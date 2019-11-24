@@ -1,0 +1,62 @@
+name:                myml
+version:             0.1.0.0
+github:              "linyinfeng/myml"
+license:             BSD3
+author:              "Lin Yinfeng"
+maintainer:          "lin.yinfeng@outlook.com"
+copyright:           "(c) Lin Yinfeng"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/linyinfeng/myml#readme>
+
+dependencies:
+- base
+- mtl
+- trifecta
+- parsers
+- haskeline
+- ansi-terminal
+- unordered-containers
+- containers
+
+library:
+  source-dirs: src
+  ghc-options:
+    - -Wall
+    - -Werror
+
+executables:
+  myml-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -Wall
+    - -Werror
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - myml
+
+tests:
+  myml-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -Wall
+    - -Werror
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - myml
