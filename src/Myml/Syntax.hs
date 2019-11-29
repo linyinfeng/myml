@@ -55,7 +55,7 @@ isValue t =
 
 isLambdaValue :: Term -> Bool
 isLambdaValue TmAbs{} = True
-isLambdaValue _             = False
+isLambdaValue _       = False
 
 isBoolValue :: Term -> Bool
 isBoolValue TmTrue  = True
@@ -70,5 +70,3 @@ isNatValue _          = False
 isUnitValue :: Term -> Bool
 isUnitValue TmUnit = True
 isUnitValue _      = False
-
-

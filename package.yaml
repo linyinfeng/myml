@@ -28,6 +28,8 @@ dependencies:
 - ansi-terminal
 - unordered-containers
 - containers
+- directory
+- filepath
 
 library:
   source-dirs: src

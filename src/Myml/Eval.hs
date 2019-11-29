@@ -1,7 +1,7 @@
 module Myml.Eval
   ( eval
   , evalOnce
-  , substitute
+  , applyTmSub
   , TmSub
   )
 where
@@ -19,9 +19,8 @@ eval t = maybe t eval (evalOnce t)
 evalOnce :: Term -> Maybe Term
 evalOnce (TmApp t1 t2) =
   (flip TmApp t2 <$> evalOnce t1) <|> (TmApp t1 <$> evalOnce t2) <|> case t1 of
-    (TmAbs x _ty t12) ->
-      if isValue t2 then Just (substitute (M.singleton x t2) t12) else Nothing
-    _ -> Nothing
+    (TmAbs x _ty t12) | isValue t2 -> Just (applyTmSub (M.singleton x t2) t12)
+    _                              -> Nothing
 evalOnce TmAbs{}                = Nothing
 evalOnce (TmVar _)              = Nothing
 evalOnce TmTrue                 = Nothing
@@ -41,16 +40,16 @@ evalOnce (TmIsZero t@(TmSucc t')) =
 evalOnce (TmIsZero t) = TmIsZero <$> evalOnce t
 evalOnce TmUnit       = Nothing
 
-substitute :: TmSub -> Term -> Term
-substitute sub  (TmVar x     ) = fromMaybe (TmVar x) (M.lookup x sub)
-substitute sub  (TmApp t1 t2 ) = TmApp (substitute sub t1) (substitute sub t2)
-substitute sub  (TmAbs x ty t) = TmAbs x ty (substitute (M.delete x sub) t)
-substitute _sub TmTrue         = TmTrue
-substitute _sub TmFalse        = TmFalse
-substitute sub (TmIf t1 t2 t3) =
-  let s = substitute sub in TmIf (s t1) (s t2) (s t3)
-substitute _sub TmZero       = TmZero
-substitute sub  (TmSucc   t) = TmSucc (substitute sub t)
-substitute sub  (TmPred   t) = TmPred (substitute sub t)
-substitute sub  (TmIsZero t) = TmIsZero (substitute sub t)
-substitute _sub TmUnit       = TmUnit
+applyTmSub :: TmSub -> Term -> Term
+applyTmSub sub  (TmVar x     ) = fromMaybe (TmVar x) (M.lookup x sub)
+applyTmSub sub  (TmApp t1 t2 ) = TmApp (applyTmSub sub t1) (applyTmSub sub t2)
+applyTmSub sub  (TmAbs x ty t) = TmAbs x ty (applyTmSub (M.delete x sub) t)
+applyTmSub _sub TmTrue         = TmTrue
+applyTmSub _sub TmFalse        = TmFalse
+applyTmSub sub (TmIf t1 t2 t3) =
+  let s = applyTmSub sub in TmIf (s t1) (s t2) (s t3)
+applyTmSub _sub TmZero       = TmZero
+applyTmSub sub  (TmSucc   t) = TmSucc (applyTmSub sub t)
+applyTmSub sub  (TmPred   t) = TmPred (applyTmSub sub t)
+applyTmSub sub  (TmIsZero t) = TmIsZero (applyTmSub sub t)
+applyTmSub _sub TmUnit       = TmUnit
