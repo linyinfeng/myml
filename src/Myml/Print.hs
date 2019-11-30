@@ -26,6 +26,20 @@ instance SyntaxPrint Term where
       >> putStr " "
       >> sPrint t2
       >> putStr ")"
+  sPrint (TmLetIn x t1 t2) =
+    putStr "("
+      >> putBuiltInSyntax "let"
+      >> putStr " "
+      >> putVar x
+      >> putStr " "
+      >> putBuiltInSyntax "="
+      >> putStr " "
+      >> sPrint t1
+      >> putStr " "
+      >> putBuiltInSyntax "in"
+      >> putStr " "
+      >> sPrint t2
+      >> putStr ")"
   sPrint TmTrue  = putBuiltInTerm "true"
   sPrint TmFalse = putBuiltInTerm "false"
   sPrint (TmIf t1 t2 t3) =

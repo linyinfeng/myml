@@ -15,6 +15,7 @@ import           Data.HashSet
 data Term = TmVar String
           | TmApp Term Term
           | TmAbs String Type Term
+          | TmLetIn String Term Term
           | TmTrue
           | TmFalse
           | TmIf Term Term Term
@@ -34,7 +35,9 @@ data Type = TyBool
 
 reservedIdent :: HashSet String
 reservedIdent = fromList
-  [ "if"
+  [ "let"
+  , "in"
+  , "if"
   , "then"
   , "else"
   , "true"

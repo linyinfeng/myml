@@ -12,6 +12,8 @@ module Myml.Typing
   , freeTyVar
   , genTyCons
   , unifyCons
+  , assignUnderscoreTyVar
+  , assignUnderscoreTyVarInTerm
   )
 where
 
@@ -44,6 +46,8 @@ applyTySubToTerm sub  (  TmApp t1 t2) = TmApp (apply t1) (apply t2)
   where apply = applyTySubToTerm sub
 applyTySubToTerm sub (TmAbs x ty t) =
   TmAbs x (applyTySub sub ty) (applyTySubToTerm sub t)
+applyTySubToTerm sub (TmLetIn x t1 t2) =
+  TmLetIn x (applyTySubToTerm sub t1) (applyTySubToTerm sub t2)
 applyTySubToTerm _sub TmTrue          = TmTrue
 applyTySubToTerm _sub TmFalse         = TmFalse
 applyTySubToTerm sub  (TmIf t1 t2 t3) = TmIf (apply t1) (apply t2) (apply t3)
@@ -68,8 +72,52 @@ lookupTyCtx :: String -> TyCtx -> Maybe Type
 lookupTyCtx name ctx =
   (\(TyAssum _ ty) -> ty) <$> find (\(TyAssum x _) -> x == name) ctx
 
-freeTyVar :: [String]
-freeTyVar = [ printf "?X%d" i | i <- [(1 :: Integer) ..] ]
+freeTyVar :: String -> [String]
+freeTyVar prefix = [ printf "%s%d" prefix i | i <- [(1 :: Integer) ..] ]
+
+assignUnderscoreTyVar :: [String] -> Type -> ([String], Type)
+assignUnderscoreTyVar f TyBool = (f, TyBool)
+assignUnderscoreTyVar f TyNat  = (f, TyNat)
+assignUnderscoreTyVar f TyUnit = (f, TyUnit)
+assignUnderscoreTyVar f (TyFunc ty1 ty2) =
+  let (f1, ty1') = assignUnderscoreTyVar f ty1
+      (f2, ty2') = assignUnderscoreTyVar f1 ty2
+  in  (f2, TyFunc ty1' ty2')
+assignUnderscoreTyVar (x : f') (   TyVar "_") = (f', TyVar x)
+assignUnderscoreTyVar f        ty@(TyVar _  ) = (f, ty)
+
+assignUnderscoreTyVarInTerm :: [String] -> Term -> ([String], Term)
+assignUnderscoreTyVarInTerm f t@(TmVar _) = (f, t)
+assignUnderscoreTyVarInTerm f (TmApp t1 t2) =
+  let apply     = assignUnderscoreTyVarInTerm
+      (f1, t1') = apply f t1
+      (f2, t2') = apply f1 t2
+  in  (f2, TmApp t1' t2')
+assignUnderscoreTyVarInTerm f (TmAbs x ty t) =
+  let (f1, ty') = assignUnderscoreTyVar f ty
+      (f2, t' ) = assignUnderscoreTyVarInTerm f1 t
+  in  (f2, TmAbs x ty' t')
+assignUnderscoreTyVarInTerm f (TmLetIn x t1 t2) =
+  let apply     = assignUnderscoreTyVarInTerm
+      (f1, t1') = apply f t1
+      (f2, t2') = apply f1 t2
+  in  (f2, TmLetIn x t1' t2')
+assignUnderscoreTyVarInTerm f TmTrue  = (f, TmTrue)
+assignUnderscoreTyVarInTerm f TmFalse = (f, TmFalse)
+assignUnderscoreTyVarInTerm f (TmIf t1 t2 t3) =
+  let apply     = assignUnderscoreTyVarInTerm
+      (f1, t1') = apply f t1
+      (f2, t2') = apply f1 t2
+      (f3, t3') = apply f2 t3
+  in  (f3, TmIf t1' t2' t3')
+assignUnderscoreTyVarInTerm f TmZero = (f, TmZero)
+assignUnderscoreTyVarInTerm f (TmSucc t) =
+  let (f', t') = assignUnderscoreTyVarInTerm f t in (f', TmSucc t')
+assignUnderscoreTyVarInTerm f (TmPred t) =
+  let (f', t') = assignUnderscoreTyVarInTerm f t in (f', TmPred t')
+assignUnderscoreTyVarInTerm f (TmIsZero t) =
+  let (f', t') = assignUnderscoreTyVarInTerm f t in (f', TmIsZero t')
+assignUnderscoreTyVarInTerm f TmUnit = (f, TmUnit)
 
 data TyError = TyErrorVarNotInCtx String
              | TyErrorNoSolution Type Type
@@ -96,6 +144,11 @@ genTyCons ctx f (TmAbs x ty t) = do
   let innerCtx = TyAssum x ty : ctx
   (tyt, f', c) <- genTyCons innerCtx f t
   return (TyFunc ty tyt, f', c)
+genTyCons ctx f (TmLetIn x t1 t2) = do
+  (ty1, f1, c1) <- genTyCons ctx f t1
+  let innerCtx = TyAssum x ty1 : ctx
+  (ty2, f2, c2) <- genTyCons innerCtx f1 t2
+  return (ty2, f2, S.union c1 c2)
 genTyCons _ctx f TmTrue          = Right (TyBool, f, S.empty)
 genTyCons _ctx f TmFalse         = Right (TyBool, f, S.empty)
 genTyCons ctx  f (TmIf t1 t2 t3) = do

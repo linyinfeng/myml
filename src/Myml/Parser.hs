@@ -6,6 +6,7 @@ where
 import           Myml.Syntax
 import           Text.Trifecta
 import           Control.Applicative
+import           Data.Functor
 import qualified Text.Parser.Token.Highlight   as H
 
 identStyle :: IdentifierStyle Parser
@@ -17,23 +18,38 @@ identStyle = IdentifierStyle "identifier"
                              H.ReservedIdentifier
 
 parseTerm :: Parser Term
-parseTerm = parsePrefixTerm
+parseTerm = parseHighest where parseHighest = parseSeqLike
+
+parseSeqLike :: Parser Term
+parseSeqLike = parseSeq parseHigher <|> parseHigher
+  where parseHigher = parsePrefixTerm
+
+parseSeq :: Parser Term -> Parser Term
+parseSeq higher =
+  chainr1 higher $ symbol ";" $> \t1 t2 -> TmApp (TmAbs "_" TyUnit t2) t1
 
 parsePrefixTerm :: Parser Term
-parsePrefixTerm = parseAbs <|> parseIf <|> parseHigher
+parsePrefixTerm = parseAbs <|> parseIf <|> parseLetIn <|> parseHigher
   where parseHigher = parseAppLike
 
 parseAbs :: Parser Term
 parseAbs = liftA3 TmAbs
-                  (parseLambda *> parseIdent)
-                  (colon *> parseType)
+                  (parseLambda *> identOrUnderscore)
+                  (colon *> parseType <|> pure (TyVar "_"))
                   (dot *> parsePrefixTerm)
+  where identOrUnderscore = parseIdent <|> symbol "_"
 
 parseIf :: Parser Term
 parseIf = liftA3 TmIf
                  (symbol "if" *> parseTerm)
                  (symbol "then" *> parseTerm)
                  (symbol "else" *> parsePrefixTerm)
+
+parseLetIn :: Parser Term
+parseLetIn = liftA3 TmLetIn
+                    (symbol "let" *> parseIdent)
+                    (symbol "=" *> parseTerm)
+                    (symbol "in" *> parsePrefixTerm)
 
 parseAppLike :: Parser Term
 parseAppLike =
@@ -78,8 +94,9 @@ parseTypeFunc = chainl1 parseTypeAtom (TyFunc <$ symbol "->")
 parseTypeAtom :: Parser Type
 parseTypeAtom = Prelude.foldl (<|>) parseTypeVar atoms <|> parens parseType
  where
-  atoms = map (\(t, s) -> t <$ symbol s)
-              [(TyUnit, "Unit"), (TyNat, "Nat"), (TyBool, "Bool")]
+  atoms = map
+    (\(t, s) -> t <$ symbol s)
+    [(TyVar "_", "_"), (TyUnit, "Unit"), (TyNat, "Nat"), (TyBool, "Bool")]
 
 parseTypeVar :: Parser Type
 parseTypeVar = TyVar <$> parseIdent

@@ -38,10 +38,13 @@ main = do
         loop
 
 processTerm :: Term -> IO ()
-processTerm term = do
+processTerm input = do
   outputLabel Blue "debug"
-  print term
+  print input
   outputLabel Green "input"
+  sPrintLn input
+  let (_fUnderscore, term) = assignUnderscoreTyVarInTerm (freeTyVar "_X") input
+  outputLabel Green "refined"
   sPrintLn term
   let evaluated = eval term
   if isValue evaluated
@@ -52,7 +55,7 @@ processTerm term = do
       outputLabel Red "stuck"
       sPrintLn evaluated
   let globalCtx   = []
-  let constraints = genTyCons globalCtx freeTyVar term
+  let constraints = genTyCons globalCtx (freeTyVar "?X") term
   case constraints of
     Left e -> do
       outputLabel Red "gen constraints faild"
