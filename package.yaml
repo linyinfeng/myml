@@ -11,8 +11,8 @@ extra-source-files:
 - ChangeLog.md
 
 # Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
+synopsis:            My toy programming language(WIP).
+category:            Language
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
@@ -38,7 +38,7 @@ library:
     - -Werror
 
 executables:
-  myml-exe:
+  mymli:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
