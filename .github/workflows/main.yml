@@ -1,0 +1,42 @@
+name: Haskell CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set path
+      run: |
+        mkdir -p ~/.local/bin
+        echo "::add-path::~/.local/bin"
+
+    - name: Cache .stack
+      id: cache-dotstack
+      uses: actions/cache@v1
+      with:
+        path: ~/.stack
+        key: ${{ runner.os }}-dotstack
+
+    - name: Install stack
+      run: |
+        curl --output /tmp/stack.tar.gz -L https://get.haskellstack.org/stable/linux-x86_64-static.tar.gz
+        mkdir -p /tmp/stack
+        tar -xf /tmp/stack.tar.gz -C /tmp/stack
+        cp /tmp/stack/stack-*-linux-x86_64-static/stack ~/.local/bin
+
+    - name: Update stack
+      run: |
+        stack update
+
+    - name: Build
+      run: stack build
+
+    - name: Check format
+      run: ./tools/check-format
+
+    - name: Run tests
+      run: stack test
