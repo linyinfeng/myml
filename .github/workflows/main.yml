@@ -1,0 +1,36 @@
+name: Haskell CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@master
+    - name: Set path
+      run: |
+        mkdir -p ~/.local/bin
+        echo "::add-path::~/.local/bin"
+
+    - name: Install stack if missing
+      run: |
+        curl --output /tmp/stack.tar.gz -L https://get.haskellstack.org/stable/linux-x86_64-static.tar.gz
+        mkdir -p /tmp/stack
+        tar -xf /tmp/stack.tar.gz -C /tmp/stack
+        cp /tmp/stack/stack-*-linux-x86_64-static/stack ~/.local/bin
+
+    - name: Update stack
+      run: |
+        stack upgrade
+        stack update
+
+    - name: Build
+      run: stack build
+
+    - name: Check format
+      run: ./tools/check-format
+
+    - name: Run tests
+      run: stack test
