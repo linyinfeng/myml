@@ -8,13 +8,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v1
     - name: Set path
       run: |
         mkdir -p ~/.local/bin
         echo "::add-path::~/.local/bin"
 
-    - name: Install stack if missing
+    - name: Cache .stack
+      id: cache-dotstack
+      uses: actions/cache@v1
+      with:
+        path: ~/.stack
+        key: ${{ runner.os }}-dotstack
+
+    - name: Install stack
       run: |
         curl --output /tmp/stack.tar.gz -L https://get.haskellstack.org/stable/linux-x86_64-static.tar.gz
         mkdir -p /tmp/stack
@@ -23,7 +30,6 @@ jobs:
 
     - name: Update stack
       run: |
-        stack upgrade
         stack update
 
     - name: Build
