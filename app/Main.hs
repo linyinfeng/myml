@@ -30,9 +30,9 @@ loop :: InputT IO ()
 loop = do
   minput <- getInputLine prompt
   case minput of
-    Nothing    -> return ()
-    Just (':' : cmd)  -> command cmd
-    Just input -> do
+    Nothing          -> return ()
+    Just (':' : cmd) -> command cmd
+    Just input       -> do
       let parser      = parseTerm <* eof
       let parseResult = parseString parser mempty input
       case parseResult of
@@ -41,14 +41,14 @@ loop = do
       loop
 
 command :: String -> InputT IO ()
-command "q" = command "exit"
+command "q"    = command "exit"
 command "quit" = command "exit"
 command "exit" = return ()
-command "" = command "help"
-command "?" = command "help"
-command "h" = command "help"
+command ""     = command "help"
+command "?"    = command "help"
+command "h"    = command "help"
 command "help" = lift outputHelp >> loop
-command cmd = do
+command cmd    = do
   lift $ commandErrorLabel "error"
   lift $ putStrLn ("unknown command ':" ++ cmd ++ "'")
   loop
