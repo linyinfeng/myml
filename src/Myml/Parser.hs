@@ -21,7 +21,8 @@ termOperatorTable :: OperatorTable Parser Term
 termOperatorTable =
   [ [Postfix (chainedPostfix (opRcdAccess <|> opRcdExtend <|> opMatchExtend))]
   , [Prefix (chainedPrefix (opSucc <|> opVariant <|> opRef <|> opDeref))]
-  , [Infix opAssign AssocNone, Infix opApp AssocLeft]
+  , [Infix opApp AssocLeft]
+  , [Infix opAssign AssocNone]
   , [Prefix (chainedPrefix (opIf <|> opAbs <|> opLet))]
   ]
  where
@@ -137,7 +138,7 @@ typeRowPair parseLabel = do
 typePresence :: Parser TypePresence
 typePresence =
   (Absent <$ reserve identStyle "Absent")
-    <|> (Present <$> (reserve identStyle "Present" *> parseTypeAtom))
+    <|> (Present <$> (reserve identStyle "Present" *> parseType))
 
 typeRowCofinite :: Parser TypeRowCofinite
 typeRowCofinite =

@@ -70,7 +70,7 @@ instance Monad m => Serial m Term where
       \/ cons1 TmDeref
       \/ cons2 TmAssign
       -- do not generate TmLoc
-      \/ cons0 TmUnit
+      \/ pure TmUnit -- no decDepth for TmUnit
       \/ cons0 TmTrue
       \/ cons0 TmFalse
       \/ cons3 TmIf
@@ -103,7 +103,7 @@ instance Monad m => Serial m Type where
       \/ cons1 TyVariant
       \/ cons1 (TyMu "X")
       \/ cons1 TyRef
-      \/ cons0 TyUnit
+      \/ pure TyUnit -- no decDepth for TyUnit
       \/ cons0 TyBool
       \/ cons0 TyNat
 
@@ -202,7 +202,7 @@ instance PrettyPrec Term where
   prettyPrec n (TmApp t1 t2) = parensPrec
     (n > prec)
     (prettyPrec prec t1 <+> prettyPrec (prec + 1) t2)
-    where prec = 1
+    where prec = 2
   prettyPrec _ (TmVar name   ) = pretty name
   prettyPrec n (TmLet x t1 t2) = parensPrec
     (n > prec)
@@ -234,11 +234,11 @@ instance PrettyPrec Term where
     <+> prettyPrec 0 t2
     <+> pretty '}'
     )
-    where prec = 3
+    where prec = 4
   prettyPrec n (TmRcdAccess t1 l) = parensPrec
     (n > prec)
     (prettyPrec prec t1 <> pretty '.' <> pretty l)
-    where prec = 3
+    where prec = 4
   prettyPrec _ (TmMatch cases) =
     pretty '['
       <+> concatWith concator (map prettyPair (Map.toList cases))
@@ -255,17 +255,18 @@ instance PrettyPrec Term where
     <+> pretty c
     <+> pretty ']'
     )
-    where prec = 3
+    where prec = 4
   prettyPrec n (TmVariant l t) = parensPrec
     (n > prec)
     (prettyVariantLabel l <+> prettyPrec prec t)
-    where prec = 2
+    where prec = 3
   prettyPrec n (TmRef t) = parensPrec (n > prec)
                                       (pretty "ref" <+> prettyPrec prec t)
-    where prec = 2
-  prettyPrec n (TmDeref t) = parensPrec (n > prec)
-                                        (pretty "!" <> prettyPrec prec t)
-    where prec = 2
+    where prec = 3
+  prettyPrec n (TmDeref t) = parensPrec
+    (n > prec)
+    (pretty "!" <> prettyPrec (prec + 1) t)
+    where prec = 3
   prettyPrec n (TmAssign t1 t2) = parensPrec
     (n > prec)
     (prettyPrec (prec + 1) t1 <+> pretty ":=" <+> prettyPrec (prec + 1) t2)
@@ -291,7 +292,7 @@ instance PrettyPrec Term where
   prettyPrec _ TmZero     = pretty "zero"
   prettyPrec n (TmSucc t) = parensPrec (n > prec)
                                        (pretty "succ" <+> prettyPrec prec t)
-    where prec = 2
+    where prec = 3
 
 prettyVariantLabel :: LabelName -> Doc ann
 prettyVariantLabel name = pretty '`' <> pretty name
