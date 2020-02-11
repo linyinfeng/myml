@@ -14,12 +14,12 @@ jobs:
         mkdir -p ~/.local/bin
         echo "::add-path::~/.local/bin"
 
-    - name: Cache .stack
-      id: cache-dotstack
-      uses: actions/cache@v1
-      with:
-        path: ~/.stack
-        key: ${{ runner.os }}-dotstack
+    # - name: Cache .stack
+    #   id: cache-dotstack
+    #   uses: actions/cache@v1
+    #   with:
+    #     path: ~/.stack
+    #     key: ${{ runner.os }}-dotstack
 
     - name: Install stack
       run: |
