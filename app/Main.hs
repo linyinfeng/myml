@@ -1,10 +1,8 @@
 module Main where
 
 import           Myml.Parser
-import           Myml.Eval
 import           Myml.Syntax
-import           Myml.Print
-import           Myml.Typing
+import           Data.Text.Prettyprint.Doc
 import           Text.Trifecta
 import           System.Console.Haskeline
 import           Control.Monad.Trans
@@ -12,76 +10,66 @@ import           System.Console.ANSI
 import           System.Directory
 import           System.FilePath
 
+historyFileName :: FilePath
+historyFileName = ".myml_history"
+
+prompt :: String
+prompt = "myml> "
+
 main :: IO ()
 main = do
   homeDir <- getHomeDirectory
-  let historyFileName = ".myml_history"
   let haskelineSettings = Settings
         { complete       = completeFilename
         , historyFile    = Just $ homeDir </> historyFileName
         , autoAddHistory = True
         }
   runInputT haskelineSettings loop
- where
-  loop :: InputT IO ()
-  loop = do
-    minput <- getInputLine "myml> "
-    case minput of
-      Nothing    -> return ()
-      Just ":q"  -> return ()
-      Just input -> do
-        let parser      = parseTerm <* eof
-        let parseResult = parseString parser mempty input
-        case parseResult of
-          Failure errInfo -> outputStrLn $ show (_errDoc errInfo)
-          Success term    -> lift (processTerm term)
-        loop
+
+loop :: InputT IO ()
+loop = do
+  minput <- getInputLine prompt
+  case minput of
+    Nothing    -> return ()
+    Just (':' : cmd)  -> command cmd
+    Just input -> do
+      let parser      = parseTerm <* eof
+      let parseResult = parseString parser mempty input
+      case parseResult of
+        Failure errInfo -> outputStrLn $ show (_errDoc errInfo)
+        Success term    -> lift (processTerm term)
+      loop
+
+command :: String -> InputT IO ()
+command "q" = command "exit"
+command "quit" = command "exit"
+command "exit" = return ()
+command "" = command "help"
+command "?" = command "help"
+command "h" = command "help"
+command "help" = lift outputHelp >> loop
+command cmd = do
+  lift $ commandErrorLabel "error"
+  lift $ putStrLn ("unknown command ':" ++ cmd ++ "'")
+  loop
+
+outputHelp :: IO ()
+outputHelp = putStrLn "help unimplemented"
 
 processTerm :: Term -> IO ()
-processTerm input = do
-  outputLabel Blue "debug"
-  print input
-  outputLabel Green "input"
-  sPrintLn input
-  let (_fUnderscore, term) = assignUnderscoreTyVarInTerm (freeTyVar "_X") input
-  outputLabel Green "refined"
-  sPrintLn term
-  let evaluated = eval term
-  if isValue evaluated
-    then do
-      outputLabel Green "value"
-      sPrintLn evaluated
-    else do
-      outputLabel Red "stuck"
-      sPrintLn evaluated
-  let globalCtx   = []
-  let constraints = genTyCons globalCtx (freeTyVar "?X") term
-  case constraints of
-    Left e -> do
-      outputLabel Red "gen constraints faild"
-      print e
-    Right (ty, _f, c) -> do
-      outputLabel Green "constraints"
-      print c
-      outputLabel Green "unsolved type"
-      sPrintLn ty
-      case unifyCons c of
-        Left e -> do
-          outputLabel Red "failed to unify constraints"
-          print e
-        Right solution -> do
-          outputLabel Green "solution"
-          print solution
-          let solved = applyTySub solution ty
-          outputLabel Green "solved type"
-          sPrintLn solved
-          let solvedTerm = applyTySubToTerm solution term
-          outputLabel Green "explicitly typed"
-          sPrintLn solvedTerm
+processTerm input = print (pretty input)
 
-outputLabel :: Color -> String -> IO ()
-outputLabel color label = do
-  setSGR [SetColor Foreground Dull color]
-  putStr label
+commandErrorLabel :: String -> IO ()
+commandErrorLabel label = bold (withColor Dull Red (putStr (label ++ ": ")))
+
+bold :: IO () -> IO ()
+bold = withSGR [SetConsoleIntensity BoldIntensity]
+
+withColor :: ColorIntensity -> Color -> IO () -> IO ()
+withColor intensity color = withSGR [SetColor Foreground intensity color]
+
+withSGR :: [SGR] -> IO () -> IO ()
+withSGR sgr io = do
+  setSGR sgr
+  io
   setSGR [Reset]
-  putStr ": "

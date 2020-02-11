@@ -21,21 +21,18 @@ description:         Please see the README on GitHub at <https://github.com/liny
 
 dependencies:
 - base
-- mtl
+- containers
+- prettyprinter
 - trifecta
 - parsers
-- haskeline
-- ansi-terminal
 - unordered-containers
-- containers
-- directory
-- filepath
+- smallcheck
+- mtl
 
 library:
   source-dirs: src
   ghc-options:
-    - -Wall
-    - -Werror
+  - -Wall
 
 executables:
   mymli:
@@ -43,12 +40,15 @@ executables:
     source-dirs:         app
     ghc-options:
     - -Wall
-    - -Werror
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - myml
+    - haskeline
+    - filepath
+    - directory
+    - ansi-terminal
 
 tests:
   myml-test:
@@ -56,9 +56,11 @@ tests:
     source-dirs:         test
     ghc-options:
     - -Wall
-    - -Werror
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - myml
+    - tasty
+    - tasty-hunit
+    - tasty-smallcheck
