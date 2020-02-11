@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 
 module Myml.Syntax
   ( Term(..)
@@ -11,6 +11,8 @@ module Myml.Syntax
   , Kind(..)
   , VarName
   , LabelName
+  , isValue
+  , isNatValue
   )
 where
 
@@ -158,6 +160,33 @@ instance Monad m => Serial m Kind where
       \/ cons0 (KRow (Set.singleton "l"))
       \/ cons0 (KRow (Set.fromList ["l1", "l2"]))
       \/ cons2 KArrow
+
+isValue :: Term -> Bool
+isValue TmVar{}         = False
+isValue TmAbs{}         = True
+isValue TmApp{}         = False
+isValue TmLet{}         = False
+isValue TmRcd{}         = True
+isValue TmRcdExtend{}   = False
+isValue TmRcdAccess{}   = False
+isValue TmMatch{}       = True
+isValue TmMatchExtend{} = False
+isValue TmVariant{}     = True
+isValue TmRef{}         = False
+isValue TmDeref{}       = False
+isValue TmAssign{}      = False
+isValue TmLoc{}         = True
+isValue TmUnit          = True
+isValue TmTrue          = True
+isValue TmFalse         = True
+isValue TmIf{}          = False
+isValue t@TmZero        = isNatValue t
+isValue t@TmSucc{}      = isNatValue t
+
+isNatValue :: Term -> Bool
+isNatValue TmZero      = True
+isNatValue (TmSucc t') = isNatValue t'
+isNatValue _           = False
 
 class PrettyPrec a where
   prettyPrec :: Int -> a -> Doc ann
