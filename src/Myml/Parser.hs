@@ -142,7 +142,7 @@ typePresence =
 
 typeRowCofinite :: Parser TypeRowCofinite
 typeRowCofinite =
-  (RowVar <$> (symbol "|" *> ident identStyle)) <|> return AllAbsent
+  (CofRowVar <$> (symbol "|" *> ident identStyle)) <|> return CofAllAbsent
 
 reservedIdents :: H.HashSet String
 reservedIdents = H.fromList

@@ -107,8 +107,8 @@ instance Monad m => Serial m Type where
       \/ cons0 TyBool
       \/ cons0 TyNat
 
-data TypeRow = TyRow { finite :: Map.Map LabelName TypePresence
-                     , cofinite :: TypeRowCofinite
+data TypeRow = TyRow { rowFinite :: Map.Map LabelName TypePresence
+                     , rowCofinite :: TypeRowCofinite
                      }
                      deriving (Eq, Show)
 
@@ -132,12 +132,12 @@ data TypePresence = Absent
 instance Monad m => Serial m TypePresence where
   series = cons0 Absent \/ (Present <$> series)
 
-data TypeRowCofinite = AllAbsent
-                     | RowVar VarName
+data TypeRowCofinite = CofAllAbsent
+                     | CofRowVar VarName
                      deriving (Eq, Show)
 
 instance Monad m => Serial m TypeRowCofinite where
-  series = cons0 AllAbsent \/ cons0 (RowVar "r")
+  series = cons0 CofAllAbsent \/ cons0 (CofRowVar "r")
 
 data TypeScheme = ScmMono Type
             | ScmForall VarName Kind TypeScheme
@@ -329,8 +329,8 @@ instance PrettyPrec Type where
 
 prettyTypeRow :: (LabelName -> Doc ann) -> TypeRow -> Doc ann
 prettyTypeRow conv (TyRow f cof) = case cof of
-  AllAbsent     -> finitePart
-  (RowVar name) -> finitePart <> space <> pretty "|" <+> pretty name
+  CofAllAbsent     -> finitePart
+  (CofRowVar name) -> finitePart <> space <> pretty "|" <+> pretty name
  where
   prettyPair (l, t) = conv l <+> pretty t
   concator left right = left <> pretty "," <+> right
