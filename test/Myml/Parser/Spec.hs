@@ -50,11 +50,11 @@ unitTests :: TestTree
 unitTests = testGroup
   "Unit tests"
   [ testCase "Simple abstraction"
-    $ testTermParser "\x3bbx. x" (TmAbs "x" (TmVar "x"))
+    $ testTermParser "\x3bb x . x" (TmAbs "x" (TmVar "x"))
   , testCase "Application in abstraction"
-    $ testTermParser "\x3bbx. x x" (TmAbs "x" (TmApp (TmVar "x") (TmVar "x")))
+    $ testTermParser "\x3bb x . x x" (TmAbs "x" (TmApp (TmVar "x") (TmVar "x")))
   , testCase "Abstraction in application 1"
-    $ testTermParser "x (\x3bbx. x)" (TmApp (TmVar "x") (TmAbs "x" (TmVar "x")))
+    $ testTermParser "x (\x3bb x . x)" (TmApp (TmVar "x") (TmAbs "x" (TmVar "x")))
   , testCase "Abstraction in application 2"
-    $ testTermParser "(\x3bbx. x) x" (TmApp (TmAbs "x" (TmVar "x")) (TmVar "x"))
+    $ testTermParser "(\x3bb x . x) x" (TmApp (TmAbs "x" (TmVar "x")) (TmVar "x"))
   ]

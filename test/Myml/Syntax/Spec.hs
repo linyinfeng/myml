@@ -49,13 +49,13 @@ freeVariableTermTests = testGroup
   $   freeVariable (pTerm "x")
   @?= Set.fromList ["x"]
   , testCase "freeVariable bind 1"
-  $   freeVariable (pTerm "\x3bbx. x x")
+  $   freeVariable (pTerm "\x3bb x . x x")
   @?= Set.empty
   , testCase "freeVariable bind 2"
-  $   freeVariable (pTerm "\x3bbx. x y")
+  $   freeVariable (pTerm "\x3bb x . x y")
   @?= Set.fromList ["y"]
   , testCase "freeVariable bind 3"
-  $   freeVariable (pTerm "\x3bbx. x y (\x3bby. x z)")
+  $   freeVariable (pTerm "\x3bb x . x y (\x3bb y . x z)")
   @?= Set.fromList ["y", "z"]
   , testCase "freeVariable let 1"
   $   freeVariable (pTerm "let x = y in z")
@@ -119,7 +119,7 @@ freeVariableTypeTests = testGroup
   $   freeVariable (pType "[ `l1 : P, `l2 : Absent, `l3 : Present X | R ]")
   @?= Set.fromList ["P", "X", "R"]
   , testCase "freeVariable mu"
-  $   freeVariable (pType "\x3bcX. (X -> T)")
+  $   freeVariable (pType "\x3bc X . (X -> T)")
   @?= Set.fromList ["T"]
   , testCase "freeVariable Unit" $ freeVariable (pType "Unit") @?= Set.empty
   , testCase "freeVariable Bool" $ freeVariable (pType "Bool") @?= Set.empty
@@ -129,7 +129,7 @@ freeVariableTypeTests = testGroup
 isValueTests :: TestTree
 isValueTests = testGroup
   "isValue tests"
-  [ testCase "isValue abstraction" $ isValue (pTerm "\x3bbx. x") @?= True
+  [ testCase "isValue abstraction" $ isValue (pTerm "\x3bb x . x") @?= True
   , testCase "isValue application" $ isValue (pTerm "x x") @?= False
   , testCase "isValue variable" $ isValue (pTerm "x") @?= False
   , testCase "isValue let" $ isValue (pTerm "let x = unit in x") @?= False
@@ -149,7 +149,7 @@ isValueTests = testGroup
   $   isValue (pTerm "[`l1 x -> x] with [`l2 x -> x]")
   @?= False
   , testCase "isValue variant 1" $ isValue (pTerm "`l1 x") @?= False
-  , testCase "isValue variant 2" $ isValue (pTerm "`l1 (\x3bbx. x)") @?= True
+  , testCase "isValue variant 2" $ isValue (pTerm "`l1 (\x3bb x . x)") @?= True
   , testCase "isValue ref" $ isValue (pTerm "ref unit") @?= False
   , testCase "isValue deref" $ isValue (pTerm "!unit") @?= False
   , testCase "isValue assign" $ isValue (pTerm "unit := unit") @?= False
