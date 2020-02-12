@@ -328,9 +328,8 @@ instance PrettyPrec Term where
   prettyPrec n (TmRef t) = parensPrec (n > prec)
                                       (pretty "ref" <+> prettyPrec prec t)
     where prec = 3
-  prettyPrec n (TmDeref t) = parensPrec
-    (n > prec)
-    (pretty "!" <+> prettyPrec prec t)
+  prettyPrec n (TmDeref t) = parensPrec (n > prec)
+                                        (pretty "!" <+> prettyPrec prec t)
     where prec = 3
   prettyPrec n (TmAssign t1 t2) = parensPrec
     (n > prec)
