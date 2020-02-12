@@ -9,7 +9,6 @@ import           Text.Trifecta
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.SmallCheck         as SC
-import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set
 
 tests :: TestTree
@@ -28,108 +27,141 @@ unitTests = testGroup "Unit tests" [freeVariableTests, isValueTests]
 propNatValueIsValue :: Term -> Bool
 propNatValueIsValue t = not (isNatValue t) || isValue t
 
-term :: String -> Term
-term s = case parseString parseTerm mempty s of
+parseHelper :: Parser a -> String -> a
+parseHelper p s = case parseString p mempty s of
   Success t -> t
   Failure e -> error (show e)
 
+pTerm :: String -> Term
+pTerm = parseHelper parseTerm
+
+pType :: String -> Type
+pType = parseHelper parseType
+
 freeVariableTests :: TestTree
-freeVariableTests = testGroup
-  "freeVariable tests"
+freeVariableTests =
+  testGroup "freeVariable tests" [freeVariableTermTests, freeVariableTypeTests]
+
+freeVariableTermTests :: TestTree
+freeVariableTermTests = testGroup
+  "freeVariable term tests"
   [ testCase "freeVariable simple variable"
-  $   freeVariable (term "x")
+  $   freeVariable (pTerm "x")
   @?= Set.fromList ["x"]
   , testCase "freeVariable bind 1"
-  $   freeVariable (term "\x3bbx. x x")
+  $   freeVariable (pTerm "\x3bbx. x x")
   @?= Set.empty
   , testCase "freeVariable bind 2"
-  $   freeVariable (term "\x3bbx. x y")
+  $   freeVariable (pTerm "\x3bbx. x y")
   @?= Set.fromList ["y"]
   , testCase "freeVariable bind 3"
-  $   freeVariable (term "\x3bbx. x y (\x3bby. x z)")
+  $   freeVariable (pTerm "\x3bbx. x y (\x3bby. x z)")
   @?= Set.fromList ["y", "z"]
   , testCase "freeVariable let 1"
-  $   freeVariable (term "let x = y in z")
+  $   freeVariable (pTerm "let x = y in z")
   @?= Set.fromList ["y", "z"]
   , testCase "freeVariable let 2"
-  $   freeVariable (term "let x = x in z")
+  $   freeVariable (pTerm "let x = x in z")
   @?= Set.fromList ["x", "z"]
   , testCase "freeVariable record"
-  $   freeVariable (term "{ x = x, y = y }")
+  $   freeVariable (pTerm "{ x = x, y = y }")
   @?= Set.fromList ["x", "y"]
   , testCase "freeVariable record extend"
-  $   freeVariable (term "{ x = x, y = y } with { z = z }")
+  $   freeVariable (pTerm "{ x = x, y = y } with { z = z }")
   @?= Set.fromList ["x", "y", "z"]
   , testCase "freeVariable record access"
-  $   freeVariable (term "{ x = x, y = y }.x")
+  $   freeVariable (pTerm "{ x = x, y = y }.x")
   @?= Set.fromList ["x", "y"]
   , testCase "freeVariable match"
-  $   freeVariable (term "[`l1 x -> x y, `l2 y -> z y]")
+  $   freeVariable (pTerm "[`l1 x -> x y, `l2 y -> z y]")
   @?= Set.fromList ["y", "z"]
   , testCase "freeVariable match extend"
-  $   freeVariable (term "[`l1 x -> x y] with [`l2 y -> z y]")
+  $   freeVariable (pTerm "[`l1 x -> x y] with [`l2 y -> z y]")
   @?= Set.fromList ["y", "z"]
   , testCase "freeVariable variant"
-  $   freeVariable (term "`x x")
+  $   freeVariable (pTerm "`x x")
   @?= Set.fromList ["x"]
   , testCase "freeVariable ref"
-  $   freeVariable (term "ref (x y)")
+  $   freeVariable (pTerm "ref (x y)")
   @?= Set.fromList ["x", "y"]
   , testCase "freeVariable deref"
-  $   freeVariable (term "!(x y)")
+  $   freeVariable (pTerm "!(x y)")
   @?= Set.fromList ["x", "y"]
   , testCase "freeVariable assign"
-  $   freeVariable (term "x := y")
+  $   freeVariable (pTerm "x := y")
   @?= Set.fromList ["x", "y"]
   , testCase "freeVariable location" $ freeVariable (TmLoc 0) @?= Set.empty
-  , testCase "freeVariable unit" $ freeVariable (term "unit") @?= Set.empty
+  , testCase "freeVariable unit" $ freeVariable (pTerm "unit") @?= Set.empty
   , testCase "freeVariable true and false"
-  $   freeVariable (term "true false")
+  $   freeVariable (pTerm "true false")
   @?= Set.empty
   , testCase "freeVariable if"
-  $   freeVariable (term "if x then y else z")
+  $   freeVariable (pTerm "if x then y else z")
   @?= Set.fromList ["x", "y", "z"]
-  , testCase "freeVariable zero" $ freeVariable (term "zero") @?= Set.empty
-  , testCase "freeVariable succ" $ freeVariable (term "succ x") @?= Set.fromList
-    ["x"]
+  , testCase "freeVariable zero" $ freeVariable (pTerm "zero") @?= Set.empty
+  , testCase "freeVariable succ"
+  $   freeVariable (pTerm "succ x")
+  @?= Set.fromList ["x"]
+  ]
+
+freeVariableTypeTests :: TestTree
+freeVariableTypeTests = testGroup
+  "freeVariable type tests"
+  [ testCase "freeVariable variable" $ freeVariable (pType "X") @?= Set.fromList
+    ["X"]
+  , testCase "freeVariable arrow"
+  $   freeVariable (pType "X -> Y -> X")
+  @?= Set.fromList ["X", "Y"]
+  , testCase "freeVariable record"
+  $   freeVariable (pType "{ l1 : P, l2 : Absent, l3 : Present X | R }")
+  @?= Set.fromList ["P", "X", "R"]
+  , testCase "freeVariable record"
+  $   freeVariable (pType "[ `l1 : P, `l2 : Absent, `l3 : Present X | R ]")
+  @?= Set.fromList ["P", "X", "R"]
+  , testCase "freeVariable mu"
+  $   freeVariable (pType "\x3bcX. (X -> T)")
+  @?= Set.fromList ["T"]
+  , testCase "freeVariable Unit" $ freeVariable (pType "Unit") @?= Set.empty
+  , testCase "freeVariable Bool" $ freeVariable (pType "Bool") @?= Set.empty
+  , testCase "freeVariable Nat" $ freeVariable (pType "Nat") @?= Set.empty
   ]
 
 isValueTests :: TestTree
 isValueTests = testGroup
   "isValue tests"
-  [ testCase "isValue abstraction" $ isValue (term "\x3bbx. x") @?= True
-  , testCase "isValue application" $ isValue (term "x x") @?= False
-  , testCase "isValue variable" $ isValue (term "x") @?= False
-  , testCase "isValue let" $ isValue (term "let x = unit in x") @?= False
-  , testCase "isValue record 1" $ isValue (term "{ l = x }") @?= False
+  [ testCase "isValue abstraction" $ isValue (pTerm "\x3bbx. x") @?= True
+  , testCase "isValue application" $ isValue (pTerm "x x") @?= False
+  , testCase "isValue variable" $ isValue (pTerm "x") @?= False
+  , testCase "isValue let" $ isValue (pTerm "let x = unit in x") @?= False
+  , testCase "isValue record 1" $ isValue (pTerm "{ l = x }") @?= False
   , testCase "isValue record 2"
-  $   isValue (term "{ l1 = x, l2 = unit }")
+  $   isValue (pTerm "{ l1 = x, l2 = unit }")
   @?= False
   , testCase "isValue record 3"
-  $   isValue (term "{ l1 = unit, l2 = unit }")
+  $   isValue (pTerm "{ l1 = unit, l2 = unit }")
   @?= True
   , testCase "isValue record extend"
-  $   isValue (term "{ l1 = x } with { l2 = y }")
+  $   isValue (pTerm "{ l1 = x } with { l2 = y }")
   @?= False
-  , testCase "isValue record access" $ isValue (term "x.x") @?= False
-  , testCase "isValue match" $ isValue (term "[`l x -> x]") @?= True
+  , testCase "isValue record access" $ isValue (pTerm "x.x") @?= False
+  , testCase "isValue match" $ isValue (pTerm "[`l x -> x]") @?= True
   , testCase "isValue match extend "
-  $   isValue (term "[`l1 x -> x] with [`l2 x -> x]")
+  $   isValue (pTerm "[`l1 x -> x] with [`l2 x -> x]")
   @?= False
-  , testCase "isValue variant 1" $ isValue (term "`l1 x") @?= False
-  , testCase "isValue variant 2" $ isValue (term "`l1 (\x3bbx. x)") @?= True
-  , testCase "isValue ref" $ isValue (term "ref unit") @?= False
-  , testCase "isValue deref" $ isValue (term "!unit") @?= False
-  , testCase "isValue assign" $ isValue (term "unit := unit") @?= False
+  , testCase "isValue variant 1" $ isValue (pTerm "`l1 x") @?= False
+  , testCase "isValue variant 2" $ isValue (pTerm "`l1 (\x3bbx. x)") @?= True
+  , testCase "isValue ref" $ isValue (pTerm "ref unit") @?= False
+  , testCase "isValue deref" $ isValue (pTerm "!unit") @?= False
+  , testCase "isValue assign" $ isValue (pTerm "unit := unit") @?= False
   , testCase "isValue location" $ isValue (TmLoc 0) @?= True
-  , testCase "isValue unit" $ isValue (term "unit") @?= True
-  , testCase "isValue true" $ isValue (term "true") @?= True
-  , testCase "isValue false" $ isValue (term "false") @?= True
+  , testCase "isValue unit" $ isValue (pTerm "unit") @?= True
+  , testCase "isValue true" $ isValue (pTerm "true") @?= True
+  , testCase "isValue false" $ isValue (pTerm "false") @?= True
   , testCase "isValue if"
-  $   isValue (term "if unit then unit else unit")
+  $   isValue (pTerm "if unit then unit else unit")
   @?= False
-  , testCase "isValue zero" $ isValue (term "zero") @?= True
-  , testCase "isValue succ 1" $ isValue (term "succ unit") @?= False
-  , testCase "isValue succ 2" $ isValue (term "succ zero") @?= True
-  , testCase "isValue succ 3" $ isValue (term "succ (succ zero)") @?= True
+  , testCase "isValue zero" $ isValue (pTerm "zero") @?= True
+  , testCase "isValue succ 1" $ isValue (pTerm "succ unit") @?= False
+  , testCase "isValue succ 2" $ isValue (pTerm "succ zero") @?= True
+  , testCase "isValue succ 3" $ isValue (pTerm "succ (succ zero)") @?= True
   ]

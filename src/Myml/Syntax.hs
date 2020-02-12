@@ -127,6 +127,7 @@ instance Monad m => Serial m TypeRow where
 
 data TypePresence = Absent
                   | Present Type
+                  | PresenceVar VarName
                   deriving (Eq, Show)
 
 -- preserve depth
@@ -138,14 +139,14 @@ data TypeRowCofinite = CofAllAbsent
                      deriving (Eq, Show)
 
 instance Monad m => Serial m TypeRowCofinite where
-  series = cons0 CofAllAbsent \/ cons0 (CofRowVar "r")
+  series = cons0 CofAllAbsent \/ cons0 (CofRowVar "R")
 
 data TypeScheme = ScmMono Type
             | ScmForall VarName Kind TypeScheme
             deriving (Eq, Show)
 
 instance Monad m => Serial m TypeScheme where
-  series = cons1 ScmMono \/ cons2 (ScmForall "x")
+  series = cons1 ScmMono \/ cons2 (ScmForall "X")
 
 data Kind = KProper
           | KPresence
@@ -155,7 +156,7 @@ data Kind = KProper
 
 instance Monad m => Serial m Kind where
   series =
-    cons0 KProper
+    pure KProper
       \/ cons0 KPresence
       \/ cons0 (KRow Set.empty)
       \/ cons0 (KRow (Set.singleton "l"))
@@ -219,8 +220,38 @@ instance FreeVariable Term where
   freeVariable TmZero           = Set.empty
   freeVariable (TmSucc t)       = freeVariable t
 
+instance FreeVariable Type where
+  freeVariable (TyVar x) = Set.singleton x
+  freeVariable (TyArrow ty1 ty2) =
+    freeVariable ty1 `Set.union` freeVariable ty2
+  freeVariable (TyRecord  row) = freeVariable row
+  freeVariable (TyVariant row) = freeVariable row
+  freeVariable (TyMu x t     ) = Set.delete x (freeVariable t)
+  freeVariable (TyRef t      ) = freeVariable t
+  freeVariable TyUnit          = Set.empty
+  freeVariable TyBool          = Set.empty
+  freeVariable TyNat           = Set.empty
+
+instance FreeVariable TypeRow where
+  freeVariable (TyRow f cof) =
+    Map.foldl (\a b -> a `Set.union` freeVariable b) Set.empty f
+      `Set.union` freeVariable cof
+
+instance FreeVariable TypePresence where
+  freeVariable Absent          = Set.empty
+  freeVariable (Present     t) = freeVariable t
+  freeVariable (PresenceVar x) = Set.singleton x
+
+instance FreeVariable TypeRowCofinite where
+  freeVariable CofAllAbsent  = Set.empty
+  freeVariable (CofRowVar r) = Set.singleton r
+
 instance FreeVariable TermCase where
   freeVariable (TmCase x t) = Set.delete x (freeVariable t)
+
+instance FreeVariable TypeScheme where
+  freeVariable (ScmMono t      ) = freeVariable t
+  freeVariable (ScmForall x _ t) = Set.delete x (freeVariable t)
 
 class PrettyPrec a where
   prettyPrec :: Int -> a -> Doc ann
@@ -231,7 +262,7 @@ instance Pretty Term where
 instance PrettyPrec Term where
   prettyPrec n (TmAbs x t) = parensPrec
     (n > prec)
-    (pretty '\x3bb' <> pretty x <> pretty '.' <+> prettyPrec prec t)
+    (pretty '\x3bb' <+> pretty x <+> pretty '.' <+> prettyPrec prec t)
     where prec = 0
   prettyPrec n (TmApp t1 t2) = parensPrec
     (n > prec)
@@ -299,7 +330,7 @@ instance PrettyPrec Term where
     where prec = 3
   prettyPrec n (TmDeref t) = parensPrec
     (n > prec)
-    (pretty "!" <> prettyPrec (prec + 1) t)
+    (pretty "!" <+> prettyPrec prec t)
     where prec = 3
   prettyPrec n (TmAssign t1 t2) = parensPrec
     (n > prec)
@@ -353,7 +384,7 @@ instance PrettyPrec Type where
       <+> pretty ']'
   prettyPrec n (TyMu name t) = parensPrec
     (n > prec)
-    (pretty "\x3bc" <> pretty name <> pretty '.' <+> prettyPrec prec t)
+    (pretty "\x3bc" <+> pretty name <+> pretty '.' <+> prettyPrec prec t)
     where prec = 1
   prettyPrec n (TyRef t) = parensPrec (n > prec)
                                       (pretty "Ref" <+> prettyPrec prec t)
@@ -372,17 +403,18 @@ prettyTypeRow conv (TyRow f cof) = case cof of
   finitePart = concatWith concator (map prettyPair (Map.toList f))
 
 instance Pretty TypePresence where
-  pretty Absent      = pretty "Absent"
-  pretty (Present t) = pretty "Present" <+> prettyPrec 1 t
+  pretty Absent          = pretty "Absent"
+  pretty (Present     t) = pretty "Present" <+> prettyPrec 1 t
+  pretty (PresenceVar x) = pretty x
 
 instance Pretty TypeScheme where
   pretty (ScmMono t) = pretty t
   pretty (ScmForall name k s) =
     pretty '\x2200'
-      <>  pretty name
+      <+> pretty name
       <+> pretty "::"
       <+> pretty k
-      <>  pretty "."
+      <+> pretty "."
       <+> pretty s
 
 instance Pretty Kind where

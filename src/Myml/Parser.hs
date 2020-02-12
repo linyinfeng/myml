@@ -3,6 +3,10 @@ module Myml.Parser
   , parseTermAtom
   , parseType
   , parseTypeAtom
+  , parseScheme
+  , parseSchemeAtom
+  , parseKind
+  , parseKindAtom
   )
 where
 
@@ -12,7 +16,9 @@ import           Text.Parser.Token.Highlight
 import           Text.Parser.Expression
 import qualified Data.HashSet                  as H
 import qualified Data.Map                      as Map
+import qualified Data.Set                      as Set
 import           Control.Applicative
+import           Data.Char
 
 parseTerm :: Parser Term
 parseTerm = buildExpressionParser termOperatorTable parseTermAtom <?> "term"
@@ -34,21 +40,21 @@ termOperatorTable =
     reserve identStyle "else"
     return (TmIf t1 t2)
   opAbs = do
-    _ <- symbol "\x3bb" <|> symbol "\\"
+    reserve identStyle "\x3bb" <|> reserve identStyle "\\"
     x <- ident identStyle
-    reserve opsStyle "."
+    _ <- symbol "."
     return (TmAbs x)
   opLet = do
     reserve identStyle "let"
     x <- ident identStyle
-    reserve opsStyle "="
+    reserve identStyle "="
     t <- parseTerm
     reserve identStyle "in"
     return (TmLet x t)
   opApp       = return TmApp
   opSucc      = TmSucc <$ reserve identStyle "succ"
   opVariant   = TmVariant <$> variantLabel
-  opRcdAccess = flip TmRcdAccess <$> (reserve opsStyle "." *> ident identStyle)
+  opRcdAccess = flip TmRcdAccess <$> (symbol "." *> ident identStyle)
   opRcdExtend = do
     try $ reserve identStyle "with" <* symbol "{"
     (l, t) <- recordPair
@@ -60,8 +66,8 @@ termOperatorTable =
     _      <- symbol "]"
     return (\t -> TmMatchExtend t l c)
   opRef    = TmRef <$ reserve identStyle "ref"
-  opDeref  = TmDeref <$ reserve opsStyle "!"
-  opAssign = TmAssign <$ reserve opsStyle ":="
+  opDeref  = TmDeref <$ reserve identStyle "!"
+  opAssign = TmAssign <$ reserve identStyle ":="
 
 parseTermAtom :: Parser Term
 parseTermAtom =
@@ -76,11 +82,9 @@ parseTermAtom =
     )
     <?> "termAtom"
  where
-  var = TmVar <$> ident identStyle
-  rcd =
-    TmRcd . Map.fromList <$> braces (recordPair `sepBy` reserve opsStyle ",")
-  match =
-    TmMatch . Map.fromList <$> brackets (matchPair `sepBy` reserve opsStyle ",")
+  var   = TmVar <$> ident identStyle
+  rcd   = TmRcd . Map.fromList <$> braces (recordPair `sepBy` symbol ",")
+  match = TmMatch . Map.fromList <$> brackets (matchPair `sepBy` symbol ",")
   unit  = TmUnit <$ reserve identStyle "unit"
   true  = TmTrue <$ reserve identStyle "true"
   false = TmFalse <$ reserve identStyle "false"
@@ -88,13 +92,14 @@ parseTermAtom =
 
 recordPair :: Parser (LabelName, Term)
 recordPair =
-  (\x y -> (x, y)) <$> ident identStyle <* reserve opsStyle "=" <*> parseTerm
+  (\x y -> (x, y)) <$> ident identStyle <* reserve identStyle "=" <*> parseTerm
 
 matchPair :: Parser (LabelName, TermCase)
 matchPair = (\x y -> (x, y)) <$> variantLabel <*> matchCase
 
 matchCase :: Parser TermCase
-matchCase = TmCase <$> ident identStyle <* reserve opsStyle "->" <*> parseTerm
+matchCase =
+  TmCase <$> ident identStyle <* reserve identStyle "->" <*> parseTerm
 
 variantLabel :: Parser LabelName
 variantLabel = try (char '`' *> ident identStyle)
@@ -107,8 +112,9 @@ typeOperatorTable =
   [[Prefix (chainedPrefix (opRef <|> opMu))], [Infix opArrow AssocRight]]
  where
   opRef = TyRef <$ reserve identStyle "Ref"
-  opMu = TyMu <$> (symbol "\x3bc" *> ident identStyle <* reserve opsStyle ".")
-  opArrow = TyArrow <$ reserve opsStyle "->"
+  opMu =
+    TyMu <$> (reserve identStyle "\x3bc" *> ident identStyle <* symbol ".")
+  opArrow = TyArrow <$ reserve identStyle "->"
 
 parseTypeAtom :: Parser Type
 parseTypeAtom =
@@ -122,16 +128,52 @@ parseTypeAtom =
   bool    = TyBool <$ reserve identStyle "Bool"
   nat     = TyNat <$ reserve identStyle "Nat"
 
+parseScheme :: Parser TypeScheme
+parseScheme =
+  buildExpressionParser schemeOperatorTable parseSchemeAtom <?> "scheme"
+
+schemeOperatorTable :: OperatorTable Parser TypeScheme
+schemeOperatorTable = [[Prefix (chainedPrefix opForall)]]
+ where
+  opForall = do
+    _ <- reserve identStyle "\x2200"
+    x <- ident identStyle
+    reserve identStyle "::"
+    kind <- parseKind
+    _    <- symbol "."
+    return (ScmForall x kind)
+
+parseSchemeAtom :: Parser TypeScheme
+parseSchemeAtom = (ScmMono <$> parseType) <|> parens parseScheme
+
+parseKind :: Parser Kind
+parseKind = buildExpressionParser kindOperatorTable parseKindAtom <?> "kind"
+
+kindOperatorTable :: OperatorTable Parser Kind
+kindOperatorTable = [[Infix opArrow AssocRight]]
+  where opArrow = KArrow <$ reserve identStyle "=>"
+
+parseKindAtom :: Parser Kind
+parseKindAtom = proper <|> presense <|> row <|> parens parseKind
+ where
+  proper   = KProper <$ reserve identStyle "*"
+  presense = KPresence <$ reserve identStyle "Presence"
+  row      = do
+    reserve identStyle "Row"
+    _  <- symbol "("
+    ls <- commaSep (ident identStyle)
+    _  <- symbol ")"
+    return (KRow (Set.fromList ls))
+
 typeRow :: Parser LabelName -> Parser TypeRow
 typeRow parseLabel = do
-  finitePart <-
-    Map.fromList <$> (typeRowPair parseLabel `sepBy` reserve opsStyle ",")
+  finitePart <- Map.fromList <$> (typeRowPair parseLabel `sepBy` symbol ",")
   TyRow finitePart <$> typeRowCofinite
 
 typeRowPair :: Parser LabelName -> Parser (LabelName, TypePresence)
 typeRowPair parseLabel = do
   label <- parseLabel
-  reserve opsStyle ":"
+  reserve identStyle ":"
   presence <- typePresence
   return (label, presence)
 
@@ -139,13 +181,14 @@ typePresence :: Parser TypePresence
 typePresence =
   (Absent <$ reserve identStyle "Absent")
     <|> (Present <$> (reserve identStyle "Present" *> parseType))
+    <|> (PresenceVar <$> ident identStyle)
 
 typeRowCofinite :: Parser TypeRowCofinite
-typeRowCofinite =
-  (CofRowVar <$> (symbol "|" *> ident identStyle)) <|> return CofAllAbsent
+typeRowCofinite = (CofRowVar <$> (reserve identStyle "|" *> ident identStyle))
+  <|> return CofAllAbsent
 
-reservedIdents :: H.HashSet String
-reservedIdents = H.fromList
+reservedTokens :: H.HashSet String
+reservedTokens = H.fromList
   [ "let"
   , "in"
   , "with"
@@ -167,29 +210,55 @@ reservedIdents = H.fromList
   , "Present"
   , "Row"
   , "Presence"
+  , "."
+  , ","
+  , ":"
+  , "->"
+  , "=>"
+  , "::"
+  , ":"
+  , "|"
+  , "="
+  , "*"
+  , "`"
+  , ":="
+  , "!"
+  , "\x3bb"
+  , "\x3bc"
   ]
-
-reservedOps :: H.HashSet String
-reservedOps = H.fromList
-  [".", ",", ":", "->", "=>", "::", ":", "|", "=", "*", "`", ":=", "!"]
 
 identStyle :: IdentifierStyle Parser
 identStyle = IdentifierStyle { _styleName              = "identifer"
-                             , _styleStart             = letter
-                             , _styleLetter            = alphaNum
-                             , _styleReserved          = reservedIdents
+                             , _styleStart             = identLetter
+                             , _styleLetter            = identLetter
+                             , _styleReserved          = reservedTokens
                              , _styleHighlight         = Identifier
                              , _styleReservedHighlight = ReservedIdentifier
                              }
 
-opsStyle :: IdentifierStyle Parser
-opsStyle = IdentifierStyle { _styleName              = "operator"
-                           , _styleStart             = _styleLetter opsStyle
-                           , _styleLetter = oneOf ":!#$%&*+./<=>?@\\^|-~"
-                           , _styleReserved          = reservedOps
-                           , _styleHighlight         = Operator
-                           , _styleReservedHighlight = ReservedOperator
-                           }
+identLetter :: Parser Char
+identLetter = satisfy isTokenChar
+ where
+  isTokenChar c =
+    not (isSpace c)
+      && c
+      /= '('
+      && c
+      /= ')'
+      && c
+      /= '['
+      && c
+      /= ']'
+      && c
+      /= '{'
+      && c
+      /= '}'
+      && c
+      /= '.'
+      && c
+      /= ','
+      && c
+      /= ';'
 
 chainedPrefix :: Parser (a -> a) -> Parser (a -> a)
 chainedPrefix p = chainl1 p (return (.))

@@ -25,6 +25,12 @@ scProps = testGroup
   , localOption (SmallCheckDepth 2)
   $ SC.testProperty "parse (pretty type) == type"
   $ propPrintParse parseType
+  , localOption (SmallCheckDepth 2)
+  $ SC.testProperty "parse (pretty kind) == kind"
+  $ propPrintParse parseKind
+  , localOption (SmallCheckDepth 3)
+  $ SC.testProperty "parse (pretty scheme) == scheme"
+  $ propPrintParse parseScheme
   ]
 
 propPrintParse :: (Pretty a, Eq a) => Parser a -> a -> Bool
