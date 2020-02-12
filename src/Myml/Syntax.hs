@@ -13,6 +13,7 @@ module Myml.Syntax
   , LabelName
   , isValue
   , isNatValue
+  , FreeVariable(..)
   )
 where
 
@@ -57,12 +58,12 @@ instance Monad m => Serial m Term where
       \/ cons0 (TmVar "x")
       \/ cons2 (TmLet "x")
       \/ cons0 (TmRcd Map.empty)
-      \/ cons1 (\t -> TmRcd (Map.singleton "l" t))
+      \/ cons1 (TmRcd . Map.singleton "l")
       \/ cons2 (\t1 t2 -> TmRcd (Map.fromList [("l1", t1), ("l2", t2)]))
       \/ cons2 (\t1 t2 -> TmRcdExtend t1 "l" t2)
       \/ cons1 (flip TmRcdAccess "l")
       \/ cons0 (TmMatch Map.empty)
-      \/ cons1 (\c -> TmMatch (Map.singleton "l" c))
+      \/ cons1 (TmMatch . Map.singleton "l")
       \/ cons2 (\c1 c2 -> TmMatch (Map.fromList [("l1", c1), ("l2", c2)]))
       \/ cons2 (\t c -> TmMatchExtend t "l" c)
       \/ cons1 (TmVariant "l")
@@ -166,12 +167,12 @@ isValue TmVar{}         = False
 isValue TmAbs{}         = True
 isValue TmApp{}         = False
 isValue TmLet{}         = False
-isValue TmRcd{}         = True
+isValue (TmRcd m)       = Map.foldl (\a b -> a && isValue b) True m
 isValue TmRcdExtend{}   = False
 isValue TmRcdAccess{}   = False
 isValue TmMatch{}       = True
 isValue TmMatchExtend{} = False
-isValue TmVariant{}     = True
+isValue (TmVariant _ t) = isValue t
 isValue TmRef{}         = False
 isValue TmDeref{}       = False
 isValue TmAssign{}      = False
@@ -187,6 +188,39 @@ isNatValue :: Term -> Bool
 isNatValue TmZero      = True
 isNatValue (TmSucc t') = isNatValue t'
 isNatValue _           = False
+
+class FreeVariable a where
+  freeVariable :: a -> Set.Set VarName
+
+instance FreeVariable Term where
+  freeVariable (TmVar x    ) = Set.singleton x
+  freeVariable (TmAbs x  t ) = Set.delete x (freeVariable t)
+  freeVariable (TmApp t1 t2) = freeVariable t1 `Set.union` freeVariable t2
+  freeVariable (TmLet x t1 t2) =
+    freeVariable t1 `Set.union` Set.delete x (freeVariable t2)
+  freeVariable (TmRcd m) =
+    Map.foldl (\a b -> a `Set.union` freeVariable b) Set.empty m
+  freeVariable (TmRcdExtend t1 _ t2) =
+    freeVariable t1 `Set.union` freeVariable t2
+  freeVariable (TmRcdAccess t _) = freeVariable t
+  freeVariable (TmMatch m) =
+    Map.foldl (\a b -> a `Set.union` freeVariable b) Set.empty m
+  freeVariable (TmMatchExtend t1 _ t2) =
+    freeVariable t1 `Set.union` freeVariable t2
+  freeVariable (TmVariant _ t ) = freeVariable t
+  freeVariable (TmRef   t     ) = freeVariable t
+  freeVariable (TmDeref t     ) = freeVariable t
+  freeVariable (TmAssign t1 t2) = freeVariable t1 `Set.union` freeVariable t2
+  freeVariable (TmLoc _       ) = Set.empty
+  freeVariable TmUnit           = Set.empty
+  freeVariable TmTrue           = Set.empty
+  freeVariable TmFalse          = Set.empty
+  freeVariable (TmIf t1 t2 t3)  = Set.unions (map freeVariable [t1, t2, t3])
+  freeVariable TmZero           = Set.empty
+  freeVariable (TmSucc t)       = freeVariable t
+
+instance FreeVariable TermCase where
+  freeVariable (TmCase x t) = Set.delete x (freeVariable t)
 
 class PrettyPrec a where
   prettyPrec :: Int -> a -> Doc ann
@@ -290,8 +324,9 @@ instance PrettyPrec Term where
     )
     where prec = 0
   prettyPrec _ TmZero     = pretty "zero"
-  prettyPrec n (TmSucc t) = parensPrec (n > prec)
-                                       (pretty "succ" <+> prettyPrec prec t)
+  prettyPrec n (TmSucc t) = parensPrec
+    (n > prec)
+    (pretty "succ" <+> prettyPrec (prec + 1) t)
     where prec = 3
 
 prettyVariantLabel :: LabelName -> Doc ann
