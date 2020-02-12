@@ -187,6 +187,7 @@ typeRowCofinite :: Parser TypeRowCofinite
 typeRowCofinite = (CofRowVar <$> (reserve identStyle "|" *> ident identStyle))
   <|> return CofAllAbsent
 
+-- no need to include ".", ",", ";"
 reservedTokens :: H.HashSet String
 reservedTokens = H.fromList
   [ "let"
@@ -210,8 +211,6 @@ reservedTokens = H.fromList
   , "Present"
   , "Row"
   , "Presence"
-  , "."
-  , ","
   , ":"
   , "->"
   , "=>"
