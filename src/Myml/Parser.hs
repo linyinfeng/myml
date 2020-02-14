@@ -3,10 +3,12 @@ module Myml.Parser
   , parseTermAtom
   , parseType
   , parseTypeAtom
+  , parseTypeRow
   , parseScheme
   , parseSchemeAtom
   , parseKind
   , parseKindAtom
+  , identStyle
   )
 where
 
@@ -113,7 +115,11 @@ typeOperatorTable =
  where
   opRef = TyRef <$ reserve identStyle "Ref"
   opMu =
-    TyMu <$> (reserve identStyle "\x3bc" *> ident identStyle <* symbol ".")
+    TyMu
+      <$> (  (reserve identStyle "\x3bc" <|> reserve identStyle "Rec")
+          *> ident identStyle
+          <* symbol "."
+          )
   opArrow = TyArrow <$ reserve identStyle "->"
 
 parseTypeAtom :: Parser Type
@@ -121,12 +127,14 @@ parseTypeAtom =
   (var <|> rcd <|> variant <|> unit <|> bool <|> nat <|> parens parseType)
     <?> "typeAtom"
  where
-  var     = TyVar <$> ident identStyle
-  rcd = TyRecord <$> (symbol "{" *> typeRow (ident identStyle) <* symbol "}")
-  variant = TyVariant <$> (symbol "[" *> typeRow variantLabel <* symbol "]")
-  unit    = TyUnit <$ reserve identStyle "Unit"
-  bool    = TyBool <$ reserve identStyle "Bool"
-  nat     = TyNat <$ reserve identStyle "Nat"
+  var = TyVar <$> ident identStyle
+  rcd =
+    TyRecord <$> (symbol "{" *> parseTypeRow (ident identStyle) <* symbol "}")
+  variant =
+    TyVariant <$> (symbol "[" *> parseTypeRow variantLabel <* symbol "]")
+  unit = TyUnit <$ reserve identStyle "Unit"
+  bool = TyBool <$ reserve identStyle "Bool"
+  nat  = TyNat <$ reserve identStyle "Nat"
 
 parseScheme :: Parser TypeScheme
 parseScheme =
@@ -165,8 +173,8 @@ parseKindAtom = proper <|> presence <|> row <|> parens parseKind
     _  <- symbol ")"
     return (KRow (Set.fromList ls))
 
-typeRow :: Parser LabelName -> Parser TypeRow
-typeRow parseLabel = do
+parseTypeRow :: Parser LabelName -> Parser TypeRow
+parseTypeRow parseLabel = do
   finitePart <- Map.fromList <$> (typeRowPair parseLabel `sepBy` symbol ",")
   TyRow finitePart <$> typeRowCofinite
 

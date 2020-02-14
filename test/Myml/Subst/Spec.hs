@@ -5,6 +5,7 @@ where
 
 import           Myml.Subst
 import           Myml.Syntax
+import           Myml.Test.Helper
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.SmallCheck         as SC
@@ -24,8 +25,11 @@ propEmptySubstTerm :: Term -> Bool
 propEmptySubstTerm t = applySubst (Map.empty :: Subst Term) t == t
 
 unitTests :: TestTree
-unitTests = testGroup
-  "Unit tests"
+unitTests = testGroup "Unit tests" [compsiteTests, substTests]
+
+compsiteTests :: TestTree
+compsiteTests = testGroup
+  "Composite tests"
   [ testCase "Subst composite empty"
   $   (Map.empty `compositeSubst` Map.empty :: Subst Term)
   @?= Map.empty
@@ -45,28 +49,181 @@ unitTests = testGroup
       `compositeSubst` Map.fromList [("x", TmVar "y"), ("y", TmVar "w")]
       )
   @?= Map.fromList [("x", TmVar "z"), ("y", TmVar "w")]
-  , testCase "term substitution 1"
-  $            Map.fromList [("x", TmVar "y")]
-  `applySubst` TmVar "x"
-  @?=          TmVar "y"
-  , testCase "term substitution 2"
-  $            Map.fromList [("x", TmVar "y")]
-  `applySubst` TmAbs "x" (TmVar "x")
-  @?=          TmAbs "x" (TmVar "x")
-  , testCase "term substitution 3"
-  $            Map.fromList [("x", TmVar "y")]
-  `applySubst` TmAbs "z" (TmVar "x")
-  @?=          TmAbs "z" (TmVar "y")
-  , testCase "term substitution 4"
-  $            Map.fromList [("x", TmVar "y")]
-  `applySubst` TmAbs "y"  (TmVar "x")
-  @?=          TmAbs "y0" (TmVar "y")
-  , testCase "term substitution 5"
-  $            Map.fromList [("x", TmVar "y")]
-  `applySubst` TmLet "y"  (TmVar "x") (TmVar "x")
-  @?=          TmLet "y0" (TmVar "y") (TmVar "y")
-  , testCase "term substitution 6"
-  $            Map.fromList [("x", TmVar "y")]
-  `applySubst` TmMatch (Map.singleton "l" (TmCase "y" (TmVar "x")))
-  @?=          TmMatch (Map.singleton "l" (TmCase "y0" (TmVar "y")))
+  ]
+
+substTests :: TestTree
+substTests = testGroup "Substitution tests" [termSubstTests, typeSubstTests]
+
+termSubstTests :: TestTree
+termSubstTests = testGroup
+  "Term substitution tests"
+  [ testCase "term substitution variable"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "x"
+  @?=          pTerm "y"
+  , testCase "term substitution abstraction 1"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "\x3bb x . x"
+  @?=          pTerm "\x3bb x . x"
+  , testCase "term substitution abstraction 2"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "\x3bb z . x"
+  @?=          pTerm "\x3bb z . y"
+  , testCase "term substitution abstraction 3"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "\x3bb y . x"
+  @?=          pTerm "\x3bb y0 . y"
+  , testCase "term substitution application"
+  $            Map.fromList [("x", pTerm "y"), ("y", pTerm "z")]
+  `applySubst` pTerm "x y"
+  @?=          pTerm "y z"
+  , testCase "term substitution let"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "let y = x in x"
+  @?=          pTerm "let y0 = y in y"
+  , testCase "term substitution record"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "{ l1 = x, l2 = x }"
+  @?=          pTerm "{ l1 = y, l2 = y }"
+  , testCase "term substitution record extend"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "{ l1 = x, l2 = x } with { l3 = x }"
+  @?=          pTerm "{ l1 = y, l2 = y } with { l3 = y }"
+  , testCase "term substitution record access"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "{ l1 = x, l2 = x }.l1"
+  @?=          pTerm "{ l1 = y, l2 = y }.l1"
+  , testCase "term substitution match"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "[ `l y -> x ]"
+  @?=          pTerm "[ `l y0 -> y ]"
+  , testCase "term substitution match extend"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "[ `l1 y -> x ] with [`l2 y -> x ]"
+  @?=          pTerm "[ `l1 y0 -> y ] with [`l2 y0 -> y ]"
+  , testCase "term substitution variant"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "`l x"
+  @?=          pTerm "`l y"
+  , testCase "term substitution ref"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "ref x"
+  @?=          pTerm "ref y"
+  , testCase "term substitution deref"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "! x"
+  @?=          pTerm "! y"
+  , testCase "term substitution assign"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "x := y"
+  @?=          pTerm "y := y"
+  , testCase "term substitution location"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` TmLoc 0
+  @?=          TmLoc 0
+  , testCase "term substitution unit"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "unit"
+  @?=          pTerm "unit"
+  , testCase "term substitution true"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "true"
+  @?=          pTerm "true"
+  , testCase "term substitution false"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "false"
+  @?=          pTerm "false"
+  , testCase "term substitution if"
+  $ Map.fromList [("x", pTerm "y"), ("y", pTerm "z"), ("z", pTerm "x")]
+  `applySubst` pTerm "if x then y else z"
+  @?= pTerm "if y then z else x"
+  , testCase "term substitution zero"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "zero"
+  @?=          pTerm "zero"
+  , testCase "term substitution succ"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "succ x"
+  @?=          pTerm "succ y"
+  ]
+
+typeSubstTests :: TestTree
+typeSubstTests = testGroup
+  "Type substitution tests"
+  [ testCase "type substitution proper variable"
+  $            Map.fromList [("X", TySubProper (pType "Y"))]
+  `applySubst` pType "X"
+  @?=          pType "Y"
+  , testCase "type substitution proper arrow"
+  $            Map.fromList
+                 [("X", TySubProper (pType "Y")), ("Y", TySubProper (pType "Z"))]
+  `applySubst` pType "X -> Y"
+  @?=          pType "Y -> Z"
+  , testCase "type substitution proper record"
+  $            Map.fromList
+                 [("X", TySubProper (pType "Y")), ("Y", TySubProper (pType "Z"))]
+  `applySubst` pType "{ l1 : Absent, l2 : Present X, l3 : P Y | R }"
+  @?=          pType "{ l1 : Absent, l2 : Present Y, l3 : P Z | R }"
+  , testCase "type substitution proper variant"
+  $            Map.fromList
+                 [("X", TySubProper (pType "Y")), ("Y", TySubProper (pType "Z"))]
+  `applySubst` pType "[ `l1 : Absent, `l2 : Present X, `l3 : P Y | R ]"
+  @?=          pType "[ `l1 : Absent, `l2 : Present Y, `l3 : P Z | R ]"
+  , testCase "type substitution proper mu"
+  $            Map.fromList [("Y", TySubProper (pType "X"))]
+  `applySubst` pType "\x3bc X . X -> Y"
+  @?=          pType "\x3bc X0 . X0 -> X"
+  , testCase "type substitution proper reference"
+  $            Map.fromList [("X", TySubProper (pType "Y"))]
+  `applySubst` pType "Ref X"
+  @?=          pType "Ref Y"
+  , testCase "type substitution proper Unit"
+  $            Map.fromList [("X", TySubProper (pType "Y"))]
+  `applySubst` pType "Unit"
+  @?=          pType "Unit"
+  , testCase "type substitution proper Bool"
+  $            Map.fromList [("X", TySubProper (pType "Y"))]
+  `applySubst` pType "Bool"
+  @?=          pType "Bool"
+  , testCase "type substitution proper Nat"
+  $            Map.fromList [("X", TySubProper (pType "Y"))]
+  `applySubst` pType "Nat"
+  @?=          pType "Nat"
+  , testCase "type substitution presence absent 1"
+  $            Map.fromList [("P", TySubPresence PresenceInstAbsent)]
+  `applySubst` pType "{ l : P Unit } -> [ `l : P Unit ]"
+  @?=          pType "{ } -> [ ]"
+  , testCase "type substitution presence absent 2"
+  $            Map.fromList [("P", TySubPresence PresenceInstAbsent)]
+  `applySubst` pType "{ l : P Unit | R1 } -> [ `l : P Unit | R2 ]"
+  @?=          pType "{ l : Absent | R1 } -> [ `l : Absent | R2 ]"
+  , testCase "type substitution presence present"
+  $            Map.fromList [("P", TySubPresence PresenceInstPresent)]
+  `applySubst` pType "{ l : P Unit | R1 } -> [ `l : P Unit | R2 ]"
+  @?=          pType "{ l : Present Unit | R1 } -> [ `l : Present Unit | R2 ]"
+  , testCase "type substitution presence varaible"
+  $            Map.fromList [("P", TySubPresence (PresenceInstVar "P'"))]
+  `applySubst` pType "{ l : P Unit | R1 } -> [ `l : P Unit | R2 ]"
+  @?=          pType "{ l : P' Unit | R1 } -> [ `l : P' Unit | R2 ]"
+  , testCase "type substitution row 1"
+  $            Map.fromList [("R", TySubRow (pTypeRow "l2 : Absent"))]
+  `applySubst` pType "{ l : P Unit | R } -> [ `l : P Unit | R ]"
+  @?=          pType "{ l : P Unit } -> [ `l : P Unit ]"
+  , testCase "type substitution row 2"
+  $            Map.fromList [("R", TySubRow (pTypeRow "l2 : Absent | R'"))]
+  `applySubst` pType "{ l : P Unit | R } -> [ `l : P Unit | R ]"
+  @?=          pType
+                 "{ l : P Unit, l2 : Absent | R' } -> [ `l : P Unit, `l2 : Absent | R' ]"
+  , testCase "type substitution row 3"
+  $            Map.fromList [("R", TySubRow (pTypeRow "| R'"))]
+  `applySubst` pType "{ l : P Unit | R } -> [ `l : P Unit | R ]"
+  @?=          pType "{ l : P Unit | R' } -> [ `l : P Unit | R' ]"
+  , testCase "type substitution row and presence"
+  $            Map.fromList
+                 [ ("P", TySubPresence PresenceInstPresent)
+                 , ("R", TySubRow (pTypeRow "l2 : P Nat | R'"))
+                 ]
+  `applySubst` pType "{ l : P Unit | R } -> [ `l : P Unit | R ]"
+  @?=          pType
+                 "{ l : Present Unit, l2 : P Nat | R' } -> [ `l : Present Unit, `l2 : P Nat | R' ]"
   ]

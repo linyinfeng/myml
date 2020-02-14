@@ -4,8 +4,7 @@ module Myml.Syntax.Spec
 where
 
 import           Myml.Syntax
-import           Myml.Parser
-import           Text.Trifecta
+import           Myml.Test.Helper
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.SmallCheck         as SC
@@ -26,17 +25,6 @@ unitTests = testGroup "Unit tests" [freeVariableTests, isValueTests]
 
 propNatValueIsValue :: Term -> Bool
 propNatValueIsValue t = not (isNatValue t) || isValue t
-
-parseHelper :: Parser a -> String -> a
-parseHelper p s = case parseString p mempty s of
-  Success t -> t
-  Failure e -> error (show e)
-
-pTerm :: String -> Term
-pTerm = parseHelper parseTerm
-
-pType :: String -> Type
-pType = parseHelper parseType
 
 freeVariableTests :: TestTree
 freeVariableTests =

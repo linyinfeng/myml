@@ -4,6 +4,8 @@ module Myml.Subst
   ( Subst
   , ApplySubst(..)
   , compositeSubst
+  , TypeSubstitutor(..)
+  , normalizeRow
   )
 where
 
@@ -132,7 +134,7 @@ instance ApplySubst TypeSubstitutor TypeRow where
   subst (TyRow f cof) = do
     f1            <- sequence (Map.map subst f)
     TyRow f2 cof' <- mergeRow
-    return (TyRow (Map.unionWithKey duplicateError f1 f2) cof')
+    return (normalizeRow (TyRow (Map.unionWithKey duplicateError f1 f2) cof'))
    where
     mergeRow = case cof of
       CofAllAbsent -> return (TyRow Map.empty CofAllAbsent)
@@ -173,6 +175,11 @@ instance ApplySubst TypeSubstitutor PresenceVarInst where
         Just (TySubRow      _) -> runtimeKindMismatch presenceVarKind rowKind
       )
       <$> asks (Map.lookup x)
+
+normalizeRow :: TypeRow -> TypeRow
+normalizeRow (TyRow f cof) = case cof of
+  CofAllAbsent -> TyRow (Map.filter (Absent /=) f) cof -- absourb absent to all absent
+  CofRowVar _  -> TyRow f cof -- unchanged
 
 rowKind :: Kind
 rowKind = KRow (Set.singleton "...")
