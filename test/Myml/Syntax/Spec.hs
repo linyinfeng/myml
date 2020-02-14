@@ -15,7 +15,7 @@ tests = testGroup "Myml.Syntax.Spec" [scProps, unitTests]
 
 scProps :: TestTree
 scProps = testGroup
-  "SmallCheck Properties"
+  "SmallCheck properties"
   [ localOption (SmallCheckDepth 1)
       $ SC.testProperty "isNatValue(x) -> isValue(x)" propNatValueIsValue
   ]

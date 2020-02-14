@@ -18,7 +18,7 @@ tests = testGroup "Myml.Parser.Spec" [scProps, unitTests]
 
 scProps :: TestTree
 scProps = testGroup
-  "SmallCheck Properties"
+  "SmallCheck properties"
   [ localOption (SmallCheckDepth 2)
   $ SC.testProperty "parse (pretty term) == term"
   $ propPrintParse parseTerm
