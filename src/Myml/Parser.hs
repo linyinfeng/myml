@@ -154,10 +154,10 @@ kindOperatorTable = [[Infix opArrow AssocRight]]
   where opArrow = KArrow <$ reserve identStyle "=>"
 
 parseKindAtom :: Parser Kind
-parseKindAtom = proper <|> presense <|> row <|> parens parseKind
+parseKindAtom = proper <|> presence <|> row <|> parens parseKind
  where
   proper   = KProper <$ reserve identStyle "*"
-  presense = KPresence <$ reserve identStyle "Presence"
+  presence = KPresence <$ reserve identStyle "Presence"
   row      = do
     reserve identStyle "Row"
     _  <- symbol "("
@@ -181,7 +181,7 @@ typePresence :: Parser TypePresence
 typePresence =
   (Absent <$ reserve identStyle "Absent")
     <|> (Present <$> (reserve identStyle "Present" *> parseType))
-    <|> (PresenceVar <$> ident identStyle)
+    <|> (PresenceVar <$> ident identStyle <*> parseType)
 
 typeRowCofinite :: Parser TypeRowCofinite
 typeRowCofinite = (CofRowVar <$> (reserve identStyle "|" *> ident identStyle))

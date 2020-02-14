@@ -113,10 +113,10 @@ freeVariableTypeTests = testGroup
   $   freeVariable (pType "X -> Y -> X")
   @?= Set.fromList ["X", "Y"]
   , testCase "freeVariable record"
-  $   freeVariable (pType "{ l1 : P, l2 : Absent, l3 : Present X | R }")
+  $   freeVariable (pType "{ l1 : P Unit, l2 : Absent, l3 : Present X | R }")
   @?= Set.fromList ["P", "X", "R"]
   , testCase "freeVariable record"
-  $   freeVariable (pType "[ `l1 : P, `l2 : Absent, `l3 : Present X | R ]")
+  $   freeVariable (pType "[ `l1 : P Unit, `l2 : Absent, `l3 : Present X | R ]")
   @?= Set.fromList ["P", "X", "R"]
   , testCase "freeVariable mu"
   $   freeVariable (pType "\x3bc X . (X -> T)")

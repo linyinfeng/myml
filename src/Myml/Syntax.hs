@@ -6,6 +6,7 @@ module Myml.Syntax
   , Type(..)
   , TypeRow(..)
   , TypePresence(..)
+  , PresenceVarInst(..)
   , TypeRowCofinite(..)
   , TypeScheme(..)
   , Kind(..)
@@ -127,12 +128,17 @@ instance Monad m => Serial m TypeRow where
 
 data TypePresence = Absent
                   | Present Type
-                  | PresenceVar VarName
+                  | PresenceVar VarName Type
                   deriving (Eq, Show)
 
 -- preserve depth
 instance Monad m => Serial m TypePresence where
   series = cons0 Absent \/ (Present <$> series)
+
+data PresenceVarInst = PresenceInstAbsent
+                     | PresenceInstPresent
+                     | PresenceInstVar VarName
+                     deriving (Eq, Show)
 
 data TypeRowCofinite = CofAllAbsent
                      | CofRowVar VarName
@@ -220,6 +226,9 @@ instance FreeVariable Term where
   freeVariable TmZero           = Set.empty
   freeVariable (TmSucc t)       = freeVariable t
 
+instance FreeVariable TermCase where
+  freeVariable (TmCase x t) = Set.delete x (freeVariable t)
+
 instance FreeVariable Type where
   freeVariable (TyVar x) = Set.singleton x
   freeVariable (TyArrow ty1 ty2) =
@@ -238,16 +247,18 @@ instance FreeVariable TypeRow where
       `Set.union` freeVariable cof
 
 instance FreeVariable TypePresence where
-  freeVariable Absent          = Set.empty
-  freeVariable (Present     t) = freeVariable t
-  freeVariable (PresenceVar x) = Set.singleton x
+  freeVariable Absent            = Set.empty
+  freeVariable (Present t      ) = freeVariable t
+  freeVariable (PresenceVar x t) = Set.singleton x `Set.union` freeVariable t
+
+instance FreeVariable PresenceVarInst where
+  freeVariable PresenceInstAbsent  = Set.empty
+  freeVariable PresenceInstPresent = Set.empty
+  freeVariable (PresenceInstVar x) = Set.singleton x
 
 instance FreeVariable TypeRowCofinite where
   freeVariable CofAllAbsent  = Set.empty
   freeVariable (CofRowVar r) = Set.singleton r
-
-instance FreeVariable TermCase where
-  freeVariable (TmCase x t) = Set.delete x (freeVariable t)
 
 instance FreeVariable TypeScheme where
   freeVariable (ScmMono t      ) = freeVariable t
@@ -402,9 +413,9 @@ prettyTypeRow conv (TyRow f cof) = case cof of
   finitePart = concatWith concator (map prettyPair (Map.toList f))
 
 instance Pretty TypePresence where
-  pretty Absent          = pretty "Absent"
-  pretty (Present     t) = pretty "Present" <+> prettyPrec 1 t
-  pretty (PresenceVar x) = pretty x
+  pretty Absent            = pretty "Absent"
+  pretty (Present t      ) = pretty "Present" <+> prettyPrec 1 t
+  pretty (PresenceVar x t) = pretty x <+> prettyPrec 1 t
 
 instance Pretty TypeScheme where
   pretty (ScmMono t) = pretty t

@@ -9,7 +9,6 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.SmallCheck         as SC
 import qualified Data.Map                      as Map
-import qualified Data.Set                      as Set
 
 tests :: TestTree
 tests = testGroup "Myml.Subst.Spec" [scProps, unitTests]
