@@ -5,6 +5,7 @@ module Myml.Eval
   , EvalState
   , runEvalState
   , smallStep
+  , bigStep
   )
 where
 
@@ -16,6 +17,7 @@ import           Control.Monad.State
 import qualified Data.Map                      as Map
 
 newtype EvalExcept = ExcNoRuleApplied Term
+  deriving (Show, Eq)
 
 type EvalState = ExceptT EvalExcept (State (Store (WithMark Term))) Term
 
@@ -52,8 +54,7 @@ smallStep t@(TmRcdAccess (TmRcd m) l) = case Map.lookup l m of
   Nothing    -> throwError (ExcNoRuleApplied t)
   Just inner -> return inner
 smallStep (TmRcdAccess t l              ) = flip TmRcdAccess l <$> smallStep t
-smallStep (TmMatchExtend (TmMatch m) l c) = return (TmMatch
- (Map.insert l c m))
+smallStep (TmMatchExtend (TmMatch m) l c) = return (TmMatch (Map.insert l c m))
 smallStep (TmMatchExtend t l c) = (\t' -> TmMatchExtend t' l c) <$> smallStep t
 smallStep (TmVariant l t                ) = TmVariant l <$> smallStep t
 smallStep (TmRef v) | isValue v           = do
@@ -61,13 +62,13 @@ smallStep (TmRef v) | isValue v           = do
   let (l, s') = allocate s v
   put s'
   return (TmLoc l)
-smallStep (TmRef t) = TmRef <$> smallStep t
+smallStep (  TmRef   t        ) = TmRef <$> smallStep t
 smallStep t@(TmDeref (TmLoc l)) = gets (lookupStore l) >>= \case
   Nothing -> throwError (ExcNoRuleApplied t)
-  Just v -> return v
-smallStep (TmDeref t) = TmDeref <$> smallStep t
-smallStep (TmIf TmTrue t2 _) = return t2
-smallStep (TmIf TmFalse _ t3) = return t3
-smallStep (TmIf t1 t2 t3) = (\t1' -> TmIf t1' t2 t3) <$> smallStep t1
-smallStep (TmSucc t) = TmSucc <$> smallStep t
-smallStep t = throwError (ExcNoRuleApplied t)
+  Just v  -> return v
+smallStep (TmDeref t         ) = TmDeref <$> smallStep t
+smallStep (TmIf TmTrue  t2 _ ) = return t2
+smallStep (TmIf TmFalse _  t3) = return t3
+smallStep (TmIf t1      t2 t3) = (\t1' -> TmIf t1' t2 t3) <$> smallStep t1
+smallStep (TmSucc t          ) = TmSucc <$> smallStep t
+smallStep t                    = throwError (ExcNoRuleApplied t)

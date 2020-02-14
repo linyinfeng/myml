@@ -92,7 +92,7 @@ allocate' :: Store (WithMark a) -> a -> Store (WithMark a)
 allocate' s item = s' where (_, s') = allocate s item
 
 lookupStore :: Location -> Store (WithMark a) -> Maybe a
-lookupStore l (Store sData _) =  removeMark <$> Map.lookup l sData
+lookupStore l (Store sData _) = removeMark <$> Map.lookup l sData
 
 class Locations a where
     locations :: a -> Set.Set Location
