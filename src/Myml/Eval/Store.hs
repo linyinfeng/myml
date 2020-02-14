@@ -12,6 +12,8 @@ module Myml.Eval.Store
   , markSweepClear
   , emptyStore
   , allocate
+  , allocate'
+  , lookupStore
   , Locations(..)
   )
 where
@@ -79,12 +81,18 @@ markSweepClear items s = clearStoreMark $ sweepStore $ markStore items s
 emptyStore :: Store (WithMark a)
 emptyStore = Store Map.empty 0
 
-infixl 6 `allocate`
-allocate :: Store (WithMark a) -> a -> Store (WithMark a)
-allocate (Store sData sMinFree) item = Store newData newMinFree
+allocate :: Store (WithMark a) -> a -> (Location, Store (WithMark a))
+allocate (Store sData sMinFree) item = (sMinFree, Store newData newMinFree)
  where
   newData    = Map.insert sMinFree (WithMark False item) sData
   newMinFree = sMinFree + 1
+
+infixl 6 `allocate'`
+allocate' :: Store (WithMark a) -> a -> Store (WithMark a)
+allocate' s item = s' where (_, s') = allocate s item
+
+lookupStore :: Location -> Store (WithMark a) -> Maybe a
+lookupStore l (Store sData _) =  removeMark <$> Map.lookup l sData
 
 class Locations a where
     locations :: a -> Set.Set Location

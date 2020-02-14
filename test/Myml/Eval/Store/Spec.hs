@@ -14,20 +14,20 @@ tests :: TestTree
 tests = testGroup "Myml.Eval.Store.Spec" [unitTests]
 
 exampleStore1 :: Store (WithMark Term)
-exampleStore1 = emptyStore `allocate` TmUnit
+exampleStore1 = emptyStore `allocate'` TmUnit
 
 exampleStore2 :: Store (WithMark Term)
-exampleStore2 = exampleStore1 `allocate` TmLoc 0
+exampleStore2 = exampleStore1 `allocate'` TmLoc 0
 
 exampleStore3 :: Store (WithMark Term)
-exampleStore3 = exampleStore2 `allocate` TmUnit
+exampleStore3 = exampleStore2 `allocate'` TmUnit
 
 exampleStore4 :: Store (WithMark Term)
 exampleStore4 =
   exampleStore3
-    `allocate` TmApp (TmLoc 1) (TmLoc 2)
-    `allocate` TmLoc 1
-    `allocate` TmUnit
+    `allocate'` TmApp (TmLoc 1) (TmLoc 2)
+    `allocate'` TmLoc 1
+    `allocate'` TmUnit
 
 exampleStore4Marked :: Store (WithMark Term)
 exampleStore4Marked = markStore [TmLoc 3] exampleStore4
