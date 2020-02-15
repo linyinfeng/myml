@@ -31,7 +31,7 @@ unitTests :: TestTree
 unitTests = testGroup
   "Unit tests"
   [ testCase "bigStep application of abstraction" $ assertBigStep
-    (pTerm "(\x3bb x . x) (\x3bb x . x)")
+    (pTerm "((\x3bb x . x) (\x3bb x . x)) ((\x3bb x . x) (\x3bb x . x))")
     emptyStore
     (pTerm "(\x3bb x . x)")
     emptyStore
@@ -69,15 +69,25 @@ unitTests = testGroup
     emptyStore
     (TmRcd (Map.fromList [("l1", TmLoc 0), ("l2", TmLoc 1)]))
     (emptyStore `allocate'` TmUnit `allocate'` TmUnit)
-  , testCase "bigStep record access" $ assertBigStep
-    (pTerm "{ l1 = ref unit }.l1")
+  , testCase "bigStep record access 1" $ assertBigStep
+    (pTerm "{ l1 = ref unit } with { l2 = unit }.l1")
     emptyStore
     (TmLoc 0)
     (emptyStore `allocate'` TmUnit)
-  , testCase "bigStep match extend" $ assertBigStep
-    (pTerm "[ `l1 x -> x ] with [ `l2 y -> y ]")
+  , testCase "bigStep record access 2" $ assertBigStep
+    (pTerm "{ l1 = unit } with { l2 = unit }.l2")
     emptyStore
-    (pTerm "[ `l1 x -> x, `l2 y -> y ]")
+    (pTerm "unit")
+    emptyStore
+  , testCase "bigStep record access 3" $ assertBigStep
+    (pTerm "{ l1 = unit } with { l2 = unit }.l3")
+    emptyStore
+    (pTerm "{ l1 = unit, l2 = unit }.l3")
+    emptyStore
+  , testCase "bigStep match extend" $ assertBigStep
+    (pTerm "[ `l1 x -> x ] with [ `l2 y -> y ]  with [ `l3 z -> z ]")
+    emptyStore
+    (pTerm "[ `l1 x -> x, `l2 y -> y, `l3 z -> z ]")
     emptyStore
   , testCase "bigStep variant" $ assertBigStep (pTerm "`l1 (ref unit)")
                                                emptyStore
@@ -105,11 +115,21 @@ unitTests = testGroup
                                              emptyStore
                                              (pTerm "unit")
                                              (emptyStore `allocate'` TmUnit)
+  , testCase "bigStep deref invalid location" $ assertBigStep
+    (TmSeq (TmRef TmUnit) (TmLoc 1))
+    emptyStore
+    (TmLoc 1)
+    (emptyStore `allocate'` TmUnit)
   , testCase "bigStep assign" $ assertBigStep
-    (pTerm "(ref zero) := succ zero")
+    (pTerm "(ref zero) := (\x3bb x . succ x) zero")
     emptyStore
     (pTerm "unit")
     (emptyStore `allocate'` pTerm "succ zero")
+  , testCase "bigStep assign invalid location" $ assertBigStep
+    (TmAssign (TmLoc 0) TmUnit)
+    emptyStore
+    (TmAssign (TmLoc 0) TmUnit)
+    emptyStore
   , testCase "bigStep unit"
     $ assertBigStep (pTerm "unit") emptyStore (pTerm "unit") emptyStore
   , testCase "bigStep seq" $ assertBigStep
@@ -125,6 +145,11 @@ unitTests = testGroup
     (pTerm "if if true then false else true then succ zero else zero")
     emptyStore
     (pTerm "zero")
+    emptyStore
+  , testCase "bigStep if" $ assertBigStep
+    (pTerm "if if false then false else true then succ zero else zero")
+    emptyStore
+    (pTerm "succ zero")
     emptyStore
   , testCase "bigStep zero"
     $ assertBigStep (pTerm "zero") emptyStore (pTerm "zero") emptyStore
