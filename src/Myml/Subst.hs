@@ -86,6 +86,7 @@ instance ApplySubst Term Term where
   subst (TmAssign t1 t2     ) = TmAssign <$> subst t1 <*> subst t2
   subst (TmLoc n            ) = return (TmLoc n)
   subst TmUnit                = return TmUnit
+  subst (TmSeq t1 t2)         = TmSeq <$> subst t1 <*> subst t2
   subst TmTrue                = return TmTrue
   subst TmFalse               = return TmFalse
   subst (TmIf t1 t2 t3)       = TmIf <$> subst t1 <*> subst t2 <*> subst t3

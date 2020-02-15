@@ -125,6 +125,10 @@ termSubstTests = testGroup
   $            Map.fromList [("x", pTerm "y")]
   `applySubst` pTerm "unit"
   @?=          pTerm "unit"
+  , testCase "Term substitution seq"
+  $            Map.fromList [("x", pTerm "y")]
+  `applySubst` pTerm "x; y"
+  @?=          pTerm "y; y"
   , testCase "Term substitution true"
   $            Map.fromList [("x", pTerm "y")]
   `applySubst` pTerm "true"

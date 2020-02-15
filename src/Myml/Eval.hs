@@ -73,7 +73,9 @@ smallStep (TmAssign (TmLoc l) v) | isValue v = gets (lookupStore l) >>= \case
   Nothing -> throwError ExcNoRuleApplied
   Just _  -> TmUnit <$ modify (\s -> assign s l v)
 smallStep (TmAssign v1 t2) | isValue v1 = TmAssign v1 <$> smallStep t2
-smallStep (TmAssign t1 t2    )          = flip TmAssign t2 <$> smallStep t1
+smallStep (TmAssign t1 t2)              = flip TmAssign t2 <$> smallStep t1
+smallStep (TmSeq v1 t2) | isValue v1    = return t2
+smallStep (TmSeq t1 t2       )          = flip TmSeq t2 <$> smallStep t1
 smallStep (TmIf TmTrue  t2 _ )          = return t2
 smallStep (TmIf TmFalse _  t3)          = return t3
 smallStep (TmIf t1 t2 t3) = (\t1' -> TmIf t1' t2 t3) <$> smallStep t1

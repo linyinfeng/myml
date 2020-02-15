@@ -112,6 +112,11 @@ unitTests = testGroup
     (emptyStore `allocate'` pTerm "succ zero")
   , testCase "bigStep unit"
     $ assertBigStep (pTerm "unit") emptyStore (pTerm "unit") emptyStore
+  , testCase "bigStep seq" $ assertBigStep
+    (pTerm "let x = ref zero in x := succ zero; ! x")
+    emptyStore
+    (pTerm "succ zero")
+    (emptyStore `allocate'` pTerm "succ zero")
   , testCase "bigStep true"
     $ assertBigStep (pTerm "true") emptyStore (pTerm "true") emptyStore
   , testCase "bigStep false"

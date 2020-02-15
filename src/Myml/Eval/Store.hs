@@ -121,6 +121,7 @@ instance Locations Term where
   locations (TmAssign t1 t2     ) = locations t1 `Set.union` locations t2
   locations (TmLoc l            ) = Set.singleton l
   locations TmUnit                = Set.empty
+  locations (TmSeq t1 t2)         = locations t1 `Set.union` locations t2
   locations TmTrue                = Set.empty
   locations TmFalse               = Set.empty
   locations (TmIf t1 t2 t3)       = Set.unions (map locations [t1, t2, t3])

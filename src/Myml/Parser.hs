@@ -31,6 +31,7 @@ termOperatorTable =
   , [Prefix (chainedPrefix (opSucc <|> opVariant <|> opRef <|> opDeref))]
   , [Infix opApp AssocLeft]
   , [Infix opAssign AssocNone]
+  , [Infix opSeq AssocRight]
   , [Prefix (chainedPrefix (opIf <|> opAbs <|> opLet))]
   ]
  where
@@ -70,6 +71,7 @@ termOperatorTable =
   opRef    = TmRef <$ reserve identStyle "ref"
   opDeref  = TmDeref <$ reserve identStyle "!"
   opAssign = TmAssign <$ reserve identStyle ":="
+  opSeq    = TmSeq <$ symbol ";"
 
 parseTermAtom :: Parser Term
 parseTermAtom =

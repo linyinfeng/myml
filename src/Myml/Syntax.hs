@@ -43,8 +43,10 @@ data Term = TmAbs VarName Term
           | TmDeref Term
           | TmAssign Term Term
           | TmLoc Integer
-          -- Primitives
+          -- Sequence
           | TmUnit
+          | TmSeq Term Term
+          -- Primitives
           | TmTrue
           | TmFalse
           | TmIf Term Term Term
@@ -73,6 +75,7 @@ instance Monad m => Serial m Term where
       \/ cons2 TmAssign
       -- do not generate TmLoc
       \/ pure TmUnit -- no decDepth for TmUnit
+      \/ cons2 TmSeq
       \/ cons0 TmTrue
       \/ cons0 TmFalse
       \/ cons3 TmIf
@@ -184,6 +187,7 @@ isValue TmRef{}         = False
 isValue TmDeref{}       = False
 isValue TmAssign{}      = False
 isValue TmLoc{}         = True
+isValue TmSeq{}         = False
 isValue TmUnit          = True
 isValue TmTrue          = True
 isValue TmFalse         = True
@@ -220,6 +224,7 @@ instance FreeVariable Term where
   freeVariable (TmAssign t1 t2) = freeVariable t1 `Set.union` freeVariable t2
   freeVariable (TmLoc _       ) = Set.empty
   freeVariable TmUnit           = Set.empty
+  freeVariable (TmSeq t1 t2)    = freeVariable t1 `Set.union` freeVariable t2
   freeVariable TmTrue           = Set.empty
   freeVariable TmFalse          = Set.empty
   freeVariable (TmIf t1 t2 t3)  = Set.unions (map freeVariable [t1, t2, t3])
@@ -270,6 +275,13 @@ class PrettyPrec a where
 instance Pretty Term where
   pretty = prettyPrec 0
 
+
+  -- 5 [Postfix (chainedPostfix (opRcdAccess <|> opRcdExtend <|> opMatchExtend))]
+  -- 4 [Prefix (chainedPrefix (opSucc <|> opVariant <|> opRef <|> opDeref))]
+  -- 3 [Infix opApp AssocLeft]
+  -- 2 [Infix opAssign AssocNone]
+  -- 1 [Infix opSeq AssocRight]
+  -- 0 [Prefix (chainedPrefix (opIf <|> opAbs <|> opLet))]
 instance PrettyPrec Term where
   prettyPrec n (TmAbs x t) = parensPrec
     (n > prec)
@@ -278,7 +290,7 @@ instance PrettyPrec Term where
   prettyPrec n (TmApp t1 t2) = parensPrec
     (n > prec)
     (prettyPrec prec t1 <+> prettyPrec (prec + 1) t2)
-    where prec = 2
+    where prec = 3
   prettyPrec _ (TmVar name   ) = pretty name
   prettyPrec n (TmLet x t1 t2) = parensPrec
     (n > prec)
@@ -310,11 +322,11 @@ instance PrettyPrec Term where
     <+> prettyPrec 0 t2
     <+> pretty '}'
     )
-    where prec = 4
+    where prec = 5
   prettyPrec n (TmRcdAccess t1 l) = parensPrec
     (n > prec)
     (prettyPrec prec t1 <> pretty '.' <> pretty l)
-    where prec = 4
+    where prec = 5
   prettyPrec _ (TmMatch cases) =
     pretty '['
       <+> concatWith concator (map prettyPair (Map.toList cases))
@@ -331,23 +343,31 @@ instance PrettyPrec Term where
     <+> pretty c
     <+> pretty ']'
     )
-    where prec = 4
+    where prec = 5
   prettyPrec n (TmVariant l t) = parensPrec
     (n > prec)
     (prettyVariantLabel l <+> prettyPrec prec t)
-    where prec = 3
+    where prec = 4
   prettyPrec n (TmRef t) = parensPrec (n > prec)
                                       (pretty "ref" <+> prettyPrec prec t)
-    where prec = 3
+    where prec = 4
   prettyPrec n (TmDeref t) = parensPrec (n > prec)
                                         (pretty "!" <+> prettyPrec prec t)
-    where prec = 3
+    where prec = 4
   prettyPrec n (TmAssign t1 t2) = parensPrec
     (n > prec)
     (prettyPrec (prec + 1) t1 <+> pretty ":=" <+> prettyPrec (prec + 1) t2)
+    where prec = 2
+  prettyPrec _ (TmLoc l)     = pretty "loc(" <> pretty l <> pretty ")"
+  prettyPrec _ TmUnit        = pretty "unit"
+  prettyPrec n (TmSeq t1 t2) = parensPrec
+    (n > prec)
+    (  align (prettyPrec (prec + 1) t1)
+    <> pretty ";"
+    <> line
+    <> prettyPrec prec t2
+    )
     where prec = 1
-  prettyPrec _ (TmLoc l)       = pretty "loc(" <> pretty l <> pretty ")"
-  prettyPrec _ TmUnit          = pretty "unit"
   prettyPrec _ TmTrue          = pretty "true"
   prettyPrec _ TmFalse         = pretty "false"
   prettyPrec n (TmIf t1 t2 t3) = parensPrec
@@ -368,7 +388,7 @@ instance PrettyPrec Term where
   prettyPrec n (TmSucc t) = parensPrec
     (n > prec)
     (pretty "succ" <+> prettyPrec (prec + 1) t)
-    where prec = 3
+    where prec = 4
 
 prettyVariantLabel :: LabelName -> Doc ann
 prettyVariantLabel name = pretty '`' <> pretty name

@@ -80,6 +80,8 @@ freeVariableTermTests = testGroup
   @?= Set.fromList ["x", "y"]
   , testCase "freeVariable location" $ freeVariable (TmLoc 0) @?= Set.empty
   , testCase "freeVariable unit" $ freeVariable (pTerm "unit") @?= Set.empty
+  , testCase "freeVariable seq" $ freeVariable (pTerm "x; y") @?= Set.fromList
+    ["x", "y"]
   , testCase "freeVariable true and false"
   $   freeVariable (pTerm "true false")
   @?= Set.empty
@@ -143,6 +145,7 @@ isValueTests = testGroup
   , testCase "isValue assign" $ isValue (pTerm "unit := unit") @?= False
   , testCase "isValue location" $ isValue (TmLoc 0) @?= True
   , testCase "isValue unit" $ isValue (pTerm "unit") @?= True
+  , testCase "isValue seq" $ isValue (pTerm "unit; unit") @?= False
   , testCase "isValue true" $ isValue (pTerm "true") @?= True
   , testCase "isValue false" $ isValue (pTerm "false") @?= True
   , testCase "isValue if"
