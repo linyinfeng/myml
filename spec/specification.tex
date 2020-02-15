@@ -2,8 +2,11 @@
 
 \usepackage{mathpartir}
 \usepackage{mathtools}
+\usepackage{amssymb}
 
 \newcommand{\theLang}{myml}
+\newcommand{\code}{\mathtt}
+\newcommand{\backtick}{{}^{\backprime}}
 
 \title{The Definition of \theLang}
 \author{Lin Yinfeng}
@@ -20,9 +23,72 @@ This specification is working in progress now.
 
 \subsubsection{Term}
 
+\begin{align*}
+\code{t} \Coloneqq \quad & & \text{term} \\
+& \code{\lambda x.\ x} & \text{variable} \\
+| \quad & \code{t\ t} & \text{application} \\
+| \quad & \code{x} & \text{variable} \\
+| \quad & \code{let\ x = t\ in\ t} & \text{let-in} \\
+| \quad & \{\ {\code{l}_i = \code{t}_i}^{i \in 1\dots n}\ \} & \text{record} \\
+| \quad & \code{t\ with\ \{\ l = t\ \}} & \text{record extend} \\
+| \quad & \code{t.l} & \text{record access} \\
+| \quad & [ {\code{\ \backtick l}_i\ \code{x}_i \rightarrow \code{t}_i}^{i \in 1\dots n} \ ] & \text{match} \\
+| \quad & \code{t\ with\ [\ \backtick l\ x \rightarrow t\ ]} & \text{match extend} \\
+| \quad & \code{\backtick l\ t} & \text{variant} \\
+| \quad & \code{ref\ t} & \text{reference} \\
+| \quad & \code{!\ t} & \text{dereference} \\
+| \quad & \code{t \coloneqq t} & \text{assignment} \\
+| \quad & \code{l} & \text{location} \\
+| \quad & \code{unit} & \text{unit} \\
+| \quad & \code{true} & \text{true} \\
+| \quad & \code{false} & \text{false} \\
+| \quad & \code{if\ t\ then\ t\ else\ t} & \text{if-then-else} \\
+| \quad & \code{zero} & \text{zero} \\
+| \quad & \code{succ\ t} & \text{successor}
+\end{align*}
+
 \subsubsection{Type}
 
+\begin{align*}
+\code{T, MT} \Coloneqq \quad & & \text{monomorphic type} \\
+& \code{X} & \text{type variable} \\
+& \code{MT \rightarrow MT} & \text{arrow} \\
+& \code{\{\ R\ \}} & \text{record} \\
+& \code{[\ R\ ]} & \text{variant} \\
+& \code{\mu X.\ MT} & \text{recursive} \\
+& \code{Ref\ MT} & \text{reference} \\
+& \code{Unit} & \text{unit} \\
+& \code{Bool} & \text{boolean} \\
+& \code{Nat} & \text{natural number}
+\end{align*}
+
+\begin{align*}
+\code{R} \Coloneqq \quad & & \text{row} \\
+& \code{RF} & \text{all absent except finite part} \\
+& \code{RF \mid X} & \text{with row variable}
+\end{align*}
+
+\begin{align*}
+\code{RF} \Coloneqq \quad & & \text{row finite part} \\
+& {\code{l}_i : \code{P}_i}^{i \in 1\dots n} & \text{label and presence pairs}
+\end{align*}
+
+\begin{align*}
+\code{P} \Coloneqq \quad & & \text{presence} \\
+& \code{Absent} & \text{absent} \\
+& \code{Present\ MT} & \text{present} \\
+& \code{X\ MT} & \text{presence variable}
+\end{align*}
+
 \subsection{Kind}
+
+\begin{align*}
+\code{K} \Coloneqq \quad & & \text{kind} \\
+& \code{*} & \text{proper} \\
+& \code{Presence} & \text{presence} \\
+& \code{row}({\code{l}_i}^{i \in 1\dots n}) & \text{row} \\
+& \code{K \Rightarrow K} & \text{arrow}
+\end{align*}
 
 \section{Evaluation}
 
