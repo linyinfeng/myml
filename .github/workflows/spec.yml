@@ -11,10 +11,9 @@ jobs:
 
     - name: Build
       uses: xu-cheng/latex-action@master
-      working-directory: spec
       with:
-        root_file: specification.tex
-        args: -xelatex -file-line-error -interaction=nonstopmode
+        root_file: spec/specification.tex
+        args: -xelatex -file-line-error -interaction=nonstopmode -output-directory=spec
 
     - name: Upload PDF file
       uses: actions/upload-artifact@v1
