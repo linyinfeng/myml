@@ -2,7 +2,7 @@ cradle:
   stack:
     - path: ./src
       component: "myml:lib"
-    - path: ./app
-      component: "myml:exe:mymli"
     - path: ./test
       component: "myml:test:myml-test"
+    - path: ./mymli
+      component: "myml:exe:mymli"

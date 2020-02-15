@@ -34,22 +34,6 @@ library:
   ghc-options:
   - -Wall
 
-executables:
-  mymli:
-    main:                Main.hs
-    source-dirs:         app
-    ghc-options:
-    - -Wall
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - myml
-    - haskeline
-    - filepath
-    - directory
-    - ansi-terminal
-
 tests:
   myml-test:
     main:                Spec.hs
@@ -64,3 +48,19 @@ tests:
     - tasty
     - tasty-hunit
     - tasty-smallcheck
+
+executables:
+  mymli:
+    main:                Main.hs
+    source-dirs:         mymli
+    ghc-options:
+    - -Wall
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - myml
+    - haskeline
+    - filepath
+    - directory
+    - ansi-terminal
