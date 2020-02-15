@@ -13,6 +13,7 @@ module Myml.Eval.Store
   , emptyStore
   , allocate
   , allocate'
+  , assign
   , lookupStore
   , Locations(..)
   )
@@ -90,6 +91,9 @@ allocate (Store sData sMinFree) item = (sMinFree, Store newData newMinFree)
 infixl 6 `allocate'`
 allocate' :: Store (WithMark a) -> a -> Store (WithMark a)
 allocate' s item = s' where (_, s') = allocate s item
+
+assign :: Store (WithMark a) -> Location -> a -> Store (WithMark a)
+assign (Store sData sMinFree) l item = if l `Map.member` sData then Store (Map.insert l (WithMark False item) sData) sMinFree else error "assign to unallocated location"
 
 lookupStore :: Location -> Store (WithMark a) -> Maybe a
 lookupStore l (Store sData _) = removeMark <$> Map.lookup l sData
