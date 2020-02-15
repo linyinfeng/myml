@@ -1,5 +1,5 @@
 # myml
 
-My toy programming language(WIP).
+![Build](https://github.com/linyinfeng/myml/workflows/Build/badge.svg)
 
-Currently just simply typed lambda calculus with natural numbers and boolean.
+My toy programming language(WIP).
