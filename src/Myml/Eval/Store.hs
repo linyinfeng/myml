@@ -93,7 +93,9 @@ allocate' :: Store (WithMark a) -> a -> Store (WithMark a)
 allocate' s item = s' where (_, s') = allocate s item
 
 assign :: Store (WithMark a) -> Location -> a -> Store (WithMark a)
-assign (Store sData sMinFree) l item = if l `Map.member` sData then Store (Map.insert l (WithMark False item) sData) sMinFree else error "assign to unallocated location"
+assign (Store sData sMinFree) l item = if l `Map.member` sData
+  then Store (Map.insert l (WithMark False item) sData) sMinFree
+  else error "assign to unallocated location"
 
 lookupStore :: Location -> Store (WithMark a) -> Maybe a
 lookupStore l (Store sData _) = removeMark <$> Map.lookup l sData

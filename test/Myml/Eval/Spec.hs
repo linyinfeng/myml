@@ -121,12 +121,9 @@ unitTests = testGroup
     emptyStore
     (pTerm "zero")
     emptyStore
-    , testCase "bigStep zero" $ assertBigStep
-    (pTerm "zero")
-    emptyStore
-    (pTerm "zero")
-    emptyStore
-        , testCase "bigStep succ" $ assertBigStep
+  , testCase "bigStep zero"
+    $ assertBigStep (pTerm "zero") emptyStore (pTerm "zero") emptyStore
+  , testCase "bigStep succ" $ assertBigStep
     (pTerm "succ ((\x3bb x . x) (succ zero))")
     emptyStore
     (pTerm "succ (succ zero)")
