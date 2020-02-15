@@ -1,7 +1,12 @@
+# stack and cabal-install files
+.stack-work/
+myml.cabal
+dist*
+
+# development environment files
 .idea
 *.iml
+.vscode
 
-.stack-work/
-dist*
-myml.cabal
+# editor files
 *~

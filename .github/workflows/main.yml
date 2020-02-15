@@ -1,4 +1,4 @@
-name: Haskell CI
+name: Build
 
 on: [push]
 
@@ -8,18 +8,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Set path
       run: |
         mkdir -p ~/.local/bin
         echo "::add-path::~/.local/bin"
 
-    - name: Cache .stack
-      id: cache-dotstack
-      uses: actions/cache@v1
-      with:
-        path: ~/.stack
-        key: ${{ runner.os }}-dotstack
+    # - name: Cache .stack
+    #   id: cache-dotstack
+    #   uses: actions/cache@v1
+    #   with:
+    #     path: ~/.stack
+    #     key: ${{ runner.os }}-dotstack
 
     - name: Install stack
       run: |
@@ -36,7 +36,7 @@ jobs:
       run: stack build
 
     - name: Check format
-      run: ./tools/check-format
+      run: ./tools/format --check-mode
 
     - name: Run tests
       run: stack test
