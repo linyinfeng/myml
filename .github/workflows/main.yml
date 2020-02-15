@@ -4,22 +4,15 @@ on: [push]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout
+      uses: actions/checkout@v2
+
     - name: Set path
       run: |
         mkdir -p ~/.local/bin
         echo "::add-path::~/.local/bin"
-
-    # - name: Cache .stack
-    #   id: cache-dotstack
-    #   uses: actions/cache@v1
-    #   with:
-    #     path: ~/.stack
-    #     key: ${{ runner.os }}-dotstack
 
     - name: Install stack
       run: |

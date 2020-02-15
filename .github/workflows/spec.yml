@@ -1,0 +1,23 @@
+name: Specification
+
+on: [push]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Build
+      uses: xu-cheng/latex-action@master
+      working-directory: spec
+      with:
+        root_file: specification.tex
+        args: -xelatex -file-line-error -interaction=nonstopmode
+
+    - name: Upload PDF file
+      uses: actions/upload-artifact@v1
+      with:
+        name: specification
+        path: spec/specification.pdf
