@@ -275,13 +275,6 @@ class PrettyPrec a where
 instance Pretty Term where
   pretty = prettyPrec 0
 
-
-  -- 5 [Postfix (chainedPostfix (opRcdAccess <|> opRcdExtend <|> opMatchExtend))]
-  -- 4 [Prefix (chainedPrefix (opSucc <|> opVariant <|> opRef <|> opDeref))]
-  -- 3 [Infix opApp AssocLeft]
-  -- 2 [Infix opAssign AssocNone]
-  -- 1 [Infix opSeq AssocRight]
-  -- 0 [Prefix (chainedPrefix (opIf <|> opAbs <|> opLet))]
 instance PrettyPrec Term where
   prettyPrec n (TmAbs x t) = parensPrec
     (n > prec)
