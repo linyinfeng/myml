@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass{report}
 
 \usepackage[a4paper, margin=2cm]{geometry}
 \usepackage{mathpartir}
@@ -21,13 +21,13 @@
 
 \maketitle
 
-This specification is working in progress now.
+\tableofcontents
 
-\section{Core Calculus}
+\chapter{\theLang{} the Calculus}
 
-\subsection{Syntax}
+\section{Syntax}
 
-\subsubsection{Term}
+\subsection{Term}
 
 \begin{align*}
 \code{t} \Coloneqq \quad & & \text{term} \\
@@ -74,7 +74,7 @@ This specification is working in progress now.
 | \quad & \code{succ\ nv} & \text{successor}
 \end{align*}
 
-\subsubsection{Type}
+\subsection{Type}
 
 \begin{align*}
 \code{T, MT} \Coloneqq \quad & & \text{monomorphic type} \\
@@ -234,7 +234,19 @@ Evaluation of \theLang{} is defined in small step operational semantic. The rela
 \inferrule
 {\code{t}\mid\mu\longrightarrow\code{t}'\mid\mu'}
 {\code{succ}\ \code{t}\mid\mu\longrightarrow \code{succ}\ \code{t}'\mid\mu'}
-\ruleTag{E-If}
+\ruleTag{E-Succ}
 \end{gather}
+
+\subsection{Substitution}
+
+Working in progress.
+
+\section{Typing}
+
+Working in progress.
+
+\chapter{\theLang{} the Language}
+
+Working in progress.
 
 \end{document}
