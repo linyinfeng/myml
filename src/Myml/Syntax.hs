@@ -137,11 +137,8 @@ data TypePresence = Absent
 
 -- preserve depth
 instance Monad m => Serial m TypePresence where
-  series =
-    pure Absent
-      \/ cons1 Present
-      \/ pure (PresenceVar "X")
-      \/ cons1 (PresenceVarWithType "X")
+  series = pure Absent \/ cons1 Present \/ pure (PresenceVar "X") \/ cons1
+    (PresenceVarWithType "X")
 
 data PresenceVarWithTypeInst = PresenceWithTypeInstAbsent
                              | PresenceWithTypeInstPresent
