@@ -25,10 +25,10 @@ propEmptySubstTerm :: Term -> Bool
 propEmptySubstTerm t = applySubst (Map.empty :: Subst Term) t == t
 
 unitTests :: TestTree
-unitTests = testGroup "Unit tests" [compsiteTests, substTests]
+unitTests = testGroup "Unit tests" [compositeTests, substTests]
 
-compsiteTests :: TestTree
-compsiteTests = testGroup
+compositeTests :: TestTree
+compositeTests = testGroup
   "Composite tests"
   [ testCase "Subst composite empty"
   $   (Map.empty `compositeSubst` Map.empty :: Subst Term)
