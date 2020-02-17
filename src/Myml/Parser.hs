@@ -191,7 +191,8 @@ typePresence :: Parser TypePresence
 typePresence =
   (Absent <$ reserve identStyle "Absent")
     <|> (Present <$> (reserve identStyle "Present" *> parseType))
-    <|> (PresenceVar <$> ident identStyle <*> parseType)
+    <|> try (PresenceVarWithType <$> ident identStyle <*> parseType)
+    <|> (PresenceVar <$> ident identStyle)
 
 typeRowCofinite :: Parser TypeRowCofinite
 typeRowCofinite = (CofRowVar <$> (reserve identStyle "|" *> ident identStyle))

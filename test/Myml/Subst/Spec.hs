@@ -193,22 +193,26 @@ typeSubstTests = testGroup
   $            Map.fromList [("X", TySubProper (pType "Y"))]
   `applySubst` pType "Nat"
   @?=          pType "Nat"
-  , testCase "Type substitution presence absent 1"
-  $            Map.fromList [("P", TySubPresence PresenceInstAbsent)]
+  , testCase "Type substitution presence with type absent 1"
+  $ Map.fromList [("P", TySubPresenceWithType PresenceWithTypeInstAbsent)]
   `applySubst` pType "{ l : P Unit } -> [ `l : P Unit ]"
-  @?=          pType "{ } -> [ ]"
-  , testCase "Type substitution presence absent 2"
-  $            Map.fromList [("P", TySubPresence PresenceInstAbsent)]
+  @?= pType "{ } -> [ ]"
+  , testCase "Type substitution presence with type absent 2"
+  $ Map.fromList [("P", TySubPresenceWithType PresenceWithTypeInstAbsent)]
   `applySubst` pType "{ l : P Unit | R1 } -> [ `l : P Unit | R2 ]"
-  @?=          pType "{ l : Absent | R1 } -> [ `l : Absent | R2 ]"
-  , testCase "Type substitution presence present"
-  $            Map.fromList [("P", TySubPresence PresenceInstPresent)]
+  @?= pType "{ l : Absent | R1 } -> [ `l : Absent | R2 ]"
+  , testCase "Type substitution presence with type present"
+  $ Map.fromList [("P", TySubPresenceWithType PresenceWithTypeInstPresent)]
   `applySubst` pType "{ l : P Unit | R1 } -> [ `l : P Unit | R2 ]"
-  @?=          pType "{ l : Present Unit | R1 } -> [ `l : Present Unit | R2 ]"
-  , testCase "Type substitution presence varaible"
-  $            Map.fromList [("P", TySubPresence (PresenceInstVar "P'"))]
+  @?= pType "{ l : Present Unit | R1 } -> [ `l : Present Unit | R2 ]"
+  , testCase "Type substitution presence with type variable"
+  $ Map.fromList [("P", TySubPresenceWithType (PresenceWithTypeInstVar "P'"))]
   `applySubst` pType "{ l : P Unit | R1 } -> [ `l : P Unit | R2 ]"
-  @?=          pType "{ l : P' Unit | R1 } -> [ `l : P' Unit | R2 ]"
+  @?= pType "{ l : P' Unit | R1 } -> [ `l : P' Unit | R2 ]"
+  , testCase "Type substitution presence variable"
+  $ Map.fromList [("P", TySubPresence (PresenceVarWithType "P1" TyUnit))]
+  `applySubst` pType "{ l : P | R1 } -> [ `l : P | R2 ]"
+  @?= pType "{ l : P1 Unit | R1 } -> [ `l : P1 Unit | R2 ]"
   , testCase "Type substitution row 1"
   $            Map.fromList [("R", TySubRow (pTypeRow "l2 : Absent"))]
   `applySubst` pType "{ l : P Unit | R } -> [ `l : P Unit | R ]"
@@ -224,7 +228,7 @@ typeSubstTests = testGroup
   @?=          pType "{ l : P Unit | R' } -> [ `l : P Unit | R' ]"
   , testCase "Type substitution row and presence"
   $            Map.fromList
-                 [ ("P", TySubPresence PresenceInstPresent)
+                 [ ("P", TySubPresenceWithType PresenceWithTypeInstPresent)
                  , ("R", TySubRow (pTypeRow "l2 : P Nat | R'"))
                  ]
   `applySubst` pType "{ l : P Unit | R } -> [ `l : P Unit | R ]"

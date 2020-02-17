@@ -98,26 +98,31 @@ instance ApplySubst Term TermCase where
     handleBind x TmVar >>= \(newX, inner) -> TmCase newX <$> inner (subst t)
 
 data TypeSubstitutor = TySubProper Type
-                     | TySubPresence PresenceVarInst
+                     | TySubPresenceWithType PresenceVarWithTypeInst
+                     | TySubPresence TypePresence
                      | TySubRow TypeRow
                      deriving (Show, Eq)
 
 instance FreeVariable TypeSubstitutor where
-  freeVariable (TySubProper   t) = freeVariable t
-  freeVariable (TySubPresence i) = freeVariable i
-  freeVariable (TySubRow      r) = freeVariable r
+  freeVariable (TySubProper           t) = freeVariable t
+  freeVariable (TySubPresenceWithType i) = freeVariable i
+  freeVariable (TySubPresence         p) = freeVariable p
+  freeVariable (TySubRow              r) = freeVariable r
 
 instance ApplySubst TypeSubstitutor TypeSubstitutor where
-  subst (TySubProper   t) = TySubProper <$> subst t
-  subst (TySubPresence i) = TySubPresence <$> subst i
-  subst (TySubRow      r) = TySubRow <$> subst r
+  subst (TySubProper           t) = TySubProper <$> subst t
+  subst (TySubPresenceWithType i) = TySubPresenceWithType <$> subst i
+  subst (TySubPresence         p) = TySubPresence <$> subst p
+  subst (TySubRow              r) = TySubRow <$> subst r
 
 instance ApplySubst TypeSubstitutor Type where
   subst (TyVar x) =
     (\case
-        Nothing                -> (TyVar x)
-        Just (TySubProper   t) -> t
-        Just (TySubPresence _) -> runtimeKindMismatch KProper presenceVarKind
+        Nothing              -> (TyVar x)
+        Just (TySubProper t) -> t
+        Just (TySubPresenceWithType _) ->
+          runtimeKindMismatch KProper properArrowPresence
+        Just (TySubPresence _) -> runtimeKindMismatch KProper KPresence
         Just (TySubRow      _) -> runtimeKindMismatch KProper rowKind
       )
       <$> asks (Map.lookup x)
@@ -141,9 +146,11 @@ instance ApplySubst TypeSubstitutor TypeRow where
       CofAllAbsent -> return (TyRow Map.empty CofAllAbsent)
       CofRowVar x ->
         (\case
-            Nothing                  -> TyRow Map.empty (CofRowVar x)
-            Just (TySubProper   _  ) -> runtimeKindMismatch rowKind KProper
-            Just (TySubPresence _) -> runtimeKindMismatch rowKind presenceVarKind
+            Nothing              -> TyRow Map.empty (CofRowVar x)
+            Just (TySubProper _) -> runtimeKindMismatch rowKind KProper
+            Just (TySubPresenceWithType _) ->
+              runtimeKindMismatch rowKind properArrowPresence
+            Just (TySubPresence _  ) -> runtimeKindMismatch rowKind KPresence
             Just (TySubRow      row) -> row
           )
           <$> asks (Map.lookup x)
@@ -153,37 +160,53 @@ instance ApplySubst TypeSubstitutor TypeRow where
 instance ApplySubst TypeSubstitutor TypePresence where
   subst Absent      = return Absent
   subst (Present t) = Present <$> subst t
-  subst (PresenceVar x t) =
+  subst (PresenceVarWithType x t) =
     asks (Map.lookup x)
       >>= (\case
-            Nothing -> PresenceVar x <$> subst t
-            Just (TySubProper _) -> runtimeKindMismatch presenceVarKind KProper
-            Just (TySubPresence p) -> case p of
-              PresenceInstAbsent  -> return Absent
-              PresenceInstPresent -> Present <$> subst t
-              PresenceInstVar x'  -> PresenceVar x' <$> subst t
-            Just (TySubRow _) -> runtimeKindMismatch presenceVarKind rowKind
+            Nothing -> PresenceVarWithType x <$> subst t
+            Just (TySubProper _) ->
+              runtimeKindMismatch properArrowPresence KProper
+            Just (TySubPresenceWithType p) -> case p of
+              PresenceWithTypeInstAbsent  -> return Absent
+              PresenceWithTypeInstPresent -> Present <$> subst t
+              PresenceWithTypeInstVar x'  -> PresenceVarWithType x' <$> subst t
+            Just (TySubPresence _) ->
+              runtimeKindMismatch properArrowPresence KPresence
+            Just (TySubRow _) ->
+              runtimeKindMismatch properArrowPresence rowKind
           )
-
-instance ApplySubst TypeSubstitutor PresenceVarInst where
-  subst PresenceInstAbsent  = return PresenceInstAbsent
-  subst PresenceInstPresent = return PresenceInstPresent
-  subst (PresenceInstVar x) =
+  subst (PresenceVar x) =
     (\case
-        Nothing                -> PresenceInstVar x
-        Just (TySubProper   _) -> runtimeKindMismatch presenceVarKind KProper
-        Just (TySubPresence i) -> i
-        Just (TySubRow      _) -> runtimeKindMismatch presenceVarKind rowKind
+        Nothing              -> PresenceVar x
+        Just (TySubProper _) -> runtimeKindMismatch KPresence KProper
+        Just (TySubPresenceWithType _) ->
+          runtimeKindMismatch KPresence properArrowPresence
+        Just (TySubPresence p) -> p
+        Just (TySubRow      _) -> runtimeKindMismatch KPresence rowKind
+      )
+      <$> asks (Map.lookup x)
+
+instance ApplySubst TypeSubstitutor PresenceVarWithTypeInst where
+  subst PresenceWithTypeInstAbsent  = return PresenceWithTypeInstAbsent
+  subst PresenceWithTypeInstPresent = return PresenceWithTypeInstPresent
+  subst (PresenceWithTypeInstVar x) =
+    (\case
+        Nothing -> PresenceWithTypeInstVar x
+        Just (TySubProper _) -> runtimeKindMismatch properArrowPresence KProper
+        Just (TySubPresenceWithType i) -> i
+        Just (TySubPresence _) ->
+          runtimeKindMismatch properArrowPresence KPresence
+        Just (TySubRow _) -> runtimeKindMismatch properArrowPresence rowKind
       )
       <$> asks (Map.lookup x)
 
 normalizeRow :: TypeRow -> TypeRow
 normalizeRow (TyRow f cof) = case cof of
-  CofAllAbsent -> TyRow (Map.filter (Absent /=) f) cof -- absourb absent to all absent
+  CofAllAbsent -> TyRow (Map.filter (Absent /=) f) cof -- absorb absent to all absent
   CofRowVar _  -> TyRow f cof -- unchanged
 
 rowKind :: Kind
 rowKind = KRow (Set.singleton "...")
 
-presenceVarKind :: Kind
-presenceVarKind = KArrow KProper KPresence
+properArrowPresence :: Kind
+properArrowPresence = KArrow KProper KPresence
