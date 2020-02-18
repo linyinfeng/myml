@@ -30,15 +30,19 @@ jobs:
         path: dist-newstyle
         key: ${{ runner.os }}-${{ matrix.ghc }}-dist-newstyle
 
+    - name: Cabal update
+      run: cabal update
+
     - name: Setup brittany
-      run: |
-        cabal install brittany
+      run: cabal install brittany
 
     - name: Check format
       run: ./tools/format --check-mode
 
     - name: Build
-      run: cabal build
+      run: |
+        cabal configure
+        cabal build
 
     - name: Run tests
       run: cabal run myml-test
