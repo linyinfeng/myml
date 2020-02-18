@@ -33,9 +33,6 @@ jobs:
     - name: Cabal update
       run: cabal update
 
-    - name: Setup brittany
-      run: cabal install brittany
-
     - name: Check format
       run: ./tools/format --check-mode
 
