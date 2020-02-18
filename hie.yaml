@@ -1,8 +1,0 @@
-cradle:
-  stack:
-    - path: ./src
-      component: "myml:lib"
-    - path: ./test
-      component: "myml:test:myml-test"
-    - path: ./mymli
-      component: "myml:exe:mymli"

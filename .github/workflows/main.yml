@@ -7,29 +7,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@master
 
-    - name: Set path
+    - name: Setup Haskell
+      uses: actions/setup-haskell@master
+
+    - name: Cache ~/.cabal/packages
+      uses: actions/cache@master
+      with:
+        path: ~/.cabal/packages
+        key: ${{ runner.os }}-${{ matrix.ghc }}-cabal-packages
+
+    - name: Cache ~/.cabal/store
+      uses: actions/cache@master
+      with:
+        path: ~/.cabal/store
+        key: ${{ runner.os }}-${{ matrix.ghc }}-cabal-store
+
+    - name: Cache dist-newstyle
+      uses: actions/cache@master
+      with:
+        path: dist-newstyle
+        key: ${{ runner.os }}-${{ matrix.ghc }}-dist-newstyle
+
+    - name: Setup brittany
       run: |
-        mkdir -p ~/.local/bin
-        echo "::add-path::~/.local/bin"
-
-    - name: Install stack
-      run: |
-        curl --output /tmp/stack.tar.gz -L https://get.haskellstack.org/stable/linux-x86_64-static.tar.gz
-        mkdir -p /tmp/stack
-        tar -xf /tmp/stack.tar.gz -C /tmp/stack
-        cp /tmp/stack/stack-*-linux-x86_64-static/stack ~/.local/bin
-
-    - name: Update stack
-      run: |
-        stack update
-
-    - name: Build
-      run: stack build
+        cabal install brittany
 
     - name: Check format
       run: ./tools/format --check-mode
 
+    - name: Build
+      run: cabal build
+
     - name: Run tests
-      run: stack test
+      run: cabal run myml-test

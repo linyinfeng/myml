@@ -1,6 +1,7 @@
 # stack and cabal-install files
 .stack-work/
 dist*
+cabal.project.local
 
 # development environment files
 .idea
