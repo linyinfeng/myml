@@ -1,0 +1,101 @@
+cabal-version: 2.2
+
+name:           myml
+version:        0.1.0.0
+synopsis:       My toy programming language(WIP).
+description:    Please see the README on GitHub at <https://github.com/linyinfeng/myml#readme>
+category:       Language
+homepage:       https://github.com/linyinfeng/myml#readme
+bug-reports:    https://github.com/linyinfeng/myml/issues
+author:         Lin Yinfeng
+maintainer:     lin.yinfeng@outlook.com
+copyright:      (c) Lin Yinfeng
+license:        MIT
+license-file:   LICENSE
+build-type:     Simple
+stability:      alpha
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/linyinfeng/myml
+
+common haskell
+  default-language: Haskell2010
+  ghc-options: -Wall
+
+common dependencies
+  build-depends:
+      base
+    , containers
+    , equivalence
+    , mtl
+    , parsers
+    , prettyprinter
+    , smallcheck
+    , trifecta
+    , unordered-containers
+
+common executable-flags
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+
+library
+  import:
+      haskell
+    , dependencies
+  exposed-modules:
+      Myml.Eval
+      Myml.Eval.Store
+      Myml.Parser
+      Myml.Subst
+      Myml.Syntax
+      Myml.Typing
+  other-modules:
+      Paths_myml
+  hs-source-dirs:
+      src
+  ghc-options: -Wall
+
+executable mymli
+  import:
+      haskell
+    , dependencies
+    , executable-flags
+  main-is: Main.hs
+  other-modules:
+      Myml.Mymli
+      Myml.Mymli.Environment
+      Paths_myml
+  hs-source-dirs:
+      mymli
+  build-depends:
+      myml
+    , ansi-terminal
+    , directory
+    , filepath
+    , haskeline
+
+test-suite myml-test
+  import:
+      haskell
+    , dependencies
+    , executable-flags
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Myml.Eval.Spec
+      Myml.Eval.Store.Spec
+      Myml.Parser.Spec
+      Myml.Subst.Spec
+      Myml.Syntax.Spec
+      Myml.Test.Helper
+      Paths_myml
+  hs-source-dirs:
+      test
+  build-depends:
+    , myml
+    , tasty
+    , tasty-hunit
+    , tasty-smallcheck

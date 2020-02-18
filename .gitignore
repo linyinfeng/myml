@@ -1,6 +1,5 @@
 # stack and cabal-install files
 .stack-work/
-myml.cabal
 dist*
 
 # development environment files
