@@ -15,23 +15,34 @@ jobs:
     - name: Setup Haskell
       uses: actions/setup-haskell@master
 
+    # force rebuild all caches once a month
+    - name: Get date
+      id: get-date
+      run: echo "::set-output name=date::$(date +'%Y-%m')"
+
     - name: Cache ~/.cabal/packages
       uses: actions/cache@master
       with:
         path: ~/.cabal/packages
-        key: ${{ runner.os }}-cabal-packages-${{ hashFiles('**/cabal.project.freeze') }}
+        key: ${{ runner.os }}-cabal-packages-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/cabal.project.freeze') }}
+        restore-keys: |
+          ${{ runner.os }}-cabal-packages-${{ steps.get-date.outputs.date }}-
 
     - name: Cache ~/.cabal/store
       uses: actions/cache@master
       with:
         path: ~/.cabal/store
-        key: ${{ runner.os }}-cabal-store-${{ hashFiles('**/cabal.project.freeze') }}
+        key: ${{ runner.os }}-cabal-store-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/cabal.project.freeze') }}
+        restore-keys: |
+          ${{ runner.os }}-cabal-store-${{ steps.get-date.outputs.date }}-
 
     - name: Cache dist-newstyle
       uses: actions/cache@master
       with:
         path: dist-newstyle
-        key: ${{ runner.os }}-dist-newstyle-${{ hashFiles('**/cabal.project.freeze') }}
+        key: ${{ runner.os }}-dist-newstyle-${{ steps.get-date.outputs.date }}-${{ hashFiles('**/cabal.project.freeze') }}
+        restore-keys: |
+          ${{ runner.os }}-dist-newstyle-${{ steps.get-date.outputs.date }}-
 
     - name: Cabal update
       run: cabal update

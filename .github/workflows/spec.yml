@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@master
 
     - name: Build
       uses: xu-cheng/latex-action@master
@@ -16,7 +16,7 @@ jobs:
         args: -xelatex -file-line-error -interaction=nonstopmode -output-directory=spec
 
     - name: Upload PDF file
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@master
       with:
         name: specification
         path: spec/specification.pdf
