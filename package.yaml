@@ -28,6 +28,7 @@ dependencies:
 - unordered-containers
 - smallcheck
 - mtl
+- equivalence
 
 library:
   source-dirs: src
