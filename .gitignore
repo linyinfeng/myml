@@ -2,6 +2,7 @@
 .stack-work/
 dist*
 cabal.project.local
+cabal.project.freeze.old
 
 # development environment files
 .idea
