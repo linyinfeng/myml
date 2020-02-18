@@ -9,6 +9,9 @@ jobs:
     - name: Checkout
       uses: actions/checkout@master
 
+    - name: Check format
+      run: ./tools/format --check-mode
+
     - name: Setup Haskell
       uses: actions/setup-haskell@master
 
@@ -32,9 +35,6 @@ jobs:
 
     - name: Cabal update
       run: cabal update
-
-    - name: Check format
-      run: ./tools/format --check-mode
 
     - name: Build
       run: |
