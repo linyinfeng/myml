@@ -1,0 +1,3 @@
+module Myml.Typing
+  ()
+where
