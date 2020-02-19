@@ -113,7 +113,10 @@ parseType = buildExpressionParser typeOperatorTable parseTypeAtom <?> "type"
 
 typeOperatorTable :: OperatorTable Parser Type
 typeOperatorTable =
-  [[Prefix (chainedPrefix opRef)], [Infix opArrow AssocRight], [Prefix (chainedPrefix opMu)]]
+  [ [Prefix (chainedPrefix opRef)]
+  , [Infix opArrow AssocRight]
+  , [Prefix (chainedPrefix opMu)]
+  ]
  where
   opRef = TyRef <$ reserve identStyle "Ref"
   opMu =

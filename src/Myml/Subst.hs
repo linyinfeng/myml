@@ -186,6 +186,22 @@ instance ApplySubst TypeSubstitutor PresenceWithType where
       )
       <$> asks (Map.lookup x)
 
+instance ApplySubst TypeSubstitutor TypeScheme where
+  subst (ScmForall x KProper s) = handleBind x (TySubProper . TyVar)
+    >>= \(newX, inner) -> ScmForall newX KProper <$> inner (subst s)
+  subst (ScmForall x KPresence s) =
+    handleBind x (TySubPresence . PresenceVar)
+      >>= \(newX, inner) -> ScmForall newX KPresence <$> inner (subst s)
+  subst (ScmForall x (KArrow KProper KPresence) s) =
+    handleBind x (TySubPresenceWithType . PresenceWithTypeVar)
+      >>= \(newX, inner) ->
+            ScmForall newX (KArrow KProper KPresence) <$> inner (subst s)
+  subst (ScmForall x (KRow labels) s) =
+    handleBind x (TySubRow . TyRow Map.empty . CofRowVar)
+      >>= \(newX, inner) -> ScmForall newX (KRow labels) <$> inner (subst s)
+  subst (ScmForall _ k _) = error ("Unknown kind: " ++ show (pretty k))
+  subst (ScmMono t      ) = ScmMono <$> subst t
+
 normalizeRow :: TypeRow -> TypeRow
 normalizeRow (TyRow f cof) = case cof of
   CofAllAbsent -> TyRow (Map.filter (Absent /=) f) cof -- absorb absent to all absent
