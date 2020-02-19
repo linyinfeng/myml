@@ -32,6 +32,7 @@ common dependencies
     , containers
     , equivalence
     , mtl
+    , transformers
     , parsers
     , prettyprinter
     , smallcheck
@@ -91,6 +92,7 @@ test-suite myml-test
       Myml.Subst.Spec
       Myml.Syntax.Spec
       Myml.Test.Helper
+      Myml.Typing.Spec
       Paths_myml
   hs-source-dirs:
       test

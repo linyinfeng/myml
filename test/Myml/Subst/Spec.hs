@@ -194,19 +194,19 @@ typeSubstTests = testGroup
   `applySubst` pType "Nat"
   @?=          pType "Nat"
   , testCase "Type substitution presence with type absent 1"
-  $ Map.fromList [("P", TySubPresenceWithType PresenceWithTypeInstAbsent)]
+  $ Map.fromList [("P", TySubPresenceWithType PresenceWithTypeAbsent)]
   `applySubst` pType "{ l : P Unit } -> [ `l : P Unit ]"
   @?= pType "{ } -> [ ]"
   , testCase "Type substitution presence with type absent 2"
-  $ Map.fromList [("P", TySubPresenceWithType PresenceWithTypeInstAbsent)]
+  $ Map.fromList [("P", TySubPresenceWithType PresenceWithTypeAbsent)]
   `applySubst` pType "{ l : P Unit | R1 } -> [ `l : P Unit | R2 ]"
   @?= pType "{ l : Absent | R1 } -> [ `l : Absent | R2 ]"
   , testCase "Type substitution presence with type present"
-  $ Map.fromList [("P", TySubPresenceWithType PresenceWithTypeInstPresent)]
+  $ Map.fromList [("P", TySubPresenceWithType PresenceWithTypePresent)]
   `applySubst` pType "{ l : P Unit | R1 } -> [ `l : P Unit | R2 ]"
   @?= pType "{ l : Present Unit | R1 } -> [ `l : Present Unit | R2 ]"
   , testCase "Type substitution presence with type variable"
-  $ Map.fromList [("P", TySubPresenceWithType (PresenceWithTypeInstVar "P'"))]
+  $ Map.fromList [("P", TySubPresenceWithType (PresenceWithTypeVar "P'"))]
   `applySubst` pType "{ l : P Unit | R1 } -> [ `l : P Unit | R2 ]"
   @?= pType "{ l : P' Unit | R1 } -> [ `l : P' Unit | R2 ]"
   , testCase "Type substitution presence variable"
@@ -228,7 +228,7 @@ typeSubstTests = testGroup
   @?=          pType "{ l : P Unit | R' } -> [ `l : P Unit | R' ]"
   , testCase "Type substitution row and presence"
   $            Map.fromList
-                 [ ("P", TySubPresenceWithType PresenceWithTypeInstPresent)
+                 [ ("P", TySubPresenceWithType PresenceWithTypePresent)
                  , ("R", TySubRow (pTypeRow "l2 : P Nat | R'"))
                  ]
   `applySubst` pType "{ l : P Unit | R } -> [ `l : P Unit | R ]"

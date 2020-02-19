@@ -88,7 +88,6 @@ allocate (Store sData sMinFree) item = (sMinFree, Store newData newMinFree)
   newData    = Map.insert sMinFree (WithMark False item) sData
   newMinFree = sMinFree + 1
 
-infixl 6 `allocate'`
 allocate' :: Store (WithMark a) -> a -> Store (WithMark a)
 allocate' s item = s' where (_, s') = allocate s item
 
