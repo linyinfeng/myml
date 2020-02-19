@@ -9,6 +9,8 @@ module Myml.Typing
   , GenState(..)
   , Solve
   , SolveState(..)
+  , runConstraintGen
+  , runSolve
   , newVarSolve
   , newVarGen
   , instantiate
