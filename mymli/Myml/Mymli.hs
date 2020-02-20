@@ -8,7 +8,7 @@ import           Myml.Mymli.Parser
 import           Myml.Mymli.Command
 import           Myml.Mymli.Input
 import           Text.Trifecta
-import Text.Trifecta.Delta
+import           Text.Trifecta.Delta
 import           System.Console.Haskeline
 import           Control.Monad.State
 import           System.Directory
@@ -39,14 +39,16 @@ loop = do
       let parser = parseCommand <* eof
       let result = runParser parser mempty cmdString
       case result of
-        Failure (ErrInfo d _) -> liftIO (print d) >> handleMymliRequest MymliContinue
-        Success cmd           -> processCommand cmd >>= handleMymliRequest
+        Failure (ErrInfo d _) ->
+          liftIO (print d) >> handleMymliRequest MymliContinue
+        Success cmd -> processCommand cmd >>= handleMymliRequest
     Just inputString -> do
       let parser = parseInput <* eof
       let result = runParser parser mempty inputString
       case result of
-        Failure (ErrInfo d _) -> liftIO (print d) >> handleMymliRequest MymliContinue
-        Success input         -> processInput input >>= handleMymliRequest
+        Failure (ErrInfo d _) ->
+          liftIO (print d) >> handleMymliRequest MymliContinue
+        Success input -> processInput input >>= handleMymliRequest
 
 handleMymliRequest :: MymliRequest -> Mymli (InputT IO) ()
 handleMymliRequest MymliContinue = loop
