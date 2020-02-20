@@ -8,7 +8,6 @@ import           Myml.Mymli.Parser
 import           Myml.Mymli.Command
 import           Myml.Mymli.Input
 import           Text.Trifecta
-import           Text.Trifecta.Delta
 import           System.Console.Haskeline
 import           Control.Monad.State
 import           System.Directory
