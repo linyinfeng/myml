@@ -36,5 +36,5 @@ parseExitCommand = CmdExit <$ (symbol "exit" <|> symbol "quit" <|> symbol "q")
 
 parseShowTypeCommand :: Parser Command
 parseShowTypeCommand = do
-  _ <- symbol "type"
+  _ <- symbol "type" <|> symbol "ty" <|> symbol "t"
   CmdShowType <$> parseTerm
