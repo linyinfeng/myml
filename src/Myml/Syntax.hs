@@ -15,6 +15,7 @@ module Myml.Syntax
   , isValue
   , isNatValue
   , FreeVariable(..)
+  , prettyTypeRow
   )
 where
 
@@ -434,6 +435,11 @@ instance Pretty TypePresence where
   pretty (Present     t          ) = pretty "Present" <+> prettyPrec 1 t
   pretty (PresenceVar x          ) = pretty x
   pretty (PresenceVarWithType x t) = pretty x <+> prettyPrec 1 t
+
+instance Pretty PresenceWithType where
+  pretty PresenceWithTypeAbsent  = pretty "Absent"
+  pretty PresenceWithTypePresent = pretty "Present"
+  pretty (PresenceWithTypeVar x) = pretty x
 
 instance Pretty TypeScheme where
   pretty (ScmMono t) = pretty t

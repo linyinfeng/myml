@@ -9,6 +9,7 @@ module Myml.Subst
   , kindOfSubstitutor
   , kindOfRowForExc
   , kindOfPresenceWithType
+  , varToSubstitutor
   )
 where
 
@@ -103,6 +104,12 @@ data TypeSubstitutor = TySubProper Type
                      | TySubPresence TypePresence
                      | TySubRow TypeRow
                      deriving (Show, Eq, Ord)
+
+instance Pretty TypeSubstitutor where
+  pretty (TySubProper           t) = pretty t
+  pretty (TySubPresenceWithType p) = pretty p
+  pretty (TySubPresence         p) = pretty p
+  pretty (TySubRow r) = prettyTypeRow (\l -> pretty l <+> pretty ":") r
 
 instance FreeVariable TypeSubstitutor where
   freeVariable (TySubProper           t) = freeVariable t
@@ -218,3 +225,11 @@ kindOfSubstitutor (TySubProper           _) = KProper
 kindOfSubstitutor (TySubPresenceWithType _) = kindOfPresenceWithType
 kindOfSubstitutor (TySubPresence         _) = KPresence
 kindOfSubstitutor (TySubRow              _) = kindOfRowForExc
+
+varToSubstitutor :: Kind -> VarName -> TypeSubstitutor
+varToSubstitutor KProper   = TySubProper . TyVar
+varToSubstitutor KPresence = TySubPresence . PresenceVar
+varToSubstitutor (KArrow KProper KPresence) =
+  TySubPresenceWithType . PresenceWithTypeVar
+varToSubstitutor (KRow _) = TySubRow . TyRow Map.empty . CofRowVar
+varToSubstitutor k = error ("Unknown kind for substitutor" ++ show (pretty k))

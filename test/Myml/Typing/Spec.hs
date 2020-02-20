@@ -3,7 +3,6 @@ module Myml.Typing.Spec
   )
 where
 
-import           Myml.Syntax
 import           Myml.Typing
 import           Myml.Test.Helper
 import           Test.Tasty
