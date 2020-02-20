@@ -67,7 +67,12 @@ executable mymli
   main-is: Main.hs
   other-modules:
       Myml.Mymli
+      Myml.Mymli.Common
       Myml.Mymli.Environment
+      Myml.Mymli.Command
+      Myml.Mymli.Input
+      Myml.Mymli.Parser
+      Myml.Mymli.Output
       Paths_myml
   hs-source-dirs:
       mymli

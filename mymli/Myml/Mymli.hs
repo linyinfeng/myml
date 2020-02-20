@@ -3,15 +3,14 @@ module Myml.Mymli
   )
 where
 
-import           Myml.Parser
-import           Myml.Syntax
-import           Myml.Eval
 import           Myml.Mymli.Environment
-import           Data.Text.Prettyprint.Doc
+import           Myml.Mymli.Parser
+import           Myml.Mymli.Command
+import           Myml.Mymli.Input
 import           Text.Trifecta
+import Text.Trifecta.Delta
 import           System.Console.Haskeline
 import           Control.Monad.State
-import           System.Console.ANSI
 import           System.Directory
 import           System.FilePath
 
@@ -29,56 +28,26 @@ main = do
         , historyFile    = Just $ homeDir </> historyFileName
         , autoAddHistory = True
         }
-  runInputT haskelineSettings (evalStateT loop initialRuntimeEnvironment)
+  runInputT haskelineSettings (evalMymli loop emptyMymlEnv)
 
-loop :: StateT RuntimeEnvironment (InputT IO) ()
+loop :: Mymli (InputT IO) ()
 loop = do
   minput <- lift (getInputLine prompt)
   case minput of
-    Nothing          -> return ()
-    Just (':' : cmd) -> command cmd
-    Just input       -> do
-      let parser      = parseTerm <* eof
-      let parseResult = parseString parser mempty input
-      case parseResult of
-        Failure errInfo -> lift (outputStrLn (show (_errDoc errInfo)))
-        Success term    -> processTerm term
-      loop
+    Nothing                -> return ()
+    Just (':' : cmdString) -> do
+      let parser = parseCommand <* eof
+      let result = runParser parser mempty cmdString
+      case result of
+        Failure (ErrInfo d _) -> liftIO (print d) >> handleMymliRequest MymliContinue
+        Success cmd           -> processCommand cmd >>= handleMymliRequest
+    Just inputString -> do
+      let parser = parseInput <* eof
+      let result = runParser parser mempty inputString
+      case result of
+        Failure (ErrInfo d _) -> liftIO (print d) >> handleMymliRequest MymliContinue
+        Success input         -> processInput input >>= handleMymliRequest
 
-command :: String -> StateT RuntimeEnvironment (InputT IO) ()
-command "q"    = command "exit"
-command "quit" = command "exit"
-command "exit" = return ()
-command ""     = command "help"
-command "?"    = command "help"
-command "h"    = command "help"
-command "help" = lift outputHelp >> loop
-command cmd    = do
-  lift $ commandErrorLabel "error"
-  lift $ outputStrLn ("unknown command ':" ++ cmd ++ "'")
-  loop
-
-outputHelp :: InputT IO ()
-outputHelp = outputStrLn "help unimplemented"
-
-processTerm :: Term -> StateT RuntimeEnvironment (InputT IO) ()
-processTerm input = do
-  store <- gets envStore
-  let (evaled, store') = runState (bigStep input) store
-  modify (\env -> env { envStore = store' })
-  lift (outputStrLn (show (pretty evaled)))
-
-commandErrorLabel :: String -> InputT IO ()
-commandErrorLabel label = bold (withColor Dull Red (outputStr (label ++ ": ")))
-
-bold :: InputT IO () -> InputT IO ()
-bold = withSGR [SetConsoleIntensity BoldIntensity]
-
-withColor :: ColorIntensity -> Color -> InputT IO () -> InputT IO ()
-withColor intensity color = withSGR [SetColor Foreground intensity color]
-
-withSGR :: [SGR] -> InputT IO () -> InputT IO ()
-withSGR sgr io = do
-  lift (setSGR sgr)
-  io
-  lift (setSGR [Reset])
+handleMymliRequest :: MymliRequest -> Mymli (InputT IO) ()
+handleMymliRequest MymliContinue = loop
+handleMymliRequest MymliExit     = return ()
