@@ -134,7 +134,7 @@ infer (TmAbs x t) = do
   return (TyArrow nv ty)
 infer (TmLet x t1 t2) = do
   ty1 <- infer t1
-  s   <- generalize ty1
+  s   <- generalize t1 ty1
   local (Map.insert x s) (infer t2)
 infer (TmRcd m) = do
   ps <- sequence (Map.map genPresence m)
@@ -265,9 +265,9 @@ instantiatePresence (PresenceVar x) = return (PresenceVar x)
 instantiatePresence (PresenceVarWithType x t) =
   PresenceVarWithType x <$> instantiateType t
 
-generalize :: Type -> Inference TypeScheme
-generalize t = do
-  tyDesc <- describeProper Set.empty t
+generalize :: Term -> Type -> Inference TypeScheme
+generalize t ty = do
+  tyDesc <- describeProper Set.empty ty
   env    <- ask
   envFv  <- liftEither
     (Map.foldl (\a b -> bind2 mergeFvWithKind a (fvWithKindScm b))
@@ -278,9 +278,25 @@ generalize t = do
   liftEither
     (sequence_ (Map.intersectionWithKey mergeFvWithKindSingle tFv envFv))
   let xs = tFv `Map.difference` envFv
-  (sub, newXs) <- replacePrefix xs
+      xs' =
+        if isValue t then xs else xs `Map.withoutKeys` dangerousVariable tyDesc
+  (sub, newXs) <- replacePrefix xs'
   let tyDesc' = applySubst sub tyDesc
   return (Map.foldrWithKey ScmForall (ScmMono tyDesc') newXs)
+
+dangerousVariable :: Type -> Set.Set VarName
+dangerousVariable = freeVariable -- traditional value restriction
+-- dangerousVariable (TyVar _) = Set.empty
+-- dangerousVariable (TyArrow t1 t2) = freeVariable t1 `Set.union` dangerousVariable t2
+-- dangerousVariable (TyRecord r) = error ""
+-- dangerousVariable (TyVariant r) = error ""
+-- dangerousVariable (TyMu x t) = let dt = dangerousVariable t in
+--   if x `Set.member` dt then freeVariable t -- x included
+--   else dt
+-- dangerousVariable (TyRef t) = freeVariable t
+-- dangerousVariable TyUnit = Set.empty
+-- dangerousVariable TyBool = Set.empty
+-- dangerousVariable TyNat = Set.empty
 
 kindPrefixes :: Set.Set VarName
 kindPrefixes = Set.fromList ["\x03b1", "\x03c6", "\x03c8", "\x03c1"]

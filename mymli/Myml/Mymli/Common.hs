@@ -30,9 +30,9 @@ mymliInferTypeAndUpdateBinding t = do
     Right (bindings', s) ->
       modify (\e -> e { envTypeBindings = bindings' }) >> return (Right s)
  where
-  inference bindings ty = do
-    ty'       <- infer ty -- maybe failed
-    inferred  <- generalize ty'
+  inference bindings term = do
+    ty'       <- infer term -- maybe failed
+    inferred  <- generalize term ty'
     -- update bindings
     bindings' <- sequence (Map.map updateBinding bindings)
     return (bindings', inferred)

@@ -37,7 +37,8 @@ pKind = parseHelper parseKind
 
 testInfer :: String -> IO ()
 testInfer t =
-  let (res, _) = runInference (infer (pTerm t) >>= generalize)
+  let parsed   = (pTerm t)
+      (res, _) = runInference (infer parsed >>= generalize parsed)
                               Map.empty
                               (InferenceState (NewVar Map.empty))
   in  case res of
