@@ -17,11 +17,15 @@ import qualified Data.Map                      as Map
 
 data MymliEnv = MymliEnv {
   envStore :: Store (WithMark Term),
-  envBindings :: Map.Map VarName Term
+  envValueBindings :: Map.Map VarName Term,
+  envTypeBindings :: Map.Map VarName TypeScheme
 }
 
 emptyMymlEnv :: MymliEnv
-emptyMymlEnv = MymliEnv { envStore = emptyStore, envBindings = Map.empty }
+emptyMymlEnv = MymliEnv { envStore         = emptyStore
+                        , envValueBindings = Map.empty
+                        , envTypeBindings  = Map.empty
+                        }
 
 type Mymli m = (StateT MymliEnv m)
 
@@ -37,8 +41,10 @@ evalMymli = evalStateT
 data MymliRequest = MymliContinue
                   | MymliExit
 
-mymliAddBinding :: Monad m => VarName -> Term -> Mymli m ()
-mymliAddBinding x t = do
-  bindings <- gets envBindings
-  let bindings' = Map.insert x t bindings
-  modify (\e -> e { envBindings = bindings' })
+mymliAddBinding :: Monad m => VarName -> Term -> TypeScheme -> Mymli m ()
+mymliAddBinding x v ty = do
+  vb <- gets envValueBindings
+  tb <- gets envTypeBindings
+  let vb' = Map.insert x v vb
+      tb' = Map.insert x ty tb
+  modify (\e -> e { envValueBindings = vb', envTypeBindings = tb' })

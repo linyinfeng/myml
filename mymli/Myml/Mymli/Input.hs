@@ -15,19 +15,21 @@ data Input = InputBind VarName Term
 
 processInput :: MonadIO m => Input -> Mymli m MymliRequest
 processInput (InputTerm t) = do
-  t' <- mymliAddLets t
-  case mymliInferType t' of
+  inferRes <- mymliInferTypeAndUpdateBinding t
+  case inferRes of
     Left  e -> liftIO (putStrLn ("[Typing Error] " ++ show e))
     Right s -> do
-      v <- mymliEval t'
+      v <- mymliEval t
       liftIO (putStrLn (show (pretty v) ++ " : " ++ show (pretty s)))
+      mymliGc
   return MymliContinue
 processInput (InputBind x t) = do
-  t' <- mymliAddLets t
-  case mymliInferType t' of
+  inferRes <- mymliInferTypeAndUpdateBinding t
+  case inferRes of
     Left  e -> liftIO (putStrLn ("[Typing Error] " ++ show e))
     Right s -> do
-      v <- mymliEval t'
-      mymliAddBinding x $! v
+      v <- mymliEval t
+      mymliAddBinding x v s
       liftIO (putStrLn (x ++ " : " ++ show (pretty s)))
+      mymliGc
   return MymliContinue

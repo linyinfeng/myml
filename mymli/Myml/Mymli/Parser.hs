@@ -26,13 +26,20 @@ parseInputTerm :: Parser Input
 parseInputTerm = InputTerm <$> parseTerm
 
 parseCommand :: Parser Command
-parseCommand = parseHelpCommand <|> parseExitCommand <|> parseShowTypeCommand
+parseCommand =
+  parseHelpCommand
+    <|> parseExitCommand
+    <|> parseShowTypeCommand
+    <|> parseShowStoreCommand
 
 parseHelpCommand :: Parser Command
 parseHelpCommand = CmdHelp <$ (symbol "help" <|> symbol "h" <|> symbol "?")
 
 parseExitCommand :: Parser Command
 parseExitCommand = CmdExit <$ (symbol "exit" <|> symbol "quit" <|> symbol "q")
+
+parseShowStoreCommand :: Parser Command
+parseShowStoreCommand = CmdShowStore <$ symbol "store"
 
 parseShowTypeCommand :: Parser Command
 parseShowTypeCommand = do

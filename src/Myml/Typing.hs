@@ -283,13 +283,13 @@ generalize t = do
   return (Map.foldrWithKey ScmForall (ScmMono tyDesc') newXs)
 
 kindPrefixes :: Set.Set VarName
-kindPrefixes = Set.fromList ["'\x03b1", "'\x03c6", "'\x03c8", "'\x03c1"]
+kindPrefixes = Set.fromList ["\x03b1", "\x03c6", "\x03c8", "\x03c1"]
 
 kindToPrefix :: Kind -> VarName
-kindToPrefix KProper                    = "'\x03b1"
-kindToPrefix KPresence                  = "'\x03c6"
-kindToPrefix (KArrow KProper KPresence) = "'\x03c8"
-kindToPrefix (KRow _                  ) = "'\x03c1"
+kindToPrefix KProper                    = "\x03b1"
+kindToPrefix KPresence                  = "\x03c6"
+kindToPrefix (KArrow KProper KPresence) = "\x03c8"
+kindToPrefix (KRow _                  ) = "\x03c1"
 kindToPrefix k = error ("Unknown kind for prefix" ++ show (pretty k))
 
 replacePrefix
@@ -472,36 +472,26 @@ unifyRow' :: TypeRow -> TypeRow -> Inference ()
 unifyRow' (TyRow f1 cof1) (TyRow f2 cof2) = do
   -- handle intersection part
   sequence_ (Map.intersectionWith unifyPresence f1 f2)
-  let f1'    = f1 `Map.difference` f2
-      f2'    = f2 `Map.difference` f1
-      error' = throwError
-        (ExcUnifyNoRuleApplied (TySubRow (TyRow f1' cof1))
-                               (TySubRow (TyRow f2' cof2))
-        )
-  case (Map.null f1', Map.null f2') of
-    (True, True) -> case (cof1, cof2) of
-      (CofAllAbsent, CofAllAbsent) -> return ()
-      (CofRowVar x1, _) -> equate (TySubRow (TyRow Map.empty (CofRowVar x1)))
-                                  (TySubRow (TyRow Map.empty cof2))
-      (_, CofRowVar x2) -> equate (TySubRow (TyRow Map.empty (CofRowVar x2)))
-                                  (TySubRow (TyRow Map.empty cof1))
-    (True, False) -> case cof1 of
-      CofAllAbsent -> error'
-      CofRowVar x1 -> equate (TySubRow (TyRow Map.empty (CofRowVar x1)))
-                             (TySubRow (TyRow f2' cof2))
-    (False, True) -> case cof2 of
-      CofAllAbsent -> error'
-      CofRowVar x2 -> equate (TySubRow (TyRow Map.empty (CofRowVar x2)))
-                             (TySubRow (TyRow f2' cof2))
-    (False, False) -> case (cof1, cof2) of
-      (CofAllAbsent, _           ) -> error'
-      (_           , CofAllAbsent) -> error'
-      (CofRowVar x1, CofRowVar x2) -> do
-        newX <- newVar innerVarPrefix
-        equate (TySubRow (TyRow Map.empty (CofRowVar x1)))
-               (TySubRow (TyRow f2' (CofRowVar newX)))
-        equate (TySubRow (TyRow Map.empty (CofRowVar x2)))
-               (TySubRow (TyRow f1' (CofRowVar newX)))
+  let f1' = f1 `Map.difference` f2
+      f2' = f2 `Map.difference` f1
+  case (cof1, cof2) of
+    (CofAllAbsent, CofAllAbsent) -> do
+      sequence_ (Map.map (unifyPresence Absent) f1')
+      sequence_ (Map.map (unifyPresence Absent) f2')
+    (CofAllAbsent, CofRowVar x2) -> do
+      equate (TySubRow (TyRow Map.empty (CofRowVar x2)))
+             (TySubRow (TyRow f1' CofAllAbsent))
+      sequence_ (Map.map (unifyPresence Absent) f2')
+    (CofRowVar x1, CofAllAbsent) -> do
+      equate (TySubRow (TyRow Map.empty (CofRowVar x1)))
+             (TySubRow (TyRow f2' CofAllAbsent))
+      sequence_ (Map.map (unifyPresence Absent) f1')
+    (CofRowVar x1, CofRowVar x2) -> do
+      newX <- newVar innerVarPrefix
+      equate (TySubRow (TyRow Map.empty (CofRowVar x1)))
+             (TySubRow (TyRow f2' (CofRowVar newX)))
+      equate (TySubRow (TyRow Map.empty (CofRowVar x2)))
+             (TySubRow (TyRow f1' (CofRowVar newX)))
 
 describeProper :: Set.Set VarName -> Type -> Inference Type
 describeProper ctx (TyVar x) | x `Set.member` ctx = return (TyVar x)
