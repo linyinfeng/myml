@@ -128,7 +128,7 @@ instance ApplySubst TypeSubstitutor Type where
     (\case
         Nothing -> (TyVar x)
         Just (TySubProper t) -> t
-        Just s -> runtimeKindMismatch KPresence (kindOfSubstitutor s)
+        Just s -> runtimeKindMismatch KProper (kindOfSubstitutor s)
       )
       <$> asks (Map.lookup x)
   subst (TyArrow t1 t2) = TyArrow <$> subst t1 <*> subst t2
@@ -153,7 +153,7 @@ instance ApplySubst TypeSubstitutor TypeRow where
         (\case
             Nothing -> TyRow Map.empty (CofRowVar x)
             Just (TySubRow row) -> row
-            Just s -> runtimeKindMismatch KPresence (kindOfSubstitutor s)
+            Just s -> runtimeKindMismatch kindOfRowForExc (kindOfSubstitutor s)
           )
           <$> asks (Map.lookup x)
     duplicateError l _ _ =

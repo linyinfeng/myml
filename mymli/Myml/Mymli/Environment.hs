@@ -11,21 +11,29 @@ module Myml.Mymli.Environment
 where
 
 import           Myml.Syntax
+import           Myml.Typing
 import           Myml.Eval.Store
 import           Control.Monad.State
 import qualified Data.Map                      as Map
 
 data MymliEnv = MymliEnv {
   envStore :: Store (WithMark Term),
+  envTermBindings :: Map.Map VarName Term,
   envValueBindings :: Map.Map VarName Term,
-  envTypeBindings :: Map.Map VarName TypeScheme
+  envTypeBindings :: Map.Map VarName TypeScheme,
+  envInferState :: InferenceState
 }
 
 emptyMymlEnv :: MymliEnv
 emptyMymlEnv = MymliEnv { envStore         = emptyStore
+                        , envTermBindings  = Map.empty
                         , envValueBindings = Map.empty
                         , envTypeBindings  = Map.empty
+                        , envInferState    = emptyInferenceState
                         }
+
+emptyInferenceState :: InferenceState
+emptyInferenceState = InferenceState (NewVar Map.empty)
 
 type Mymli m = (StateT MymliEnv m)
 
@@ -41,10 +49,18 @@ evalMymli = evalStateT
 data MymliRequest = MymliContinue
                   | MymliExit
 
-mymliAddBinding :: Monad m => VarName -> Term -> TypeScheme -> Mymli m ()
-mymliAddBinding x v ty = do
-  vb <- gets envValueBindings
-  tb <- gets envTypeBindings
-  let vb' = Map.insert x v vb
-      tb' = Map.insert x ty tb
-  modify (\e -> e { envValueBindings = vb', envTypeBindings = tb' })
+mymliAddBinding
+  :: Monad m => VarName -> Term -> Term -> TypeScheme -> Mymli m ()
+mymliAddBinding x t v ty = do
+  termBindings  <- gets envTermBindings
+  valueBindings <- gets envValueBindings
+  typeBindings  <- gets envTypeBindings
+  let termBindings'  = Map.insert x t termBindings
+      valueBindings' = Map.insert x v valueBindings
+      typeBindings'  = Map.insert x ty typeBindings
+  modify
+    (\e -> e { envTermBindings  = termBindings'
+             , envValueBindings = valueBindings'
+             , envTypeBindings  = typeBindings'
+             }
+    )
