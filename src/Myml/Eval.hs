@@ -35,6 +35,10 @@ runSmallStepState s = runState (runExceptT s)
 smallStep :: Term -> SmallStepState
 smallStep (TmApp (TmAbs x t1) v2) | isValue v2 =
   return (applySubst (Map.singleton x v2) t1)
+smallStep (TmApp (TmMatch m) (TmVariant l v2)) | isValue v2 =
+  case Map.lookup l m of
+    Nothing -> throwError ExcNoRuleApplied
+    Just (TmCase x t1) -> return (applySubst (Map.singleton x v2) t1)
 smallStep (TmApp v1 t2) | isValue v1 = TmApp v1 <$> smallStep t2
 smallStep (TmApp t1 t2)              = flip TmApp t2 <$> smallStep t1
 smallStep (TmLet x v1 t2) | isValue v1 =
