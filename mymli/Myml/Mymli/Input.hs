@@ -12,6 +12,7 @@ import           Control.Monad.Trans
 
 data Input = InputBind VarName Term
            | InputTerm Term
+           | InputEmpty
 
 processInput :: MonadIO m => Input -> Mymli m MymliRequest
 processInput (InputTerm t) = do
@@ -33,3 +34,4 @@ processInput (InputBind x t) = do
       liftIO (putStrLn (x ++ " : " ++ show (pretty s)))
       mymliGc
   return MymliContinue
+processInput InputEmpty = return MymliContinue

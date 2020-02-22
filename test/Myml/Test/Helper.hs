@@ -37,7 +37,7 @@ pKind = parseHelper parseKind
 
 testInfer :: String -> IO ()
 testInfer t =
-  let parsed   = (pTerm t)
+  let parsed   = pTerm t
       (res, _) = runInference (infer parsed >>= generalize parsed)
                               Map.empty
                               (InferenceState (NewVar Map.empty))

@@ -12,7 +12,7 @@ import           Text.Trifecta
 import           Control.Applicative
 
 parseInput :: Parser Input
-parseInput = parseInputBind <|> parseInputTerm
+parseInput = parseInputBind <|> parseInputTerm <|> parseInputEmpty
 
 parseInputs :: Parser [Input]
 parseInputs = many parseInput
@@ -24,6 +24,9 @@ parseInputBind = do
 
 parseInputTerm :: Parser Input
 parseInputTerm = InputTerm <$> parseTerm
+
+parseInputEmpty :: Parser Input
+parseInputEmpty = return InputEmpty
 
 parseCommand :: Parser Command
 parseCommand =

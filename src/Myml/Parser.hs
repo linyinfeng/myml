@@ -20,6 +20,7 @@ import qualified Data.HashSet                  as H
 import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set
 import           Control.Applicative
+import           Data.Functor
 import           Data.Char
 
 parseTerm :: Parser Term
@@ -89,7 +90,9 @@ parseTermAtom =
   var   = TmVar <$> ident identStyle
   rcd   = TmRcd . Map.fromList <$> braces (recordPair `sepBy` symbol ",")
   match = TmMatch . Map.fromList <$> brackets (matchPair `sepBy` symbol ",")
-  unit  = TmUnit <$ reserve identStyle "unit"
+  unit =
+    TmUnit
+      <$ (reserve identStyle "unit" <|> (try (symbol "(" *> symbol ")") $> ()))
   true  = TmTrue <$ reserve identStyle "true"
   false = TmFalse <$ reserve identStyle "false"
   zero  = TmZero <$ reserve identStyle "zero"
