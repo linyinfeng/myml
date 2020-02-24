@@ -6,6 +6,7 @@ where
 
 import           Myml.Mymli.Common
 import           Myml.Mymli.Environment
+import           Myml.Mymli.Output
 import           Myml.Syntax
 import           Data.Text.Prettyprint.Doc
 import           Control.Monad.Trans
@@ -18,7 +19,7 @@ processInput :: MonadIO m => Input -> Mymli m MymliRequest
 processInput (InputTerm t) = do
   inferRes <- mymliInferTypeAndUpdateBinding t
   case inferRes of
-    Left  e -> liftIO (putStrLn ("[Typing Error] " ++ show e))
+    Left  e -> liftIO (typingErrorLabel >> print e)
     Right s -> do
       v <- mymliEval t
       liftIO (print (pretty v))
@@ -28,7 +29,7 @@ processInput (InputTerm t) = do
 processInput (InputBind x t) = do
   inferRes <- mymliInferTypeAndUpdateBinding t
   case inferRes of
-    Left  e -> liftIO (putStrLn ("[Typing Error] " ++ show e))
+    Left  e -> liftIO (typingErrorLabel >> print e)
     Right s -> do
       v <- mymliEval t
       mymliAddBinding x t v s

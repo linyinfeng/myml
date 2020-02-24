@@ -17,7 +17,7 @@ historyFileName :: FilePath
 historyFileName = ".myml_history"
 
 prompt :: String
-prompt = "mymli> "
+prompt = "\ESC[1;32m\STXmymli\ESC[0m\STX> "
 
 main :: IO ()
 main = do

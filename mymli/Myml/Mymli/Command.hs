@@ -10,6 +10,7 @@ import           Myml.Mymli.Environment
 import           Myml.Syntax
 import           Myml.Eval.Store
 import           Myml.Mymli.Common
+import           Myml.Mymli.Output
 import           Control.Monad.Trans
 import           Control.Monad.State
 import           Data.Text.Prettyprint.Doc
@@ -32,7 +33,7 @@ processCommand CmdHelp = do
 processCommand (CmdShowType t) = do
   inferRes <- mymliInferTypeAndUpdateBinding t
   case inferRes of
-    Left  e -> liftIO (putStrLn ("[Typing Error] " ++ show e))
+    Left  e -> liftIO (typingErrorLabel >> print e)
     Right s -> liftIO (print (pretty s))
   return MymliContinue
 processCommand CmdShowStore = do

@@ -1,5 +1,6 @@
 module Myml.Mymli.Output
-  ( commandErrorLabel
+  ( errorLabel
+  , typingErrorLabel
   , bold
   , withColor
   , withSGR
@@ -8,8 +9,11 @@ where
 
 import           System.Console.ANSI
 
-commandErrorLabel :: String -> IO ()
-commandErrorLabel label = bold (withColor Dull Red (putStr (label ++ ": ")))
+typingErrorLabel :: IO ()
+typingErrorLabel = errorLabel "Typing Error"
+
+errorLabel :: String -> IO ()
+errorLabel label = bold (withColor Dull Red (putStr (label ++ ": ")))
 
 bold :: IO () -> IO ()
 bold = withSGR [SetConsoleIntensity BoldIntensity]
