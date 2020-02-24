@@ -21,7 +21,7 @@ processInput (InputTerm t) = do
     Left  e -> liftIO (putStrLn ("[Typing Error] " ++ show e))
     Right s -> do
       v <- mymliEval t
-      liftIO (putStrLn (show (pretty v) ++ " : " ++ show (pretty s)))
+      liftIO (putStrLn (show (pretty v) ++ "\n: " ++ show (pretty s)))
       mymliGc
   return MymliContinue
 processInput (InputBind x t) = do
@@ -31,7 +31,7 @@ processInput (InputBind x t) = do
     Right s -> do
       v <- mymliEval t
       mymliAddBinding x t v s
-      liftIO (putStrLn (x ++ " : " ++ show (pretty s)))
+      liftIO (putStrLn (x ++ "\n: " ++ show (pretty s)))
       mymliGc
   return MymliContinue
 processInput InputEmpty = return MymliContinue

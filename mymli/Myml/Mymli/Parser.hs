@@ -34,6 +34,7 @@ parseCommand =
     <|> parseExitCommand
     <|> parseShowTypeCommand
     <|> parseShowStoreCommand
+    <|> parseShowBindingsCommand
 
 parseHelpCommand :: Parser Command
 parseHelpCommand = CmdHelp <$ (symbol "help" <|> symbol "h" <|> symbol "?")
@@ -48,3 +49,11 @@ parseShowTypeCommand :: Parser Command
 parseShowTypeCommand = do
   _ <- symbol "type" <|> symbol "ty" <|> symbol "t"
   CmdShowType <$> parseTerm
+
+parseShowBindingsCommand :: Parser Command
+parseShowBindingsCommand =
+  (symbol "bindings" <|> symbol "b") *> (v <|> t <|> ty)
+ where
+  v  = CmdShowValueBindings <$ (symbol "value" <|> symbol "val" <|> symbol "v")
+  t  = CmdShowTermBindings <$ (symbol "term" <|> symbol "tm")
+  ty = CmdShowTypeBindings <$ (symbol "type" <|> symbol "ty")

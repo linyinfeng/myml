@@ -19,6 +19,9 @@ data Command = CmdExit
              | CmdHelp
              | CmdShowType Term
              | CmdShowStore
+             | CmdShowValueBindings
+             | CmdShowTermBindings
+             | CmdShowTypeBindings
              deriving (Show)
 
 processCommand :: MonadIO m => Command -> Mymli m MymliRequest
@@ -35,4 +38,16 @@ processCommand (CmdShowType t) = do
 processCommand CmdShowStore = do
   Store { storeData, ..} <- gets envStore
   liftIO (print (pretty (Map.toList (Map.map removeMark storeData))))
+  return MymliContinue
+processCommand CmdShowValueBindings = do
+  valueBindings <- gets envValueBindings
+  liftIO (print (pretty (Map.toList valueBindings)))
+  return MymliContinue
+processCommand CmdShowTermBindings = do
+  termBindings <- gets envTermBindings
+  liftIO (print (pretty (Map.toList termBindings)))
+  return MymliContinue
+processCommand CmdShowTypeBindings = do
+  typeBindings <- gets envTypeBindings
+  liftIO (print (pretty (Map.toList typeBindings)))
   return MymliContinue
