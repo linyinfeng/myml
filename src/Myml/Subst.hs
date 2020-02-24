@@ -156,6 +156,8 @@ instance ApplySubst TypeSubstitutor TypeRow where
             Just s -> runtimeKindMismatch kindOfRowForExc (kindOfSubstitutor s)
           )
           <$> asks (Map.lookup x)
+      CofMu x r -> handleBind x (TySubRow . TyRow Map.empty . CofRowVar)
+        >>= \(newX, inner) -> TyRow Map.empty . CofMu newX <$> inner (subst r)
     duplicateError l _ _ =
       runtimeKindMismatch (KRow (Set.fromList [l, "..."])) kindOfRowForExc
 
@@ -213,6 +215,7 @@ normalizeRow :: TypeRow -> TypeRow
 normalizeRow (TyRow f cof) = case cof of
   CofAllAbsent -> TyRow (Map.filter (Absent /=) f) cof -- absorb absent to all absent
   CofRowVar _  -> TyRow f cof -- unchanged
+  CofMu _ _    -> TyRow f cof -- unchanged
 
 kindOfRowForExc :: Kind
 kindOfRowForExc = KRow (Set.singleton "...")

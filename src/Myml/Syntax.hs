@@ -148,10 +148,11 @@ data PresenceWithType = PresenceWithTypeAbsent
 
 data TypeRowCofinite = CofAllAbsent
                      | CofRowVar VarName
+                     | CofMu VarName TypeRow
                      deriving (Show, Eq, Ord)
 
 instance Monad m => Serial m TypeRowCofinite where
-  series = pure CofAllAbsent \/ pure (CofRowVar "R")
+  series = pure CofAllAbsent \/ pure (CofRowVar "R") \/ cons1 (CofMu "R")
 
 data TypeScheme = ScmMono Type
             | ScmForall VarName Kind TypeScheme
@@ -269,6 +270,7 @@ instance FreeVariable PresenceWithType where
 instance FreeVariable TypeRowCofinite where
   freeVariable CofAllAbsent  = Set.empty
   freeVariable (CofRowVar r) = Set.singleton r
+  freeVariable (CofMu x r  ) = Set.delete x (freeVariable r)
 
 instance FreeVariable TypeScheme where
   freeVariable (ScmMono t      ) = freeVariable t
@@ -425,6 +427,14 @@ prettyTypeRow :: (LabelName -> Doc ann) -> TypeRow -> Doc ann
 prettyTypeRow conv (TyRow f cof) = case cof of
   CofAllAbsent     -> finitePart
   (CofRowVar name) -> finitePart <> space <> pretty "|" <+> pretty name
+  (CofMu x r) ->
+    finitePart
+      <>  space
+      <>  pretty "|"
+      <+> pretty "\x3bc"
+      <+> pretty x
+      <+> pretty '.'
+      <+> parens (prettyTypeRow conv r)
  where
   prettyPair (l, t) = conv l <+> pretty t
   concator left right = left <> pretty "," <+> right

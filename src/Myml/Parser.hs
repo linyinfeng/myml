@@ -184,7 +184,7 @@ parseKindAtom = proper <|> presence <|> row <|> parens parseKind
 parseTypeRow :: Parser LabelName -> Parser TypeRow
 parseTypeRow parseLabel = do
   finitePart <- Map.fromList <$> (typeRowPair parseLabel `sepBy` symbol ",")
-  TyRow finitePart <$> typeRowCofinite
+  TyRow finitePart <$> typeRowCofinite parseLabel
 
 typeRowPair :: Parser LabelName -> Parser (LabelName, TypePresence)
 typeRowPair parseLabel = do
@@ -200,9 +200,18 @@ typePresence =
     <|> try (PresenceVarWithType <$> ident identStyle <*> parseType)
     <|> (PresenceVar <$> ident identStyle)
 
-typeRowCofinite :: Parser TypeRowCofinite
-typeRowCofinite = (CofRowVar <$> (reserve identStyle "|" *> ident identStyle))
-  <|> return CofAllAbsent
+typeRowCofinite :: Parser LabelName -> Parser TypeRowCofinite
+typeRowCofinite parseLabel = rowVar <|> mu <|> allAbsent
+ where
+  rowVar    = CofRowVar <$> try (reserve identStyle "|" *> ident identStyle)
+  allAbsent = return CofAllAbsent
+  mu        = do
+    reserve identStyle "|"
+    reserve identStyle "\x3bc"
+    x <- ident identStyle
+    _ <- symbol "."
+    r <- parens (parseTypeRow parseLabel)
+    return (CofMu x r)
 
 -- no need to include ".", ",", ";"
 reservedTokens :: H.HashSet String

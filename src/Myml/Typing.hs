@@ -49,6 +49,7 @@ data TypingExcept = ExcUnifyKindMismatch Kind Kind
                   | ExcFreeVarKindConflict VarName Kind Kind
                   | ExcStoreTypingNotImplemented
                   | ExcDescribeNoRuleApplied TypeSubstitutor
+                  | ExcCanNotHandleCofMu TypeRow
                   deriving Eq
 
 instance Show TypingExcept where
@@ -71,6 +72,8 @@ instance Show TypingExcept where
   show ExcStoreTypingNotImplemented = "Store typing is not implemented"
   show (ExcDescribeNoRuleApplied s) =
     "Unable to describe from unification result: " ++ show (pretty s)
+  show (ExcCanNotHandleCofMu r) = "Can not handle cofinite mu row: "
+    ++ show (prettyTypeRow (\l -> pretty l <+> pretty ":") r)
 
 newtype NewVar = NewVar (Map.Map VarName Integer)
   deriving Show
@@ -257,8 +260,16 @@ instantiateType TyBool    = return TyBool
 instantiateType TyNat     = return TyNat
 
 instantiateRow :: TypeRow -> Inference TypeRow
-instantiateRow (TyRow f cof) =
-  flip TyRow cof <$> sequence (Map.map instantiatePresence f)
+instantiateRow (TyRow f cof) = do
+  f'   <- sequence (Map.map instantiatePresence f)
+  cof' <- case cof of
+    CofAllAbsent -> return CofAllAbsent
+    CofRowVar x  -> return (CofRowVar x)
+    CofMu x r    -> do
+      r' <- instantiateRow r
+      unifyRow (TyRow Map.empty (CofRowVar x)) r'
+      return (CofRowVar x)
+  return (TyRow f' cof')
 
 instantiatePresence :: TypePresence -> Inference TypePresence
 instantiatePresence Absent          = return Absent
@@ -371,9 +382,15 @@ fvWithKindRow (TyRow f cof) = do
   fvF <- Map.foldl (\a b -> bind2 mergeFvWithKind a (fvWithKindPresence b))
                    (Right Map.empty)
                    f
-  let fvCof = case cof of
-        CofAllAbsent -> Map.empty
-        CofRowVar x  -> Map.singleton x (KRow (Map.keysSet f))
+  fvCof <- case cof of
+    CofAllAbsent -> return Map.empty
+    CofRowVar x  -> return (Map.singleton x (KRow (Map.keysSet f)))
+    CofMu x r    -> do
+      m <- fvWithKindRow r
+      case Map.lookup x m of
+        Nothing -> return m
+        Just (KRow _) -> return (Map.delete x m) -- TODO: Maybe can change to KRow (Map.keysSet f)?
+        Just k -> Left (ExcFreeVarKindConflict x (KRow (Map.keysSet f)) k)
   mergeFvWithKind fvF fvCof
 
 fvWithKindPresence :: TypePresence -> Either TypingExcept (Map.Map VarName Kind)
@@ -512,6 +529,10 @@ unifyRow' (TyRow f1 cof1) (TyRow f2 cof2) = do
              (TySubRow (TyRow f2' (CofRowVar newX)))
       equate (TySubRow (TyRow Map.empty (CofRowVar x2)))
              (TySubRow (TyRow f1' (CofRowVar newX)))
+    (_, _) -> throwError
+      (ExcUnifyNoRuleApplied (TySubRow (TyRow f1 cof1))
+                             (TySubRow (TyRow f2 cof2))
+      )
 
 flattenRow :: TypeRow -> Inference TypeRow
 flattenRow (TyRow f CofAllAbsent)               = return (TyRow f CofAllAbsent)
@@ -526,6 +547,7 @@ flattenRow (TyRow f1 (CofRowVar x)) = do
   unless (Set.null overlapped)
          (throwError (ExcUnifyRowLabelCollided overlapped))
   return (TyRow (Map.union f1 f2) inf2)
+flattenRow r@(TyRow _ (CofMu _ _)) = throwError (ExcCanNotHandleCofMu r)
 
 describeProper :: Set.Set VarName -> Type -> Inference Type
 describeProper ctx (TyVar x) | x `Set.member` ctx = return (TyVar x)
@@ -568,11 +590,16 @@ describePresence ctx (PresenceVarWithType x t) = do
 describeRow :: Set.Set VarName -> TypeRow -> Inference TypeRow
 describeRow ctx (TyRow f CofAllAbsent) =
   flip TyRow CofAllAbsent <$> sequence (Map.map (describePresence ctx) f)
+describeRow ctx (TyRow f (CofRowVar x)) | Map.null f && x `Set.member` ctx =
+  return (TyRow f (CofRowVar x))
 describeRow ctx (TyRow f (CofRowVar x)) | Map.null f = do
   (TyRow f' inf) <- classDesc (TySubRow (TyRow f (CofRowVar x))) >>= ensureRow
   if TyRow f' inf == TyRow f (CofRowVar x)
     then return (TyRow f (CofRowVar x))
-    else describeRow ctx (TyRow f' inf)
+    else do
+      r' <- describeRow (Set.insert x ctx) (TyRow f' inf)
+      let fv = freeVariable r'
+      return (if x `Set.member` fv then TyRow Map.empty (CofMu x r') else r')
 describeRow ctx (TyRow f1 (CofRowVar x)) = do
   (TyRow f2 inf2) <- describeRow ctx (TyRow Map.empty (CofRowVar x))
   f1'             <- sequence (Map.map (describePresence ctx) f1)
@@ -580,6 +607,7 @@ describeRow ctx (TyRow f1 (CofRowVar x)) = do
   unless (Set.null overlapped)
          (throwError (ExcUnifyRowLabelCollided overlapped))
   return (TyRow (Map.union f1' f2) inf2)
+describeRow _ r@(TyRow _ (CofMu _ _)) = throwError (ExcCanNotHandleCofMu r)
 
 regTreeEq' :: Type -> Type -> Bool
 regTreeEq' t1 t2 = case runState (runMaybeT (regTreeEq t1 t2)) Set.empty of
