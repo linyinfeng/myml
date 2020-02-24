@@ -44,11 +44,12 @@ import qualified Data.Set                      as Set
 
 data TypingExcept = ExcUnifyKindMismatch Kind Kind
                   | ExcUnifyNoRuleApplied TypeSubstitutor TypeSubstitutor
-                  | ExcUnifyRowLabelCollided LabelName
+                  | ExcUnifyRowLabelCollided (Set.Set LabelName)
                   | ExcUnboundedVariable VarName
                   | ExcFreeVarKindConflict VarName Kind Kind
                   | ExcStoreTypingNotImplemented
                   | ExcDescribeNoRuleApplied TypeSubstitutor
+                  deriving Eq
 
 instance Show TypingExcept where
   show (ExcUnifyKindMismatch k1 k2) =
@@ -58,7 +59,7 @@ instance Show TypingExcept where
       ++ show (pretty k2)
   show (ExcUnifyNoRuleApplied s1 s2) =
     "Unable to unify " ++ show (pretty s1) ++ " with " ++ show (pretty s2)
-  show (ExcUnifyRowLabelCollided l) = "Row label collided: " ++ l
+  show (ExcUnifyRowLabelCollided s) = "Row label collided: " ++ show s
   show (ExcUnboundedVariable     x) = "Unbounded variable: " ++ x
   show (ExcFreeVarKindConflict x k1 k2) =
     "Free variable kind conflict in generalization, var: "
@@ -70,6 +71,7 @@ instance Show TypingExcept where
   show ExcStoreTypingNotImplemented = "Store typing is not implemented"
   show (ExcDescribeNoRuleApplied s) =
     "Unable to describe from unification result: " ++ show (pretty s)
+
 newtype NewVar = NewVar (Map.Map VarName Integer)
   deriving Show
 
@@ -433,21 +435,19 @@ unifyPresenceWithType :: PresenceWithType -> PresenceWithType -> Inference ()
 unifyPresenceWithType p1 p2 = do
   p1' <- classDesc (TySubPresenceWithType p1) >>= ensurePresenceWithType
   p2' <- classDesc (TySubPresenceWithType p2) >>= ensurePresenceWithType
-  unifyPresenceWithType' p1' p2'
-
-unifyPresenceWithType' :: PresenceWithType -> PresenceWithType -> Inference ()
-unifyPresenceWithType' PresenceWithTypeAbsent PresenceWithTypeAbsent =
-  return ()
-unifyPresenceWithType' PresenceWithTypePresent PresenceWithTypePresent =
-  return ()
-unifyPresenceWithType' (PresenceWithTypeVar x1) p2 = equate
-  (TySubPresenceWithType (PresenceWithTypeVar x1))
-  (TySubPresenceWithType p2)
-unifyPresenceWithType' p1 (PresenceWithTypeVar x2) = equate
-  (TySubPresenceWithType (PresenceWithTypeVar x2))
-  (TySubPresenceWithType p1)
-unifyPresenceWithType' p1 p2 = throwError
-  (ExcUnifyNoRuleApplied (TySubPresenceWithType p1) (TySubPresenceWithType p2))
+  if p1' == p2'
+    then return ()
+    else case (p1', p2') of
+      (PresenceWithTypeVar x1, _) -> equate
+        (TySubPresenceWithType (PresenceWithTypeVar x1))
+        (TySubPresenceWithType p2')
+      (_, PresenceWithTypeVar x2) -> equate
+        (TySubPresenceWithType (PresenceWithTypeVar x2))
+        (TySubPresenceWithType p1')
+      _ -> throwError
+        (ExcUnifyNoRuleApplied (TySubPresenceWithType p1')
+                               (TySubPresenceWithType p2')
+        )
 
 unifyPresence :: TypePresence -> TypePresence -> Inference ()
 unifyPresence p1 p2 = do
@@ -456,8 +456,9 @@ unifyPresence p1 p2 = do
   unifyPresence' p1' p2'
 
 unifyPresence' :: TypePresence -> TypePresence -> Inference ()
-unifyPresence' Absent       Absent       = return ()
-unifyPresence' (Present t1) (Present t2) = unifyProper t1 t2
+unifyPresence' Absent       Absent                          = return ()
+unifyPresence' (Present t1) (Present t2)                    = unifyProper t1 t2
+unifyPresence' (PresenceVar x1) (PresenceVar x2) | x1 == x2 = return ()
 unifyPresence' (PresenceVar x1) p2 =
   equate (TySubPresence (PresenceVar x1)) (TySubPresence p2)
 unifyPresence' p1 (PresenceVar x2) =
@@ -480,8 +481,8 @@ unifyPresence' p1 p2 =
 
 unifyRow :: TypeRow -> TypeRow -> Inference ()
 unifyRow r1 r2 = do
-  r1' <- classDesc (TySubRow r1) >>= ensureRow
-  r2' <- classDesc (TySubRow r2) >>= ensureRow
+  r1' <- classDesc (TySubRow r1) >>= ensureRow >>= flattenRow
+  r2' <- classDesc (TySubRow r2) >>= ensureRow >>= flattenRow
   unifyRow' r1' r2'
 
 unifyRow' :: TypeRow -> TypeRow -> Inference ()
@@ -502,12 +503,29 @@ unifyRow' (TyRow f1 cof1) (TyRow f2 cof2) = do
       equate (TySubRow (TyRow Map.empty (CofRowVar x1)))
              (TySubRow (TyRow f2' CofAllAbsent))
       sequence_ (Map.map (unifyPresence Absent) f1')
+    (CofRowVar x1, CofRowVar x2) | x1 == x2 -> do
+      sequence_ (Map.map (unifyPresence Absent) f1')
+      sequence_ (Map.map (unifyPresence Absent) f2')
     (CofRowVar x1, CofRowVar x2) -> do
       newX <- newVar innerVarPrefix
       equate (TySubRow (TyRow Map.empty (CofRowVar x1)))
              (TySubRow (TyRow f2' (CofRowVar newX)))
       equate (TySubRow (TyRow Map.empty (CofRowVar x2)))
              (TySubRow (TyRow f1' (CofRowVar newX)))
+
+flattenRow :: TypeRow -> Inference TypeRow
+flattenRow (TyRow f CofAllAbsent)               = return (TyRow f CofAllAbsent)
+flattenRow (TyRow f (CofRowVar x)) | Map.null f = do
+  (TyRow f' inf) <- classDesc (TySubRow (TyRow f (CofRowVar x))) >>= ensureRow
+  if TyRow f' inf == TyRow f (CofRowVar x)
+    then return (TyRow f (CofRowVar x))
+    else flattenRow (TyRow f' inf)
+flattenRow (TyRow f1 (CofRowVar x)) = do
+  (TyRow f2 inf2) <- flattenRow (TyRow Map.empty (CofRowVar x))
+  let overlapped = Map.keysSet (f1 `Map.intersection` f2)
+  unless (Set.null overlapped)
+         (throwError (ExcUnifyRowLabelCollided overlapped))
+  return (TyRow (Map.union f1 f2) inf2)
 
 describeProper :: Set.Set VarName -> Type -> Inference Type
 describeProper ctx (TyVar x) | x `Set.member` ctx = return (TyVar x)
@@ -550,24 +568,18 @@ describePresence ctx (PresenceVarWithType x t) = do
 describeRow :: Set.Set VarName -> TypeRow -> Inference TypeRow
 describeRow ctx (TyRow f CofAllAbsent) =
   flip TyRow CofAllAbsent <$> sequence (Map.map (describePresence ctx) f)
-describeRow ctx (TyRow f (CofRowVar x)) = do
-  (TyRow f' inf) <-
-    classDesc (TySubRow (TyRow Map.empty (CofRowVar x))) >>= ensureRow
-  if TyRow f' inf == TyRow Map.empty (CofRowVar x)
-    then flip TyRow (CofRowVar x)
-      <$> sequence (Map.map (describePresence ctx) f)
-    else
-      let
-        rf   = Map.map (describePresence ctx) f
-        rf'  = Map.map (describePresence ctx) f'
-        newF = sequence
-          (Map.unionWithKey
-            (\k _ _ -> throwError (ExcUnifyRowLabelCollided k))
-            rf
-            rf'
-          )
-      in
-        flip TyRow inf <$> newF >>= describeRow ctx
+describeRow ctx (TyRow f (CofRowVar x)) | Map.null f = do
+  (TyRow f' inf) <- classDesc (TySubRow (TyRow f (CofRowVar x))) >>= ensureRow
+  if TyRow f' inf == TyRow f (CofRowVar x)
+    then return (TyRow f (CofRowVar x))
+    else describeRow ctx (TyRow f' inf)
+describeRow ctx (TyRow f1 (CofRowVar x)) = do
+  (TyRow f2 inf2) <- describeRow ctx (TyRow Map.empty (CofRowVar x))
+  f1'             <- sequence (Map.map (describePresence ctx) f1)
+  let overlapped = Map.keysSet (f1' `Map.intersection` f2)
+  unless (Set.null overlapped)
+         (throwError (ExcUnifyRowLabelCollided overlapped))
+  return (TyRow (Map.union f1' f2) inf2)
 
 regTreeEq' :: Type -> Type -> Bool
 regTreeEq' t1 t2 = case runState (runMaybeT (regTreeEq t1 t2)) Set.empty of
