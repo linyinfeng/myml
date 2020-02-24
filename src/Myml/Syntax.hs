@@ -285,11 +285,19 @@ instance Pretty Term where
 instance PrettyPrec Term where
   prettyPrec n (TmAbs x t) = parensPrec
     (n > prec)
-    (pretty '\x3bb' <+> pretty x <+> pretty '.' <+> prettyPrec prec t)
+    (hang
+      indentSpace
+      (   pretty '\x3bb'
+      <+> pretty x
+      <+> pretty '.'
+      <>  softline
+      <>  prettyPrec prec t
+      )
+    )
     where prec = 0
   prettyPrec n (TmApp t1 t2) = parensPrec
     (n > prec)
-    (prettyPrec prec t1 <+> prettyPrec (prec + 1) t2)
+    (align (prettyPrec prec t1 <> softline <> prettyPrec (prec + 1) t2))
     where prec = 3
   prettyPrec _ (TmVar name   ) = pretty name
   prettyPrec n (TmLet x t1 t2) = parensPrec
@@ -300,63 +308,82 @@ instance PrettyPrec Term where
       <+> pretty '='
       <+> prettyPrec 0 t1
       <+> pretty "in"
-      <>  line
+      <>  softline
       <>  prettyPrec prec t2
       )
     )
     where prec = 0
-  prettyPrec _ (TmRcd fields) =
-    pretty '{'
-      <+> concatWith concator (map prettyPair (Map.toList fields))
-      <+> pretty '}'
+  prettyPrec _ (TmRcd fields) = group
+    (align (encloseSep open close separator fields'))
    where
-    concator l r = l <> pretty ',' <+> r
+    fields'   = map prettyPair (Map.toList fields)
+    open      = pretty "{ "
+    close     = pretty " }"
+    separator = pretty ", "
     prettyPair (l, t) = pretty l <+> pretty '=' <+> prettyPrec 0 t
   prettyPrec n (TmRcdExtend t1 l t2) = parensPrec
     (n > prec)
-    (   prettyPrec prec t1
-    <+> pretty "with"
-    <+> pretty '{'
-    <+> pretty l
-    <+> pretty '='
-    <+> prettyPrec 0 t2
-    <+> pretty '}'
+    (hang
+      indentSpace
+      (   prettyPrec prec t1
+      <+> pretty "with"
+      <>  softline
+      <>  pretty '{'
+      <+> pretty l
+      <+> pretty '='
+      <+> prettyPrec 0 t2
+      <+> pretty '}'
+      )
     )
     where prec = 5
   prettyPrec n (TmRcdAccess t1 l) = parensPrec
     (n > prec)
     (prettyPrec prec t1 <> pretty '.' <> pretty l)
     where prec = 5
-  prettyPrec _ (TmMatch cases) =
-    pretty '['
-      <+> concatWith concator (map prettyPair (Map.toList cases))
-      <+> pretty ']'
+  prettyPrec _ (TmMatch cases) = group
+    (align (encloseSep open close separator cases'))
    where
-    concator l r = l <> pretty ',' <+> r
+    cases'    = map prettyPair (Map.toList cases)
+    open      = pretty "[ "
+    close     = pretty " ]"
+    separator = pretty ", "
     prettyPair (l, c) = prettyVariantLabel l <+> pretty c
   prettyPrec n (TmMatchExtend t l c) = parensPrec
     (n > prec)
-    (   prettyPrec prec t
-    <+> pretty "with"
-    <+> pretty '['
-    <+> prettyVariantLabel l
-    <+> pretty c
-    <+> pretty ']'
+    (hang
+      indentSpace
+      (   prettyPrec prec t
+      <+> pretty "with"
+      <>  softline
+      <>  pretty '['
+      <+> prettyVariantLabel l
+      <+> pretty c
+      <+> pretty ']'
+      )
     )
     where prec = 5
   prettyPrec n (TmVariant l t) = parensPrec
     (n > prec)
-    (prettyVariantLabel l <+> prettyPrec prec t)
+    (align (prettyVariantLabel l <> softline <> prettyPrec prec t))
     where prec = 4
-  prettyPrec n (TmRef t) = parensPrec (n > prec)
-                                      (pretty "ref" <+> prettyPrec prec t)
+  prettyPrec n (TmRef t) = parensPrec
+    (n > prec)
+    (align (pretty "ref" <> softline <> prettyPrec prec t))
     where prec = 4
-  prettyPrec n (TmDeref t) = parensPrec (n > prec)
-                                        (pretty "!" <+> prettyPrec prec t)
+  prettyPrec n (TmDeref t) = parensPrec
+    (n > prec)
+    (align (pretty "!" <> softline <> prettyPrec prec t))
     where prec = 4
   prettyPrec n (TmAssign t1 t2) = parensPrec
     (n > prec)
-    (prettyPrec (prec + 1) t1 <+> pretty ":=" <+> prettyPrec (prec + 1) t2)
+    (hang
+      indentSpace
+      (   prettyPrec (prec + 1) t1
+      <+> pretty ":="
+      <>  softline
+      <>  prettyPrec (prec + 1) t2
+      )
+    )
     where prec = 2
   prettyPrec _ (TmLoc l)     = pretty "loc(" <> pretty l <> pretty ")"
   prettyPrec _ TmUnit        = pretty "unit"
@@ -364,7 +391,7 @@ instance PrettyPrec Term where
     (n > prec)
     (  align (prettyPrec (prec + 1) t1)
     <> pretty ";"
-    <> line
+    <> softline
     <> prettyPrec prec t2
     )
     where prec = 1
@@ -373,14 +400,16 @@ instance PrettyPrec Term where
   prettyPrec n (TmIf t1 t2 t3) = parensPrec
     (n > prec)
     (align
-      (   pretty "if"
-      <+> prettyPrec 0 t1
-      <>  line
-      <>  pretty "then"
-      <+> prettyPrec 0 t2
-      <>  line
-      <>  pretty "else"
-      <+> prettyPrec prec t3
+      (group
+        (   pretty "if"
+        <+> prettyPrec 0 t1
+        <>  line
+        <>  pretty "then"
+        <+> prettyPrec 0 t2
+        <>  line
+        <>  pretty "else"
+        <+> prettyPrec prec t3
+        )
       )
     )
     where prec = 0
@@ -403,15 +432,21 @@ instance PrettyPrec Type where
   prettyPrec _ (TyVar name     ) = pretty name
   prettyPrec n (TyArrow ty1 ty2) = parensPrec
     (n > prec)
-    (prettyPrec (prec + 1) ty1 <+> pretty "->" <+> prettyPrec prec ty2)
+    (align
+      (   prettyPrec (prec + 1) ty1
+      <+> pretty "->"
+      <>  softline
+      <>  prettyPrec prec ty2
+      )
+    )
     where prec = 1
   prettyPrec _ (TyRecord rows) =
-    pretty '{' <+> prettyTypeRow (\l -> pretty l <+> pretty ":") rows <+> pretty
-      '}'
-  prettyPrec _ (TyVariant rows) =
-    pretty '['
-      <+> prettyTypeRow (\l -> prettyVariantLabel l <+> pretty ":") rows
-      <+> pretty ']'
+    prettyTypeRow (pretty "{") (pretty "}") (\l -> pretty l <+> pretty ":") rows
+  prettyPrec _ (TyVariant rows) = prettyTypeRow
+    (pretty "[")
+    (pretty "]")
+    (\l -> prettyVariantLabel l <+> pretty ":")
+    rows
   prettyPrec n (TyMu name t) = parensPrec
     (n > prec)
     (pretty "\x3bc" <+> pretty name <+> pretty '.' <+> prettyPrec prec t)
@@ -423,21 +458,24 @@ instance PrettyPrec Type where
   prettyPrec _ TyBool = pretty "Bool"
   prettyPrec _ TyNat  = pretty "Nat"
 
-prettyTypeRow :: (LabelName -> Doc ann) -> TypeRow -> Doc ann
-prettyTypeRow conv (TyRow f cof) = case cof of
-  CofAllAbsent     -> finitePart
-  (CofRowVar name) -> finitePart <> space <> pretty "|" <+> pretty name
-  (CofMu x r) ->
-    finitePart
-      <>  space
-      <>  pretty "|"
-      <+> pretty "\x3bc"
-      <+> pretty x
-      <+> pretty '.'
-      <+> parens (prettyTypeRow conv r)
+prettyTypeRow
+  :: Doc ann -> Doc ann -> (LabelName -> Doc ann) -> TypeRow -> Doc ann
+prettyTypeRow open close conv (TyRow f cof) = align
+  (open <+> prettyRow <+> close)
  where
+  prettyRow = case cof of
+    CofAllAbsent     -> finitePart
+    (CofRowVar name) -> finitePart <> softline <> pretty "|" <+> pretty name
+    (CofMu x r) ->
+      finitePart
+        <>  softline
+        <>  pretty "|"
+        <+> pretty "\x3bc"
+        <+> pretty x
+        <+> pretty '.'
+        <+> prettyTypeRow (pretty "( ") (pretty " )") conv r
   prettyPair (l, t) = conv l <+> pretty t
-  concator left right = left <> pretty "," <+> right
+  concator left right = left <> softline <> pretty "," <+> right
   finitePart = concatWith concator (map prettyPair (Map.toList f))
 
 instance Pretty TypePresence where
@@ -459,7 +497,8 @@ instance Pretty TypeScheme where
       <+> pretty "::"
       <+> pretty k
       <+> pretty "."
-      <+> pretty s
+      <>  softline -- no hang and align
+      <>  pretty s
 
 instance Pretty Kind where
   pretty = prettyPrec 0
@@ -476,3 +515,6 @@ instance PrettyPrec Kind where
 
 parensPrec :: Bool -> Doc ann -> Doc ann
 parensPrec cond = if cond then parens else id
+
+indentSpace :: Int
+indentSpace = 2

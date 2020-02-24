@@ -109,7 +109,8 @@ instance Pretty TypeSubstitutor where
   pretty (TySubProper           t) = pretty t
   pretty (TySubPresenceWithType p) = pretty p
   pretty (TySubPresence         p) = pretty p
-  pretty (TySubRow r) = prettyTypeRow (\l -> pretty l <+> pretty ":") r
+  pretty (TySubRow r) =
+    prettyTypeRow (pretty "(") (pretty ")") (\l -> pretty l <+> pretty ":") r
 
 instance FreeVariable TypeSubstitutor where
   freeVariable (TySubProper           t) = freeVariable t

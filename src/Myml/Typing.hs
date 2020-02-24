@@ -72,8 +72,14 @@ instance Show TypingExcept where
   show ExcStoreTypingNotImplemented = "Store typing is not implemented"
   show (ExcDescribeNoRuleApplied s) =
     "Unable to describe from unification result: " ++ show (pretty s)
-  show (ExcCanNotHandleCofMu r) = "Can not handle cofinite mu row: "
-    ++ show (prettyTypeRow (\l -> pretty l <+> pretty ":") r)
+  show (ExcCanNotHandleCofMu r) =
+    "Can not handle cofinite mu row: "
+      ++ show
+           (prettyTypeRow (pretty "(")
+                          (pretty ")")
+                          (\l -> pretty l <+> pretty ":")
+                          r
+           )
 
 newtype NewVar = NewVar (Map.Map VarName Integer)
   deriving Show
