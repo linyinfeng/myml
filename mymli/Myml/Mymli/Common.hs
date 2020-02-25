@@ -7,7 +7,6 @@ module Myml.Mymli.Common
   , mymliSubstEnv
   , mymliEval
   , mymliGc
-
   )
 where
 
@@ -30,8 +29,8 @@ inputCmdPrompt = "input| "
 
 parseAndPrintError :: Parser a -> String -> IO (Maybe a)
 parseAndPrintError parser input = case runParser parser mempty input of
-                                Failure (ErrInfo d _) -> print d >> return Nothing
-                                Success res -> return (Just res)
+  Failure (ErrInfo d _) -> print d >> return Nothing
+  Success res           -> return (Just res)
 
 mymliInferTypeAndUpdateBinding
   :: Monad m => Term -> Mymli m (Either TypingExcept TypeScheme)

@@ -36,12 +36,12 @@ loop = do
     Just (':' : cmdString) -> do
       res <- liftIO (parseAndPrintError (parseCommand <* eof) cmdString)
       case res of
-        Nothing -> handleMymliRequest MymliContinue
+        Nothing  -> handleMymliRequest MymliContinue
         Just cmd -> processCommand cmd >>= handleMymliRequest
     Just inputString -> do
       res <- liftIO (parseAndPrintError (parseInput <* eof) inputString)
       case res of
-        Nothing -> handleMymliRequest MymliContinue
+        Nothing    -> handleMymliRequest MymliContinue
         Just input -> processInput input >>= handleMymliRequest
 
 handleMymliRequest :: MymliRequest -> Mymli (InputT IO) ()
