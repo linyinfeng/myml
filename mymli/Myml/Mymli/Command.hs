@@ -13,6 +13,8 @@ import           Myml.Mymli.Common
 import           Myml.Mymli.Output
 import           Myml.Mymli.Input
 import           Myml.Mymli.Input.Parser
+import           Myml.Mymli.Text
+import qualified Data.Text.IO                  as Text.IO
 import           Control.Monad.Trans
 import           Control.Monad.State
 import           Text.Trifecta
@@ -34,7 +36,7 @@ data Command = CmdExit
 processCommand :: Command -> Mymli (InputT IO) MymliRequest
 processCommand CmdExit = return MymliExit
 processCommand CmdHelp = do
-  liftIO (putStrLn "Help is unimplemented")
+  liftIO (Text.IO.putStrLn mymliHelpText)
   return MymliContinue
 processCommand (CmdShowType t) = do
   inferRes <- mymliInferTypeAndUpdateBinding t

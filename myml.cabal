@@ -74,6 +74,7 @@ executable mymli
       Myml.Mymli.Input
       Myml.Mymli.Input.Parser
       Myml.Mymli.Output
+      Myml.Mymli.Text
       Paths_myml
   hs-source-dirs:
       mymli
@@ -83,6 +84,8 @@ executable mymli
     , directory
     , filepath
     , haskeline
+    , text
+    , neat-interpolation
 
 test-suite myml-test
   import:

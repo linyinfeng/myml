@@ -9,6 +9,8 @@ import           Myml.Mymli.Command
 import           Myml.Mymli.Input
 import           Myml.Mymli.Command.Parser
 import           Myml.Mymli.Input.Parser
+import           Myml.Mymli.Text
+import qualified Data.Text.IO                  as Text.IO
 import           Text.Trifecta
 import           System.Console.Haskeline
 import           Control.Monad.State
@@ -26,7 +28,13 @@ main = do
         , historyFile    = Just $ homeDir </> historyFileName
         , autoAddHistory = True
         }
-  runInputT haskelineSettings (evalMymli loop emptyMymlEnv)
+  runInputT haskelineSettings (evalMymli (greeting >> loop >> bye) emptyMymlEnv)
+
+greeting :: Mymli (InputT IO) ()
+greeting = liftIO (Text.IO.putStrLn mymliGreetingText)
+
+bye :: Mymli (InputT IO) ()
+bye = liftIO (Text.IO.putStrLn mymliByeText)
 
 loop :: Mymli (InputT IO) ()
 loop = do

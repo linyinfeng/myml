@@ -33,8 +33,7 @@ parseShowTypeCommand = do
   CmdShowType <$> parseTerm
 
 parseShowBindingsCommand :: Parser Command
-parseShowBindingsCommand =
-  (symbol "bindings" <|> symbol "b") *> (v <|> t <|> ty)
+parseShowBindingsCommand = symbol "bindings" *> (v <|> t <|> ty)
  where
   v  = CmdShowValueBindings <$ symbol "value"
   t  = CmdShowTermBindings <$ symbol "term"
