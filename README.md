@@ -5,8 +5,6 @@
 
 My toy programming language (working in progress).
 
-Currently type checking is not implemented.
-
 ## Example
 
 ```text
