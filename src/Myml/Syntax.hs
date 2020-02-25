@@ -461,21 +461,21 @@ instance PrettyPrec Type where
 prettyTypeRow
   :: Doc ann -> Doc ann -> (LabelName -> Doc ann) -> TypeRow -> Doc ann
 prettyTypeRow open close conv (TyRow f cof) = align
-  (open <+> prettyRow <+> close)
+  (group (open <+> prettyRow <+> close))
  where
   prettyRow = case cof of
     CofAllAbsent     -> finitePart
-    (CofRowVar name) -> finitePart <> softline <> pretty "|" <+> pretty name
+    (CofRowVar name) -> finitePart <> line <> pretty "|" <+> pretty name
     (CofMu x r) ->
       finitePart
-        <>  softline
+        <>  line
         <>  pretty "|"
         <+> pretty "\x3bc"
         <+> pretty x
         <+> pretty '.'
         <+> prettyTypeRow (pretty "( ") (pretty " )") conv r
   prettyPair (l, t) = conv l <+> pretty t
-  concator left right = left <> softline <> pretty "," <+> right
+  concator left right = left <> line <> pretty "," <+> right
   finitePart = concatWith concator (map prettyPair (Map.toList f))
 
 instance Pretty TypePresence where
