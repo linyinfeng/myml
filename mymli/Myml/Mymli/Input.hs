@@ -20,10 +20,9 @@ processInput (InputTerm t) = do
   inferRes <- mymliInferTypeAndUpdateBinding t
   case inferRes of
     Left  e -> liftIO (typingErrorLabel >> print e)
-    Right s -> do
+    Right _s -> do
       v <- mymliEval t
       liftIO (print (pretty v))
-      liftIO (print (pretty ":" <+> pretty s))
       mymliGc
   return MymliContinue
 processInput (InputBind x t) = do
@@ -33,8 +32,6 @@ processInput (InputBind x t) = do
     Right s -> do
       v <- mymliEval t
       mymliAddBinding x t v s
-      liftIO (print (pretty x))
-      liftIO (print (pretty ":" <+> pretty s))
       mymliGc
   return MymliContinue
 processInput InputEmpty = return MymliContinue
