@@ -42,12 +42,14 @@ loop = do
   case minput of
     Nothing                -> return ()
     Just (':' : cmdString) -> do
-      res <- liftIO (parseAndPrintError (parseCommand <* eof) cmdString)
+      res <- liftIO
+        (parseAndPrintError (whiteSpace *> parseCommand <* eof) cmdString)
       case res of
         Nothing  -> handleMymliRequest MymliContinue
         Just cmd -> processCommand cmd >>= handleMymliRequest
     Just inputString -> do
-      res <- liftIO (parseAndPrintError (parseInput <* eof) inputString)
+      res <- liftIO
+        (parseAndPrintError (whiteSpace *> parseInput <* eof) inputString)
       case res of
         Nothing    -> handleMymliRequest MymliContinue
         Just input -> processInput input >>= handleMymliRequest

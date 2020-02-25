@@ -37,4 +37,14 @@ eq 0 1
 eq 1 1
 eq 3 3
 eq 3 1
+
+setCounterClass =
+  λ r . λ self . λ _ .
+    { get = λ _ . ! (r.x)
+    , set = λ i . r.x := i
+    , inc = λ _ . (self unit).set (suc ((self unit).get unit))
+    }
+setCounterDefaultRep = { x = ref 0 }
+createSetCounter =
+  λ _ . z (setCounterClass setCounterDefaultRep) unit
 ```

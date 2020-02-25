@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables #-}
 
 module Myml.Mymli.Command
   ( Command(..)
@@ -77,7 +77,10 @@ processCommand CmdInput = do
       Just "" -> return (Just "")
       Just l  -> fmap (l ++) <$> multiLineInput
 processCommand (CmdLoadFile file) = do
-  result <- parseFromFile parseInputs file
+  result <- liftIO
+    (handle (\(e :: IOException) -> print e >> return Nothing)
+            (parseFromFile (whiteSpace *> parseInputs <* eof) file)
+    )
   case result of
     Nothing     -> return MymliContinue
     Just inputs -> do
