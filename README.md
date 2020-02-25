@@ -25,7 +25,10 @@ suc = λ n . `suc n
 prd = [ `suc n-1 -> n-1, `zro u -> `zro u ]
 isZro = [ `suc _ -> false, `zro _ -> true ]
 
-g = λ self . λ n . λ m . if isZro n then (if isZro m then true else false) else (if isZro m then false else self (prd n) (prd m))
+g = λ self . λ n . λ m .
+  if isZro n
+  then (if isZro m then true else false)
+  else (if isZro m then false else self (prd n) (prd m))
 eq = z g
 
 eq 0 0

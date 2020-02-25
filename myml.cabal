@@ -70,8 +70,9 @@ executable mymli
       Myml.Mymli.Common
       Myml.Mymli.Environment
       Myml.Mymli.Command
+      Myml.Mymli.Command.Parser
       Myml.Mymli.Input
-      Myml.Mymli.Parser
+      Myml.Mymli.Input.Parser
       Myml.Mymli.Output
       Paths_myml
   hs-source-dirs:

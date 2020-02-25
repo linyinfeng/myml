@@ -1,9 +1,13 @@
 {-# LANGUAGE RankNTypes #-}
 module Myml.Mymli.Common
-  ( mymliInferTypeAndUpdateBinding
+  ( prompt
+  , inputCmdPrompt
+  , parseAndPrintError
+  , mymliInferTypeAndUpdateBinding
   , mymliSubstEnv
   , mymliEval
   , mymliGc
+
   )
 where
 
@@ -13,9 +17,21 @@ import           Myml.Subst
 import           Myml.Eval
 import           Myml.Eval.Store
 import           Myml.Mymli.Environment
+import           Text.Trifecta
 import           Control.Monad.State
 import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set
+
+prompt :: String
+prompt = "\ESC[1;32m\STXmymli\ESC[0m\STX> "
+
+inputCmdPrompt :: String
+inputCmdPrompt = "input| "
+
+parseAndPrintError :: Parser a -> String -> IO (Maybe a)
+parseAndPrintError parser input = case runParser parser mempty input of
+                                Failure (ErrInfo d _) -> print d >> return Nothing
+                                Success res -> return (Just res)
 
 mymliInferTypeAndUpdateBinding
   :: Monad m => Term -> Mymli m (Either TypingExcept TypeScheme)
