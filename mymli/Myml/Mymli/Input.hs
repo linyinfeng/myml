@@ -19,7 +19,7 @@ processInput :: MonadIO m => Input -> Mymli m MymliRequest
 processInput (InputTerm t) = do
   inferRes <- mymliInferTypeAndUpdateBinding t
   case inferRes of
-    Left  e -> liftIO (typingErrorLabel >> print e)
+    Left  e  -> liftIO (typingErrorLabel >> print e)
     Right _s -> do
       v <- mymliEval t
       liftIO (print (pretty v))
