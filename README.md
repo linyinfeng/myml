@@ -5,7 +5,19 @@
 
 My toy programming language (working in progress).
 
+## Build and Run
+
+```bash
+cabal v2-run mymli
+```
+
+## Usage
+
+Use command `:help` in mymli for help information.
+
 ## Example
+
+Multiline term and bindings can be inputted by `:input` command.
 
 ```text
 diverge = λ y . (λ x . x x) (λ x . x x)
@@ -45,4 +57,7 @@ setCounterClass =
 setCounterDefaultRep = { x = ref 0 }
 createSetCounter =
   λ _ . z (setCounterClass setCounterDefaultRep) unit
+
+c = createSetCounter unit
+c.inc unit; c.inc unit; c.get unit
 ```
