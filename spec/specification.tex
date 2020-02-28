@@ -268,96 +268,100 @@ Working in progress.
 
 \subsection{Generalization}
 
-\begin{gather}
-\bar{\Gamma}(\code{MT}) = \forall\ \hat{\code{X}}.\ \code{MT}
-\qquad \hat{\code{X}} = \freeVariable(\code{MT}) \setminus \freeVariable(\Gamma)
-\ruleTag{Gen}
-\end{gather}
+Working in progress.
+
+% \begin{gather}
+% \bar{\Gamma}(\code{MT}) = \forall\ \hat{\code{X}}.\ \code{MT}
+% \qquad \hat{\code{X}} = \freeVariable(\code{MT}) \setminus \freeVariable(\Gamma)
+% \ruleTag{Gen}
+% \end{gather}
 
 \subsection{Typing Relation}
 
-\begin{gather}
-\inferrule
-{\code{x}:\code{PT}\in\Gamma \and
- \code{MT} = \instantiate(\code{PT})}
-{\typingRelation{\Gamma}{\code{x}}{\code{MT}}{[\ ]}}
-\ruleTag{T-Var} \\
-\inferrule
-{\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
- \typingRelation{\sigma_1\Gamma}{\code{t}_2}{\code{MT}_2}{\sigma_2} \\\\
- \code{MT}_3 = \newVariable \and
- \sigma_3 = \mostGeneralUnifier(\sigma_2\code{MT}_1, \code{MT}_2\rightarrow\code{MT}_3)}
-{\typingRelation{\Gamma}{\code{t}_1\ \code{t}_2}{\sigma_3\code{MT}_3}{\sigma_3\composite\sigma_2\composite\sigma_1}}
-\ruleTag{T-App} \\
-\inferrule
-{\code{MT}_1 = \newVariable \and
- \typingRelation{\Gamma,\code{x}:\code{MT}_1}{\code{t}}{\code{MT}_2}{\sigma}}
-{\typingRelation{\Gamma}{\code{\lambda\ x.\ t}}{\sigma\code{MT}_1\rightarrow\code{MT}_2}{\sigma}}
-\ruleTag{T-Abs} \\
-\inferrule
-{\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
- \Gamma' = \sigma_1\Gamma \and
- \typingRelation{\Gamma', \code{x}:\bar{\Gamma'}(\code{MT}_1)}{\code{t}_2}{\code{MT}_2}{\sigma_2}}
-{\typingRelation{\Gamma}{\code{let}\ \code{x}=\code{t}_1\ \code{in}\ \code{t}_2}{\code{MT}_2}{\sigma_2\composite\sigma_1}}
-\ruleTag{T-Let} \\
-\inferrule
-{\typingRelation{\sigma_{i-1}\sigma_{i-2}\dots\sigma_1\Gamma}{\code{t}_i}{\code{MT}_i}{\sigma_i} \and
- \code{P}_i = \newVariable}
-{\typingRelation{\Gamma}{\{\ {\code{l}_i = \code{t}_i}^{i\in 1\dots n}\ \}}{\{\ \code{l}_i = \code{P}_i\ (\sigma_{n}\sigma_{n-1}\dots\sigma_{i+1}\code{MT}_i)\ \}}{\sigma_n\composite\sigma_{n-1}\composite\cdots\composite\sigma_1}}
-\ruleTag{T-Rcd} \\
-\inferrule
-{\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
- \typingRelation{\sigma_1\Gamma}{\code{t}_2}{\code{MT}_2}{\sigma_2} \\\\
- \code{P} = \newVariable \and
- \code{R} = \newVariable \and
- \sigma_3 = \mostGeneralUnifier(\sigma_2\code{MT}_1, \{\ \code{l}:\code{P}\mid\code{R}\ \}) \\\\
- \code{P}' = \newVariable}
-{\typingRelation{\Gamma}{\code{t}_1\ \code{with}\ \{\ \code{l} = \code{t}_2\ \}}{\{\ \code{l}:\code{P}'\ \sigma_3\code{MT}_2\mid\sigma_3\code{R}\ \}}{\sigma_3\composite\sigma_2\composite\sigma_1}}
-\ruleTag{T-RcdExt} \\
-\inferrule
-{\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \\\\
- \code{MT}_2 = \newVariable \and
- \code{R} = \newVariable \and
- \sigma_2 = \mostGeneralUnifier(\code{MT}_1, \{\ \code{l}:\code{Present}\ \code{MT}_2\mid\code{R}\ \})}
-{\typingRelation{\Gamma}{\code{t}_1.\code{l}}{\sigma_2\code{MT}_2}{\sigma_2\composite\sigma_1}}
-\ruleTag{T-RcdProj} \\
-\inferrule
-{}
-{\typingRelation{\Gamma}{[\ {\backtick\code{l}_i\ \code{x}_i\rightarrow\code{t}_i}^{i\in 1\dots n}\ ]}{\text{TODO}}{\text{TODO}}}
-\ruleTag{T-Mat} \\
-\inferrule
-{\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
- \code{MT}_3 = \newVariable \and
- \typingRelation{\sigma_1\Gamma, \code{x}:\code{MT}_3}{\code{t_2}}{\code{MT}_2}{\sigma_2} \\\\
- \code{P} = \newVariable \and
- \code{R} = \newVariable \and
- \sigma_3 = \mostGeneralUnifier(\sigma_2\code{MT}_1, [\ \backtick\code{l}:\code{P}\mid\code{R}\ ]\rightarrow\code{MT}_2) \\\\
- \code{P}' = \newVariable}
-{\typingRelation{\Gamma}{\code{t}_1\ \code{with}\ [\ \backtick\code{l}\ \code{x}\rightarrow\code{t}_2\ ]}{[\ \backtick\code{l}:\code{P}'\ \sigma_3\sigma_2\code{MT}_3\mid\sigma_3\code{R}\ ]\rightarrow\sigma_3\code{MT}_2}{\sigma_3\composite\sigma_2\composite\sigma_1}}
-\ruleTag{T-MatExt} \\
-\inferrule
-{\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
- \code{R} = \newVariable}
-{\typingRelation{\Gamma}{\backtick\code{l}\ \code{t}_1}{[\ \backtick\code{l}:\code{Present}\ \code{MT}_1\mid\code{R}\ ]}{\sigma_1}}
-\ruleTag{T-Variant} \\
-\inferrule
-{\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1}}
-{\typingRelation{\Gamma}{\code{ref}\ \code{t}_1}{\code{Ref}\ \code{MT}_1}{\sigma_1}}
-\ruleTag{T-Ref} \\
-\inferrule
-{\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
- \code{MT}_2 = \newVariable \and
- \sigma_2 = \mostGeneralUnifier(\code{MT}_1, \code{Ref}\ \code{MT}_2)}
-{\typingRelation{\Gamma}{!\ \code{t}_1}{\sigma_2\code{MT}_2}{\sigma_2\composite\sigma_1}}
-\ruleTag{T-Deref} \\
-\inferrule
-{\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
- \typingRelation{\sigma_1\Gamma}{\code{t}_2}{\code{MT}_2}{\sigma_2} \and
- \sigma_3 = \mostGeneralUnifier(\sigma_2\code{MT}_1, \code{Ref}\ \code{MT}_2)
- }
-{\typingRelation{\Gamma}{\code{t}_1\coloneqq\code{t}_2}{\code{unit}}{\sigma_3\composite\sigma_2\composite\sigma_3}}
-\ruleTag{T-Assign}
-\end{gather}
+Working in progress.
+
+% \begin{gather}
+% \inferrule
+% {\code{x}:\code{PT}\in\Gamma \and
+%  \code{MT} = \instantiate(\code{PT})}
+% {\typingRelation{\Gamma}{\code{x}}{\code{MT}}{[\ ]}}
+% \ruleTag{T-Var} \\
+% \inferrule
+% {\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
+%  \typingRelation{\sigma_1\Gamma}{\code{t}_2}{\code{MT}_2}{\sigma_2} \\\\
+%  \code{MT}_3 = \newVariable \and
+%  \sigma_3 = \mostGeneralUnifier(\sigma_2\code{MT}_1, \code{MT}_2\rightarrow\code{MT}_3)}
+% {\typingRelation{\Gamma}{\code{t}_1\ \code{t}_2}{\sigma_3\code{MT}_3}{\sigma_3\composite\sigma_2\composite\sigma_1}}
+% \ruleTag{T-App} \\
+% \inferrule
+% {\code{MT}_1 = \newVariable \and
+%  \typingRelation{\Gamma,\code{x}:\code{MT}_1}{\code{t}}{\code{MT}_2}{\sigma}}
+% {\typingRelation{\Gamma}{\code{\lambda\ x.\ t}}{\sigma\code{MT}_1\rightarrow\code{MT}_2}{\sigma}}
+% \ruleTag{T-Abs} \\
+% \inferrule
+% {\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
+%  \Gamma' = \sigma_1\Gamma \and
+%  \typingRelation{\Gamma', \code{x}:\bar{\Gamma'}(\code{MT}_1)}{\code{t}_2}{\code{MT}_2}{\sigma_2}}
+% {\typingRelation{\Gamma}{\code{let}\ \code{x}=\code{t}_1\ \code{in}\ \code{t}_2}{\code{MT}_2}{\sigma_2\composite\sigma_1}}
+% \ruleTag{T-Let} \\
+% \inferrule
+% {\typingRelation{\sigma_{i-1}\sigma_{i-2}\dots\sigma_1\Gamma}{\code{t}_i}{\code{MT}_i}{\sigma_i} \and
+%  \code{P}_i = \newVariable}
+% {\typingRelation{\Gamma}{\{\ {\code{l}_i = \code{t}_i}^{i\in 1\dots n}\ \}}{\{\ \code{l}_i = \code{P}_i\ (\sigma_{n}\sigma_{n-1}\dots\sigma_{i+1}\code{MT}_i)\ \}}{\sigma_n\composite\sigma_{n-1}\composite\cdots\composite\sigma_1}}
+% \ruleTag{T-Rcd} \\
+% \inferrule
+% {\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
+%  \typingRelation{\sigma_1\Gamma}{\code{t}_2}{\code{MT}_2}{\sigma_2} \\\\
+%  \code{P} = \newVariable \and
+%  \code{R} = \newVariable \and
+%  \sigma_3 = \mostGeneralUnifier(\sigma_2\code{MT}_1, \{\ \code{l}:\code{P}\mid\code{R}\ \}) \\\\
+%  \code{P}' = \newVariable}
+% {\typingRelation{\Gamma}{\code{t}_1\ \code{with}\ \{\ \code{l} = \code{t}_2\ \}}{\{\ \code{l}:\code{P}'\ \sigma_3\code{MT}_2\mid\sigma_3\code{R}\ \}}{\sigma_3\composite\sigma_2\composite\sigma_1}}
+% \ruleTag{T-RcdExt} \\
+% \inferrule
+% {\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \\\\
+%  \code{MT}_2 = \newVariable \and
+%  \code{R} = \newVariable \and
+%  \sigma_2 = \mostGeneralUnifier(\code{MT}_1, \{\ \code{l}:\code{Present}\ \code{MT}_2\mid\code{R}\ \})}
+% {\typingRelation{\Gamma}{\code{t}_1.\code{l}}{\sigma_2\code{MT}_2}{\sigma_2\composite\sigma_1}}
+% \ruleTag{T-RcdProj} \\
+% \inferrule
+% {}
+% {\typingRelation{\Gamma}{[\ {\backtick\code{l}_i\ \code{x}_i\rightarrow\code{t}_i}^{i\in 1\dots n}\ ]}{\text{TODO}}{\text{TODO}}}
+% \ruleTag{T-Mat} \\
+% \inferrule
+% {\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
+%  \code{MT}_3 = \newVariable \and
+%  \typingRelation{\sigma_1\Gamma, \code{x}:\code{MT}_3}{\code{t_2}}{\code{MT}_2}{\sigma_2} \\\\
+%  \code{P} = \newVariable \and
+%  \code{R} = \newVariable \and
+%  \sigma_3 = \mostGeneralUnifier(\sigma_2\code{MT}_1, [\ \backtick\code{l}:\code{P}\mid\code{R}\ ]\rightarrow\code{MT}_2) \\\\
+%  \code{P}' = \newVariable}
+% {\typingRelation{\Gamma}{\code{t}_1\ \code{with}\ [\ \backtick\code{l}\ \code{x}\rightarrow\code{t}_2\ ]}{[\ \backtick\code{l}:\code{P}'\ \sigma_3\sigma_2\code{MT}_3\mid\sigma_3\code{R}\ ]\rightarrow\sigma_3\code{MT}_2}{\sigma_3\composite\sigma_2\composite\sigma_1}}
+% \ruleTag{T-MatExt} \\
+% \inferrule
+% {\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
+%  \code{R} = \newVariable}
+% {\typingRelation{\Gamma}{\backtick\code{l}\ \code{t}_1}{[\ \backtick\code{l}:\code{Present}\ \code{MT}_1\mid\code{R}\ ]}{\sigma_1}}
+% \ruleTag{T-Variant} \\
+% \inferrule
+% {\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1}}
+% {\typingRelation{\Gamma}{\code{ref}\ \code{t}_1}{\code{Ref}\ \code{MT}_1}{\sigma_1}}
+% \ruleTag{T-Ref} \\
+% \inferrule
+% {\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
+%  \code{MT}_2 = \newVariable \and
+%  \sigma_2 = \mostGeneralUnifier(\code{MT}_1, \code{Ref}\ \code{MT}_2)}
+% {\typingRelation{\Gamma}{!\ \code{t}_1}{\sigma_2\code{MT}_2}{\sigma_2\composite\sigma_1}}
+% \ruleTag{T-Deref} \\
+% \inferrule
+% {\typingRelation{\Gamma}{\code{t}_1}{\code{MT}_1}{\sigma_1} \and
+%  \typingRelation{\sigma_1\Gamma}{\code{t}_2}{\code{MT}_2}{\sigma_2} \and
+%  \sigma_3 = \mostGeneralUnifier(\sigma_2\code{MT}_1, \code{Ref}\ \code{MT}_2)
+%  }
+% {\typingRelation{\Gamma}{\code{t}_1\coloneqq\code{t}_2}{\code{unit}}{\sigma_3\composite\sigma_2\composite\sigma_3}}
+% \ruleTag{T-Assign}
+% \end{gather}
 
 \subsection{Most General Unifier}
 
