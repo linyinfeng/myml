@@ -17,7 +17,7 @@ Use command `:help` in mymli for help information.
 
 ## Example
 
-Multiline term and bindings can be inputted by `:input` command.
+Multi-line terms and bindings can be inputted by `:input` command.
 
 ```text
 diverge = λ y . (λ x . x x) (λ x . x x)
