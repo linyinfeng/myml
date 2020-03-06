@@ -158,16 +158,12 @@ unitTests = testGroup
     emptyStore
     (pTerm "2")
     emptyStore
-  , testCase "bigStep pred 1" $ assertBigStep
-    (pTerm "pred (succ zero)")
-    emptyStore
-    (pTerm "zero")
-    emptyStore
-  , testCase "bigStep pred 2" $ assertBigStep
-    (pTerm "pred zero")
-    emptyStore
-    (pTerm "zero")
-    emptyStore
+  , testCase "bigStep pred 1" $ assertBigStep (pTerm "pred (succ zero)")
+                                              emptyStore
+                                              (pTerm "zero")
+                                              emptyStore
+  , testCase "bigStep pred 2"
+    $ assertBigStep (pTerm "pred zero") emptyStore (pTerm "zero") emptyStore
   , testCase "bigStep isZero" $ assertBigStep
     (pTerm "{ l1 = isZero (succ zero), l2 = isZero zero }")
     emptyStore

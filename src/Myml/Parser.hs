@@ -96,13 +96,13 @@ parseTermAtom =
   unit =
     TmUnit
       <$ (reserve identStyle "unit" <|> (try (symbol "(" *> symbol ")") $> ()))
-  true  = TmTrue <$ reserve identStyle "true"
-  false = TmFalse <$ reserve identStyle "false"
-  zero  = TmNat 0 <$ reserve identStyle "zero"
-  nat  = TmNat <$> natural
-  suc  = TmSucc <$ reserve identStyle "succ"
-  prd  = TmPred <$ reserve identStyle "pred"
-  isZero  = TmIsZero <$ reserve identStyle "isZero"
+  true   = TmTrue <$ reserve identStyle "true"
+  false  = TmFalse <$ reserve identStyle "false"
+  zero   = TmNat 0 <$ reserve identStyle "zero"
+  nat    = TmNat <$> natural
+  suc    = TmSucc <$ reserve identStyle "succ"
+  prd    = TmPred <$ reserve identStyle "pred"
+  isZero = TmIsZero <$ reserve identStyle "isZero"
 
 recordPair :: Parser (LabelName, Term)
 recordPair =

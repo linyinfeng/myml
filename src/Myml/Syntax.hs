@@ -234,7 +234,7 @@ instance FreeVariable Term where
   freeVariable TmTrue           = Set.empty
   freeVariable TmFalse          = Set.empty
   freeVariable (TmIf t1 t2 t3)  = Set.unions (map freeVariable [t1, t2, t3])
-  freeVariable (TmNat _)           = Set.empty
+  freeVariable (TmNat _      )  = Set.empty
   freeVariable TmSucc           = Set.empty
   freeVariable TmPred           = Set.empty
   freeVariable TmIsZero         = Set.empty
@@ -417,10 +417,10 @@ instance PrettyPrec Term where
       )
     )
     where prec = 0
-  prettyPrec _ (TmNat n)     = pretty n
-  prettyPrec _ TmSucc = pretty "succ"
-  prettyPrec _ TmPred = pretty "pred"
-  prettyPrec _ TmIsZero = pretty "isZero"
+  prettyPrec _ (TmNat n) = pretty n
+  prettyPrec _ TmSucc    = pretty "succ"
+  prettyPrec _ TmPred    = pretty "pred"
+  prettyPrec _ TmIsZero  = pretty "isZero"
 
 prettyVariantLabel :: LabelName -> Doc ann
 prettyVariantLabel name = pretty '`' <> pretty name
