@@ -9,6 +9,4 @@ if [ -n "$STATUS" ]; then
 else
     "$TOOL_DIR/format"
     "$TOOL_DIR/refreeze"
-    cabal build
-    cabal run myml-test
 fi
