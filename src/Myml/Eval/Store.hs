@@ -124,8 +124,10 @@ instance Locations Term where
   locations TmTrue                = Set.empty
   locations TmFalse               = Set.empty
   locations (TmIf t1 t2 t3)       = Set.unions (map locations [t1, t2, t3])
-  locations TmZero                = Set.empty
-  locations (TmSucc t)            = locations t
+  locations (TmNat _)                = Set.empty
+  locations TmSucc            = Set.empty
+  locations TmPred            = Set.empty
+  locations TmIsZero            = Set.empty
 
 instance Locations TermCase where
   locations (TmCase _ t) = locations t

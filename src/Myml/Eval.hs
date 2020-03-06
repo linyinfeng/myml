@@ -39,6 +39,9 @@ smallStep (TmApp (TmMatch m) (TmVariant l v2)) | isValue v2 =
   case Map.lookup l m of
     Nothing            -> throwError ExcNoRuleApplied
     Just (TmCase x t1) -> return (applySubst (Map.singleton x v2) t1)
+smallStep (TmApp TmSucc (TmNat n)) = return (TmNat (succ n))
+smallStep (TmApp TmPred (TmNat n)) = return (TmNat (if n == 0 then 0 else n - 1))
+smallStep (TmApp TmIsZero (TmNat n)) = return (if n == 0 then TmTrue else TmFalse)
 smallStep (TmApp v1 t2) | isValue v1 = TmApp v1 <$> smallStep t2
 smallStep (TmApp t1 t2)              = flip TmApp t2 <$> smallStep t1
 smallStep (TmLet x v1 t2) | isValue v1 =
@@ -83,5 +86,4 @@ smallStep (TmSeq t1 t2       )          = flip TmSeq t2 <$> smallStep t1
 smallStep (TmIf TmTrue  t2 _ )          = return t2
 smallStep (TmIf TmFalse _  t3)          = return t3
 smallStep (TmIf t1 t2 t3) = (\t1' -> TmIf t1' t2 t3) <$> smallStep t1
-smallStep (TmSucc t          )          = TmSucc <$> smallStep t
 smallStep _                             = throwError ExcNoRuleApplied

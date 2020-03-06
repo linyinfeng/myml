@@ -7,24 +7,13 @@ import           Myml.Syntax
 import           Myml.Test.Helper
 import           Test.Tasty
 import           Test.Tasty.HUnit
-import           Test.Tasty.SmallCheck         as SC
 import qualified Data.Set                      as Set
 
 tests :: TestTree
-tests = testGroup "Myml.Syntax.Spec" [scProps, unitTests]
-
-scProps :: TestTree
-scProps = testGroup
-  "SmallCheck properties"
-  [ localOption (SmallCheckDepth 1)
-      $ SC.testProperty "isNatValue(x) -> isValue(x)" propNatValueIsValue
-  ]
+tests = testGroup "Myml.Syntax.Spec" [unitTests]
 
 unitTests :: TestTree
 unitTests = testGroup "Unit tests" [freeVariableTests, isValueTests]
-
-propNatValueIsValue :: Term -> Bool
-propNatValueIsValue t = not (isNatValue t) || isValue t
 
 freeVariableTests :: TestTree
 freeVariableTests =
@@ -88,7 +77,7 @@ freeVariableTermTests = testGroup
   , testCase "freeVariable if"
   $   freeVariable (pTerm "if x then y else z")
   @?= Set.fromList ["x", "y", "z"]
-  , testCase "freeVariable zero" $ freeVariable (pTerm "zero") @?= Set.empty
+  , testCase "freeVariable 0" $ freeVariable (pTerm "0") @?= Set.empty
   , testCase "freeVariable succ"
   $   freeVariable (pTerm "succ x")
   @?= Set.fromList ["x"]
@@ -152,7 +141,5 @@ isValueTests = testGroup
   $   isValue (pTerm "if unit then unit else unit")
   @?= False
   , testCase "isValue zero" $ isValue (pTerm "zero") @?= True
-  , testCase "isValue succ 1" $ isValue (pTerm "succ unit") @?= False
-  , testCase "isValue succ 2" $ isValue (pTerm "succ zero") @?= True
-  , testCase "isValue succ 3" $ isValue (pTerm "succ (succ zero)") @?= True
+  , testCase "isValue succ" $ isValue (pTerm "succ zero") @?= False
   ]

@@ -92,8 +92,10 @@ instance ApplySubst Term Term where
   subst TmTrue                = return TmTrue
   subst TmFalse               = return TmFalse
   subst (TmIf t1 t2 t3)       = TmIf <$> subst t1 <*> subst t2 <*> subst t3
-  subst TmZero                = return TmZero
-  subst (TmSucc t)            = TmSucc <$> subst t
+  subst (TmNat n)                = return (TmNat n)
+  subst TmSucc            = return TmSucc
+  subst TmPred            = return TmPred
+  subst TmIsZero            = return TmIsZero
 
 instance ApplySubst Term TermCase where
   subst (TmCase x t) =

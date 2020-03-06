@@ -29,7 +29,7 @@ parseTerm = buildExpressionParser termOperatorTable parseTermAtom <?> "term"
 termOperatorTable :: OperatorTable Parser Term
 termOperatorTable =
   [ [Postfix (chainedPostfix (opRcdAccess <|> opRcdExtend <|> opMatchExtend))]
-  , [Prefix (chainedPrefix (opSucc <|> opVariant <|> opRef <|> opDeref))]
+  , [Prefix (chainedPrefix (opVariant <|> opRef <|> opDeref))]
   , [Infix opApp AssocLeft]
   , [Infix opAssign AssocNone]
   , [Infix opSeq AssocRight]
@@ -56,7 +56,6 @@ termOperatorTable =
     reserve identStyle "in"
     return (TmLet x t)
   opApp       = return TmApp
-  opSucc      = TmSucc <$ reserve identStyle "succ"
   opVariant   = TmVariant <$> variantLabel
   opRcdAccess = flip TmRcdAccess <$> (symbol "." *> ident identStyle)
   opRcdExtend = do
@@ -76,13 +75,17 @@ termOperatorTable =
 
 parseTermAtom :: Parser Term
 parseTermAtom =
-  (   var
-    <|> rcd
+  (   rcd
     <|> match
     <|> unit
     <|> true
     <|> false
     <|> zero
+    <|> nat
+    <|> suc
+    <|> prd
+    <|> isZero
+    <|> var
     <|> parens parseTerm
     )
     <?> "termAtom"
@@ -95,7 +98,11 @@ parseTermAtom =
       <$ (reserve identStyle "unit" <|> (try (symbol "(" *> symbol ")") $> ()))
   true  = TmTrue <$ reserve identStyle "true"
   false = TmFalse <$ reserve identStyle "false"
-  zero  = TmZero <$ reserve identStyle "zero"
+  zero  = TmNat 0 <$ reserve identStyle "zero"
+  nat  = TmNat <$> natural
+  suc  = TmSucc <$ reserve identStyle "succ"
+  prd  = TmPred <$ reserve identStyle "pred"
+  isZero  = TmIsZero <$ reserve identStyle "isZero"
 
 recordPair :: Parser (LabelName, Term)
 recordPair =
@@ -228,6 +235,8 @@ reservedTokens = H.fromList
   , "else"
   , "zero"
   , "succ"
+  , "pred"
+  , "isZero"
   , "Unit"
   , "Bool"
   , "Nat"

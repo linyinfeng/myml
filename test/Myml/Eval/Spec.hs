@@ -124,7 +124,7 @@ unitTests = testGroup
     (pTerm "(ref zero) := (\x3bb x . succ x) zero")
     emptyStore
     (pTerm "unit")
-    (emptyStore `allocate'` pTerm "succ zero")
+    (emptyStore `allocate'` pTerm "1")
   , testCase "bigStep assign invalid location" $ assertBigStep
     (TmAssign (TmLoc 0) TmUnit)
     emptyStore
@@ -135,27 +135,42 @@ unitTests = testGroup
   , testCase "bigStep seq" $ assertBigStep
     (pTerm "let x = ref zero in x := succ zero; ! x")
     emptyStore
-    (pTerm "succ zero")
-    (emptyStore `allocate'` pTerm "succ zero")
+    (pTerm "1")
+    (emptyStore `allocate'` pTerm "1")
   , testCase "bigStep true"
     $ assertBigStep (pTerm "true") emptyStore (pTerm "true") emptyStore
   , testCase "bigStep false"
     $ assertBigStep (pTerm "false") emptyStore (pTerm "false") emptyStore
-  , testCase "bigStep if" $ assertBigStep
+  , testCase "bigStep if 1" $ assertBigStep
     (pTerm "if if true then false else true then succ zero else zero")
     emptyStore
     (pTerm "zero")
     emptyStore
-  , testCase "bigStep if" $ assertBigStep
+  , testCase "bigStep if 2" $ assertBigStep
     (pTerm "if if false then false else true then succ zero else zero")
     emptyStore
-    (pTerm "succ zero")
+    (pTerm "1")
     emptyStore
   , testCase "bigStep zero"
     $ assertBigStep (pTerm "zero") emptyStore (pTerm "zero") emptyStore
   , testCase "bigStep succ" $ assertBigStep
     (pTerm "succ ((\x3bb x . x) (succ zero))")
     emptyStore
-    (pTerm "succ (succ zero)")
+    (pTerm "2")
+    emptyStore
+  , testCase "bigStep pred 1" $ assertBigStep
+    (pTerm "pred (succ zero)")
+    emptyStore
+    (pTerm "zero")
+    emptyStore
+  , testCase "bigStep pred 2" $ assertBigStep
+    (pTerm "pred zero")
+    emptyStore
+    (pTerm "zero")
+    emptyStore
+  , testCase "bigStep isZero" $ assertBigStep
+    (pTerm "{ l1 = isZero (succ zero), l2 = isZero zero }")
+    emptyStore
+    (pTerm "{ l1 = false , l2 = true }")
     emptyStore
   ]

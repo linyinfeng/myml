@@ -219,11 +219,10 @@ infer (TmIf t1 t2 t3) = do
   unifyProper ty1 TyBool
   unifyProper ty2 ty3
   return ty2
-infer TmZero     = return TyNat
-infer (TmSucc t) = do
-  ty <- infer t
-  unifyProper ty TyNat
-  return TyNat
+infer (TmNat _)     = return TyNat
+infer TmSucc = return (TyArrow TyNat TyNat)
+infer TmPred = return (TyArrow TyNat TyNat)
+infer TmIsZero = return (TyArrow TyNat TyBool)
 
 instantiate :: TypeScheme -> Inference Type
 instantiate (ScmForall x KProper s) = do

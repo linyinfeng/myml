@@ -13,7 +13,6 @@ module Myml.Syntax
   , VarName
   , LabelName
   , isValue
-  , isNatValue
   , FreeVariable(..)
   , prettyTypeRow
   )
@@ -48,11 +47,15 @@ data Term = TmAbs VarName Term
           | TmUnit
           | TmSeq Term Term
           -- Primitives
+          -- Boolean
           | TmTrue
           | TmFalse
           | TmIf Term Term Term
-          | TmZero
-          | TmSucc Term
+          -- Nat
+          | TmNat Integer
+          | TmSucc
+          | TmPred
+          | TmIsZero
           deriving (Eq, Show)
 
 instance Monad m => Serial m Term where
@@ -80,8 +83,10 @@ instance Monad m => Serial m Term where
       \/ cons0 TmTrue
       \/ cons0 TmFalse
       \/ cons3 TmIf
-      \/ cons0 TmZero
-      \/ cons1 TmSucc
+      \/ cons0 (TmNat 0)
+      \/ cons0 TmSucc
+      \/ cons0 TmPred
+      \/ cons0 TmIsZero
 
 data TermCase = TmCase VarName Term
   deriving (Eq, Show)
@@ -196,13 +201,10 @@ isValue TmUnit          = True
 isValue TmTrue          = True
 isValue TmFalse         = True
 isValue TmIf{}          = False
-isValue t@TmZero        = isNatValue t
-isValue t@TmSucc{}      = isNatValue t
-
-isNatValue :: Term -> Bool
-isNatValue TmZero      = True
-isNatValue (TmSucc t') = isNatValue t'
-isNatValue _           = False
+isValue TmNat{}         = True
+isValue TmSucc          = True
+isValue TmPred          = True
+isValue TmIsZero        = True
 
 class FreeVariable a where
   freeVariable :: a -> Set.Set VarName
@@ -232,8 +234,10 @@ instance FreeVariable Term where
   freeVariable TmTrue           = Set.empty
   freeVariable TmFalse          = Set.empty
   freeVariable (TmIf t1 t2 t3)  = Set.unions (map freeVariable [t1, t2, t3])
-  freeVariable TmZero           = Set.empty
-  freeVariable (TmSucc t)       = freeVariable t
+  freeVariable (TmNat _)           = Set.empty
+  freeVariable TmSucc           = Set.empty
+  freeVariable TmPred           = Set.empty
+  freeVariable TmIsZero         = Set.empty
 
 instance FreeVariable TermCase where
   freeVariable (TmCase x t) = Set.delete x (freeVariable t)
@@ -413,11 +417,10 @@ instance PrettyPrec Term where
       )
     )
     where prec = 0
-  prettyPrec _ TmZero     = pretty "zero"
-  prettyPrec n (TmSucc t) = parensPrec
-    (n > prec)
-    (pretty "succ" <+> prettyPrec (prec + 1) t)
-    where prec = 4
+  prettyPrec _ (TmNat n)     = pretty n
+  prettyPrec _ TmSucc = pretty "succ"
+  prettyPrec _ TmPred = pretty "pred"
+  prettyPrec _ TmIsZero = pretty "isZero"
 
 prettyVariantLabel :: LabelName -> Doc ann
 prettyVariantLabel name = pretty '`' <> pretty name
