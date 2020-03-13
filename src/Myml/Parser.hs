@@ -106,7 +106,7 @@ parseTermAtom =
   isZero = TmIsZero <$ reserve identStyle "isZero"
   klass = do
     reserve identStyle "class"
-    inherit <- optional (reserve identStyle "inhert" *> parseTermAtom)
+    inherit <- optional (reserve identStyle "inherit" *> parseTermAtom)
     reserve identStyle "with"
     rep <- ident identStyle
     methods <- Map.fromList <$> braces (recordPair `sepBy` symbol ",")

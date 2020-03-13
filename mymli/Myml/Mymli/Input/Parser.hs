@@ -13,7 +13,7 @@ parseInput :: Parser Input
 parseInput = parseInputBind <|> parseInputTerm <|> parseInputEmpty
 
 parseInputs :: Parser [Input]
-parseInputs = many (parseInput <* symbol ",")
+parseInputs = parseInput `sepBy` (symbol ",")
 
 parseInputBind :: Parser Input
 parseInputBind = do

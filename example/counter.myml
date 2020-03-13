@@ -1,0 +1,38 @@
+fix = λ f . (λ x . f (λ v . x x v)) (λ x . f (λ v . x x v)) ,
+new = λ klass . λ rep . fix (klass rep) unit ,
+
+Counter =
+  class
+    with r
+    { get = λ _ . ! r.x
+    , inc = λ _ . r.x := succ (! r.x)
+    },
+BackupCounter =
+  class
+    inherit Counter
+    with r
+    { get = super.get
+    , inc = super.inc
+    , backup = r.b := ! r.x
+    , restore = r.x := ! r.b
+    },
+ResetCounter =
+  class
+    inherit Counter
+    with r
+    { get = super.get
+    , inc = super.inc
+    , reset = r.x := 0
+    },
+
+rep = { x = ref 0, b = ref 0 },
+counter = new Counter rep,
+backupCounter = new BackupCounter rep,
+resetCounter = new ResetCounter rep,
+
+incAndGet = λ c . c.inc (); c.get (),
+incAndGetCounter = incAndGet counter,
+incAndGetBackupCounter = incAndGet backupCounter,
+
+selectedCounter = if true then resetCounter else backupCounter,
+incAndGetSelectedCounter = incAndGet selectedCounter
