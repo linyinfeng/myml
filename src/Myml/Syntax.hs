@@ -73,7 +73,7 @@ data TermClass = TmClass {
 deriveTermClass :: TermClass -> Term
 deriveTermClass (TmClass inherits rep methods) = TmAbs
   rep
-  (TmAbs "self" (TmAbs "" (inheritsToLet inherits (TmRcd methods))))
+  (TmAbs "self" (TmAbs "unit" (inheritsToLet inherits (TmRcd methods))))
  where
   inheritsToLet ((t, x) : ps) inner = TmLet
     x

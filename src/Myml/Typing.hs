@@ -303,34 +303,34 @@ generalize t ty = do
   return (Map.foldrWithKey ScmForall (ScmMono tyDesc') newXs)
 
 dangerousVariable :: Type -> Set.Set VarName
--- dangerousVariable = freeVariable -- traditional value restriction
-dangerousVariable (TyVar _) = Set.empty
-dangerousVariable (TyArrow t1 t2) =
-  freeVariable t1 `Set.union` dangerousVariable t2
-dangerousVariable (TyRecord  r) = dangerousVariableRecordRow r
-dangerousVariable (TyVariant r) = freeVariable r
-dangerousVariable (TyMu x t) =
-  let dt = dangerousVariable t
-  in  if x `Set.member` dt
-        then freeVariable t -- x included in dangerous variables
-        else dt
-dangerousVariable (TyRef t) = freeVariable t
-dangerousVariable TyUnit    = Set.empty
-dangerousVariable TyBool    = Set.empty
-dangerousVariable TyNat     = Set.empty
+dangerousVariable = freeVariable -- traditional value restriction
+-- dangerousVariable (TyVar _) = Set.empty
+-- dangerousVariable (TyArrow t1 t2) =
+--   freeVariable t1 `Set.union` dangerousVariable t2
+-- dangerousVariable (TyRecord  r) = dangerousVariableRecordRow r
+-- dangerousVariable (TyVariant r) = freeVariable r
+-- dangerousVariable (TyMu x t) =
+--   let dt = dangerousVariable t
+--   in  if x `Set.member` dt
+--         then freeVariable t -- x included in dangerous variables
+--         else dt
+-- dangerousVariable (TyRef t) = freeVariable t
+-- dangerousVariable TyUnit    = Set.empty
+-- dangerousVariable TyBool    = Set.empty
+-- dangerousVariable TyNat     = Set.empty
 
-dangerousVariableRecordRow :: TypeRow -> Set.Set VarName
-dangerousVariableRecordRow (TyRow f cof) =
-  Map.foldl (\a b -> a `Set.union` dangerousVariableRecordPresence b)
-            Set.empty
-            f
-    `Set.union` freeVariable cof
+-- dangerousVariableRecordRow :: TypeRow -> Set.Set VarName
+-- dangerousVariableRecordRow (TyRow f cof) =
+--   Map.foldl (\a b -> a `Set.union` dangerousVariableRecordPresence b)
+--             Set.empty
+--             f
+--     `Set.union` freeVariable cof
 
-dangerousVariableRecordPresence :: TypePresence -> Set.Set VarName
-dangerousVariableRecordPresence Absent                    = Set.empty
-dangerousVariableRecordPresence (Present     t          ) = dangerousVariable t
-dangerousVariableRecordPresence (PresenceVar x          ) = Set.singleton x
-dangerousVariableRecordPresence (PresenceVarWithType _ t) = dangerousVariable t
+-- dangerousVariableRecordPresence :: TypePresence -> Set.Set VarName
+-- dangerousVariableRecordPresence Absent                    = Set.empty
+-- dangerousVariableRecordPresence (Present     t          ) = dangerousVariable t
+-- dangerousVariableRecordPresence (PresenceVar x          ) = Set.singleton x
+-- dangerousVariableRecordPresence (PresenceVarWithType _ t) = dangerousVariable t
 
 kindPrefixes :: Set.Set VarName
 kindPrefixes = Set.fromList ["\x03b1", "\x03c6", "\x03c8", "\x03c1"]
