@@ -61,25 +61,20 @@ data Term = TmAbs VarName Term
           deriving (Eq, Show)
 
 data TermClass = TmClass {
-    classInherit :: Maybe Term,
+    classInherits :: [(Term, VarName)],
     classRep :: VarName,
     classMethods :: Map.Map LabelName Term
   }
   deriving (Eq, Show)
 
 deriveTermClass :: TermClass -> Term
-deriveTermClass (TmClass (Just inherit) rep methods) =
+deriveTermClass (TmClass inherits rep methods) =
   TmAbs rep (
     TmAbs "self" (
       TmAbs ""
-        (TmLet "super"
-          (TmApp (TmApp (TmApp inherit (TmVar rep)) (TmVar "self")) TmUnit)
-          (TmRcd methods))))
-deriveTermClass (TmClass Nothing rep methods) =
-  TmAbs rep (
-    TmAbs "self" (
-      TmAbs ""
-        (TmRcd methods)))
+        (inheritsToLet inherits (TmRcd methods))))
+  where inheritsToLet ((t, x):ps) inner = TmLet x (TmApp (TmApp (TmApp t (TmVar rep)) (TmVar "self")) TmUnit) (inheritsToLet ps inner)
+        inheritsToLet [] inner = inner
 
 instance Monad m => Serial m Term where
   series =

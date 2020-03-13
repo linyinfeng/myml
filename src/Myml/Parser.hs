@@ -106,11 +106,16 @@ parseTermAtom =
   isZero = TmIsZero <$ reserve identStyle "isZero"
   klass = do
     reserve identStyle "class"
-    inherit <- optional (reserve identStyle "inherit" *> parseTermAtom)
+    inherits <- many (do
+      reserve identStyle "inherit"
+      t <- parseTermAtom
+      reserve identStyle "as"
+      x <- ident identStyle
+      return (t, x))
     reserve identStyle "with"
     rep <- ident identStyle
     methods <- Map.fromList <$> braces (recordPair `sepBy` symbol ",")
-    let k = TmClass inherit rep methods
+    let k = TmClass inherits rep methods
     return (deriveTermClass k)
 
 recordPair :: Parser (LabelName, Term)
@@ -248,6 +253,7 @@ reservedTokens = H.fromList
   , "isZero"
   , "class"
   , "inherit"
+  , "as"
   , "Unit"
   , "Bool"
   , "Nat"

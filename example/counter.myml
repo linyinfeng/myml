@@ -9,20 +9,32 @@ Counter =
     },
 BackupCounter =
   class
-    inherit Counter
+    inherit Counter as super
     with r
     { get = super.get
     , inc = super.inc
-    , backup = r.b := ! r.x
-    , restore = r.x := ! r.b
+    , backup = λ _ . r.b := ! r.x
+    , restore = λ _ . r.x := ! r.b
     },
 ResetCounter =
   class
-    inherit Counter
+    inherit Counter as super
     with r
     { get = super.get
     , inc = super.inc
-    , reset = r.x := 0
+    , reset = λ _ . r.x := 0
+    },
+MixinCounter =
+  class
+    inherit Counter as super
+    inherit BackupCounter as superBackup
+    inherit ResetCounter as superReset
+    with r
+    { get = super.get
+    , inc = super.inc
+    , backup = superBackup.backup
+    , restore = superBackup.restore
+    , reset = superReset.reset
     },
 
 rep = { x = ref 0, b = ref 0 },
