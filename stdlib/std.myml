@@ -1,0 +1,3 @@
+fix = λ f . (λ x . f (λ v . x x v)) (λ x . f (λ v . x x v)) ,
+
+new = λ klass . λ rep . fix (klass rep) unit ,

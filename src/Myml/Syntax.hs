@@ -2,6 +2,8 @@
 
 module Myml.Syntax
   ( Term(..)
+  , TermClass(..)
+  , deriveTermClass
   , TermCase(..)
   , Type(..)
   , TypeRow(..)
@@ -57,6 +59,27 @@ data Term = TmAbs VarName Term
           | TmPred
           | TmIsZero
           deriving (Eq, Show)
+
+data TermClass = TmClass {
+    classInherit :: Maybe Term,
+    classRep :: VarName,
+    classMethods :: Map.Map LabelName Term
+  }
+  deriving (Eq, Show)
+
+deriveTermClass :: TermClass -> Term
+deriveTermClass (TmClass (Just inherit) rep methods) =
+  TmAbs rep (
+    TmAbs "self" (
+      TmAbs ""
+        (TmLet "super"
+          (TmApp (TmApp (TmApp inherit (TmVar rep)) (TmVar "self")) TmUnit)
+          (TmRcd methods))))
+deriveTermClass (TmClass Nothing rep methods) =
+  TmAbs rep (
+    TmAbs "self" (
+      TmAbs ""
+        (TmRcd methods)))
 
 instance Monad m => Serial m Term where
   series =

@@ -85,6 +85,7 @@ parseTermAtom =
     <|> suc
     <|> prd
     <|> isZero
+    <|> klass
     <|> var
     <|> parens parseTerm
     )
@@ -103,6 +104,14 @@ parseTermAtom =
   suc    = TmSucc <$ reserve identStyle "succ"
   prd    = TmPred <$ reserve identStyle "pred"
   isZero = TmIsZero <$ reserve identStyle "isZero"
+  klass = do
+    reserve identStyle "class"
+    inherit <- optional (reserve identStyle "inhert" *> parseTermAtom)
+    reserve identStyle "with"
+    rep <- ident identStyle
+    methods <- Map.fromList <$> braces (recordPair `sepBy` symbol ",")
+    let k = TmClass inherit rep methods
+    return (deriveTermClass k)
 
 recordPair :: Parser (LabelName, Term)
 recordPair =
@@ -237,6 +246,8 @@ reservedTokens = H.fromList
   , "succ"
   , "pred"
   , "isZero"
+  , "class"
+  , "inherit"
   , "Unit"
   , "Bool"
   , "Nat"
