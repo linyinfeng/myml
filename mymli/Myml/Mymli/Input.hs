@@ -20,10 +20,13 @@ processInput :: MonadIO m => Input -> Mymli m MymliRequest
 processInput (InputTerm t) = do
   inferRes <- mymliInferTypeAndUpdateBinding t
   case inferRes of
-    Left  e  -> liftIO (typingErrorLabel >> print e)
+    Left  e -> liftIO (typingErrorLabel >> print e)
     Right s -> do
       v <- mymliEval t
-      liftIO (print (pretty v) >> withColor Dull Green (putStr ": ") >> print (pretty s))
+      liftIO
+        (print (pretty v) >> withColor Dull Green (putStr ": ") >> print
+          (pretty s)
+        )
       mymliGc
   return MymliContinue
 processInput (InputBind x t) = do
@@ -33,7 +36,10 @@ processInput (InputBind x t) = do
     Right s -> do
       v <- mymliEval t
       mymliAddBinding x t v s
-      liftIO (print (pretty x) >> withColor Dull Green (putStr ": ") >> print (pretty s))
+      liftIO
+        (print (pretty x) >> withColor Dull Green (putStr ": ") >> print
+          (pretty s)
+        )
       mymliGc
   return MymliContinue
 processInput InputEmpty = return MymliContinue

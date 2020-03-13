@@ -68,13 +68,15 @@ data TermClass = TmClass {
   deriving (Eq, Show)
 
 deriveTermClass :: TermClass -> Term
-deriveTermClass (TmClass inherits rep methods) =
-  TmAbs rep (
-    TmAbs "self" (
-      TmAbs ""
-        (inheritsToLet inherits (TmRcd methods))))
-  where inheritsToLet ((t, x):ps) inner = TmLet x (TmApp (TmApp (TmApp t (TmVar rep)) (TmVar "self")) TmUnit) (inheritsToLet ps inner)
-        inheritsToLet [] inner = inner
+deriveTermClass (TmClass inherits rep methods) = TmAbs
+  rep
+  (TmAbs "self" (TmAbs "" (inheritsToLet inherits (TmRcd methods))))
+ where
+  inheritsToLet ((t, x) : ps) inner = TmLet
+    x
+    (TmApp (TmApp (TmApp t (TmVar rep)) (TmVar "self")) TmUnit)
+    (inheritsToLet ps inner)
+  inheritsToLet [] inner = inner
 
 instance Monad m => Serial m Term where
   series =

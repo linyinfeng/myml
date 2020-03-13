@@ -104,16 +104,18 @@ parseTermAtom =
   suc    = TmSucc <$ reserve identStyle "succ"
   prd    = TmPred <$ reserve identStyle "pred"
   isZero = TmIsZero <$ reserve identStyle "isZero"
-  klass = do
+  klass  = do
     reserve identStyle "class"
-    inherits <- many (do
-      reserve identStyle "inherit"
-      t <- parseTermAtom
-      reserve identStyle "as"
-      x <- ident identStyle
-      return (t, x))
+    inherits <- many
+      (do
+        reserve identStyle "inherit"
+        t <- parseTermAtom
+        reserve identStyle "as"
+        x <- ident identStyle
+        return (t, x)
+      )
     reserve identStyle "with"
-    rep <- ident identStyle
+    rep     <- ident identStyle
     methods <- Map.fromList <$> braces (recordPair `sepBy` symbol ",")
     let k = TmClass inherits rep methods
     return (deriveTermClass k)
