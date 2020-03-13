@@ -4,6 +4,9 @@ module Myml.Syntax
   ( Term(..)
   , TermClass(..)
   , deriveTermClass
+  , termZ
+  , termNew
+  , termSelf
   , TermCase(..)
   , Type(..)
   , TypeRow(..)
@@ -77,6 +80,24 @@ deriveTermClass (TmClass inherits rep methods) = TmAbs
     (TmApp (TmApp (TmApp t (TmVar rep)) (TmVar "self")) TmUnit)
     (inheritsToLet ps inner)
   inheritsToLet [] inner = inner
+
+-- λ f . (λ x . f (λ v . x x v)) (λ x . f (λ v . x x v))
+termZ :: Term
+termZ = TmAbs "f" (TmApp half half)
+ where
+  half = TmAbs
+    "x"
+    (TmApp (TmVar "f")
+           (TmAbs "v" (TmApp (TmApp (TmVar "x") (TmVar "x")) (TmVar "v")))
+    )
+
+termNew :: Term
+termNew = TmAbs
+  "k"
+  (TmAbs "r" (TmApp (TmApp termZ (TmApp (TmVar "k") (TmVar "r"))) TmUnit))
+
+termSelf :: Term
+termSelf = TmApp (TmVar "self") TmUnit
 
 instance Monad m => Serial m Term where
   series =

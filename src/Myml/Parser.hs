@@ -86,6 +86,8 @@ parseTermAtom =
     <|> prd
     <|> isZero
     <|> klass
+    <|> new
+    <|> self
     <|> var
     <|> parens parseTerm
     )
@@ -119,6 +121,8 @@ parseTermAtom =
     methods <- Map.fromList <$> braces (recordPair `sepBy` symbol ",")
     let k = TmClass inherits rep methods
     return (deriveTermClass k)
+  new  = termNew <$ reserve identStyle "new"
+  self = termSelf <$ reserve identStyle "self"
 
 recordPair :: Parser (LabelName, Term)
 recordPair =
@@ -255,6 +259,8 @@ reservedTokens = H.fromList
   , "isZero"
   , "class"
   , "inherit"
+  , "new"
+  , "self"
   , "as"
   , "Unit"
   , "Bool"
