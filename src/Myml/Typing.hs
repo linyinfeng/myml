@@ -297,14 +297,15 @@ generalize :: Term -> Type -> Inference TypeScheme
 generalize t ty = do
   tyDesc <- describeProper Set.empty ty
   env    <- ask
-  envFv  <- liftEither
-    (Map.foldl (\a b -> bind2 mergeFvWithKind a (fvWithKindScm b))
-               (Right Map.empty)
-               env
+  -- TODO: is `describeScheme Set.empty` right?
+  envFv  <- Map.foldl
+    (\a b ->
+      bind2 mergeFvWithKind a (describeScheme Set.empty b >>= fvWithKindScm)
     )
-  tFv <- liftEither (fvWithKind tyDesc)
-  liftEither
-    (sequence_ (Map.intersectionWithKey mergeFvWithKindSingle tFv envFv))
+    (return Map.empty)
+    env
+  tFv <- fvWithKind tyDesc
+  sequence_ (Map.intersectionWithKey mergeFvWithKindSingle tFv envFv)
   imperative <- gets imperativeFeaturesEnabled
   let xs  = tFv `Map.difference` envFv
       xs' = if imperative && not (isValue t)
@@ -368,15 +369,15 @@ replacePrefix m = do
 mergeFvWithKind
   :: Map.Map VarName Kind
   -> Map.Map VarName Kind
-  -> Either TypingExcept (Map.Map VarName Kind)
+  -> Inference (Map.Map VarName Kind)
 mergeFvWithKind m1 m2 = (\updated -> updated `Map.union` m1 `Map.union` m2) -- union == unionWith const
   <$> sequence (Map.intersectionWithKey mergeFvWithKindSingle m1 m2)
 
-mergeFvWithKindSingle :: VarName -> Kind -> Kind -> Either TypingExcept Kind
+mergeFvWithKindSingle :: VarName -> Kind -> Kind -> Inference Kind
 mergeFvWithKindSingle x a b = case (a, b) of
   (KRow l1, KRow l2) -> return (KRow (l1 `Set.union` l2))
   (k1, k2) | k1 == k2  -> return k1
-           | otherwise -> Left (ExcFreeVarKindConflict x k1 k2)
+           | otherwise -> throwError (ExcFreeVarKindConflict x k1 k2)
 
 bind2 :: Monad m => (a -> b -> m c) -> m a -> m b -> m c
 bind2 f ma mb = do
@@ -384,7 +385,16 @@ bind2 f ma mb = do
   b <- mb
   f a b
 
-fvWithKind :: Type -> Either TypingExcept (Map.Map VarName Kind)
+fvWithKindScm :: TypeScheme -> Inference (Map.Map VarName Kind)
+fvWithKindScm (ScmForall x k s) = do
+  m <- fvWithKindScm s
+  case Map.lookup x m of
+    Nothing -> return m
+    Just k' | k == k'   -> return (Map.delete x m)
+            | otherwise -> throwError (ExcFreeVarKindConflict x k k')
+fvWithKindScm (ScmMono t) = fvWithKind t
+
+fvWithKind :: Type -> Inference (Map.Map VarName Kind)
 fvWithKind (TyVar x) = return (Map.singleton x KProper)
 fvWithKind (TyArrow t1 t2) =
   bind2 mergeFvWithKind (fvWithKind t1) (fvWithKind t2)
@@ -395,25 +405,16 @@ fvWithKind (TyMu x t     ) = do
   case Map.lookup x m of
     Nothing      -> return m
     Just KProper -> return (Map.delete x m)
-    Just k       -> Left (ExcFreeVarKindConflict x k KProper)
+    Just k       -> throwError (ExcFreeVarKindConflict x k KProper)
 fvWithKind (TyRef t) = fvWithKind t
 fvWithKind TyUnit    = return Map.empty
 fvWithKind TyBool    = return Map.empty
 fvWithKind TyNat     = return Map.empty
 
-fvWithKindScm :: TypeScheme -> Either TypingExcept (Map.Map VarName Kind)
-fvWithKindScm (ScmForall x k s) = do
-  m <- fvWithKindScm s
-  case Map.lookup x m of
-    Nothing -> return m
-    Just k' | k == k'   -> return (Map.delete x m)
-            | otherwise -> Left (ExcFreeVarKindConflict x k k')
-fvWithKindScm (ScmMono t) = fvWithKind t
-
-fvWithKindRow :: TypeRow -> Either TypingExcept (Map.Map VarName Kind)
+fvWithKindRow :: TypeRow -> Inference (Map.Map VarName Kind)
 fvWithKindRow (TyRow f cof) = do
   fvF <- Map.foldl (\a b -> bind2 mergeFvWithKind a (fvWithKindPresence b))
-                   (Right Map.empty)
+                   (return Map.empty)
                    f
   fvCof <- case cof of
     CofAllAbsent -> return Map.empty
@@ -421,12 +422,13 @@ fvWithKindRow (TyRow f cof) = do
     CofMu x r    -> do
       m <- fvWithKindRow r
       case Map.lookup x m of
-        Nothing -> return m
+        Nothing       -> return m
         Just (KRow _) -> return (Map.delete x m) -- TODO: Maybe can change to KRow (Map.keysSet f)?
-        Just k -> Left (ExcFreeVarKindConflict x (KRow (Map.keysSet f)) k)
+        Just k ->
+          throwError (ExcFreeVarKindConflict x (KRow (Map.keysSet f)) k)
   mergeFvWithKind fvF fvCof
 
-fvWithKindPresence :: TypePresence -> Either TypingExcept (Map.Map VarName Kind)
+fvWithKindPresence :: TypePresence -> Inference (Map.Map VarName Kind)
 fvWithKindPresence Absent          = return Map.empty
 fvWithKindPresence (Present     t) = fvWithKind t
 fvWithKindPresence (PresenceVar x) = return (Map.singleton x KPresence)
@@ -582,6 +584,11 @@ flattenRow (TyRow f1 (CofRowVar x)) = do
   return (TyRow (Map.union f1 f2) inf2)
 flattenRow r@(TyRow _ (CofMu _ _)) = throwError (ExcCanNotHandleCofMu r)
 
+describeScheme :: Set.Set VarName -> TypeScheme -> Inference TypeScheme
+describeScheme ctx (ScmForall x k s) =
+  ScmForall x k <$> describeScheme (Set.insert x ctx) s
+describeScheme ctx (ScmMono t) = ScmMono <$> describeProper ctx t
+
 describeProper :: Set.Set VarName -> Type -> Inference Type
 describeProper ctx (TyVar x) | x `Set.member` ctx = return (TyVar x)
 describeProper ctx (TyVar x)                      = do
@@ -600,8 +607,9 @@ describeProper ctx (TyRef     t  ) = TyRef <$> describeProper ctx t
 describeProper _   TyUnit          = return TyUnit
 describeProper _   TyBool          = return TyBool
 describeProper _   TyNat           = return TyNat
-describeProper _ t@(TyMu _ _) =
-  throwError (ExcDescribeNoRuleApplied (TySubProper t))
+-- describeProper _ t@(TyMu _ _) =
+--   throwError (ExcDescribeNoRuleApplied (TySubProper t))
+describeProper ctx (TyMu x t) = TyMu x <$> describeProper (Set.insert x ctx) t
 
 describePresence :: Set.Set VarName -> TypePresence -> Inference TypePresence
 describePresence _   Absent          = return Absent
