@@ -25,7 +25,8 @@ assertSmallStep
   -> Either EvalExcept Term
   -> Store (WithMark Term)
   -> Assertion
-assertSmallStep t1 s1 t2 s2 = runSmallStepState (smallStep t1) (Just s1) @?= (t2, (Just s2))
+assertSmallStep t1 s1 t2 s2 =
+  runSmallStepState (smallStep t1) (Just s1) @?= (t2, (Just s2))
 
 unitTests :: TestTree
 unitTests = testGroup
