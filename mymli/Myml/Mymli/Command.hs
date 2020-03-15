@@ -45,8 +45,11 @@ processCommand (CmdShowType t) = do
     Right s -> liftIO (print (pretty s))
   return MymliContinue
 processCommand CmdShowStore = do
-  Store { storeData, ..} <- gets envStore
-  liftIO (print (pretty (Map.toList (Map.map removeMark storeData))))
+  maybeStore <- gets envStore
+  case maybeStore of
+    Nothing                     -> return ()
+    Just Store { storeData, ..} -> do
+      liftIO (print (pretty (Map.toList (Map.map removeMark storeData))))
   return MymliContinue
 processCommand CmdShowValueBindings = do
   valueBindings <- gets envValueBindings
@@ -91,9 +94,10 @@ processCommand (CmdLoadFile file) = do
 
 mymliEnvForFile :: Monad m => Mymli m MymliEnv
 mymliEnvForFile = do
-  MymliEnv { envStore, envTermBindings = _, envValueBindings = _, envTypeBindings = _, envInferState } <-
+  MymliEnv { envOption, envStore = _, envTermBindings = _, envValueBindings = _, envTypeBindings = _, envInferState } <-
     get
-  return MymliEnv { envStore         = Store Map.empty (storeMinFree envStore)
+  return MymliEnv { envOption
+                  , envStore         = emptyEnvStore envOption
                   , envTermBindings  = Map.empty
                   , envValueBindings = Map.empty
                   , envTypeBindings  = Map.empty
@@ -103,19 +107,17 @@ mymliEnvForFile = do
 mymliMergeFileEnv :: Monad m => MymliEnv -> Mymli m ()
 mymliMergeFileEnv fileEnv = do
   let
-    MymliEnv { envStore = Store fileStoreMap fileStoreMinFree, envTermBindings = fileTermBindings, envValueBindings = fileValueBindings, envTypeBindings = fileTypeBindings, envInferState = fileInferState }
+    MymliEnv { envOption = _, envStore = fileStore, envTermBindings = fileTermBindings, envValueBindings = fileValueBindings, envTypeBindings = fileTypeBindings, envInferState = fileInferState }
       = fileEnv
-  MymliEnv { envStore = Store currentStoreMap _currentStoreMinFree, envTermBindings = currentTermBindings, envValueBindings = currentValueBindings, envTypeBindings = currentTypeBindings, envInferState = _currentInferState } <-
+  MymliEnv { envOption = envOption, envStore = currentStore, envTermBindings = currentTermBindings, envValueBindings = currentValueBindings, envTypeBindings = currentTypeBindings, envInferState = _currentInferState } <-
     get
   let
     env = MymliEnv
-      { envStore         = Store
-        { storeData    = Map.unionWith
-                           (\_ _ -> error "store collied after file loading")
-                           currentStoreMap
-                           fileStoreMap
-        , storeMinFree = fileStoreMinFree
-        }
+      { envOption
+      , envStore         = case (fileStore, currentStore) of
+        (Nothing, Nothing) -> Nothing
+        (Just f, Just c) -> Just (mymliMergeFileStore f c)
+        _ -> error "file imperative option mismatch with current environment"
       , envTermBindings  = Map.unionWith const
                                          fileTermBindings
                                          currentTermBindings
@@ -128,6 +130,16 @@ mymliMergeFileEnv fileEnv = do
       , envInferState    = fileInferState
       }
   put env
+
+mymliMergeFileStore
+  :: Store (WithMark Term) -> Store (WithMark Term) -> Store (WithMark Term)
+mymliMergeFileStore (Store fm fmf) (Store cm _) = Store
+  { storeData    = Map.unionWith
+                     (\_ _ -> error "store collied after file loading")
+                     cm
+                     fm
+  , storeMinFree = fmf
+  }
 
 processInputsFromFile :: MonadIO m => [Input] -> Mymli m Bool
 processInputsFromFile []               = return True

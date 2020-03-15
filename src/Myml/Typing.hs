@@ -50,6 +50,7 @@ data TypingExcept = ExcUnifyKindMismatch Kind Kind
                   | ExcStoreTypingNotImplemented
                   | ExcDescribeNoRuleApplied TypeSubstitutor
                   | ExcCanNotHandleCofMu TypeRow
+                  | ExcImperativeFeaturesDisabled Term
                   deriving Eq
 
 instance Show TypingExcept where
@@ -80,6 +81,8 @@ instance Show TypingExcept where
                           (\l -> pretty l <+> pretty ":")
                           r
            )
+  show (ExcImperativeFeaturesDisabled t) =
+    "Imperative features disabled, can not type: " ++ show (pretty t)
 
 newtype NewVar = NewVar (Map.Map VarName Integer)
   deriving Show
@@ -100,10 +103,9 @@ type Inference a
     )
     a
 
-newtype InferenceState
- = InferenceState
- { inferStateNewVar :: NewVar }
- deriving Show
+data InferenceState = InferenceState { inferStateNewVar :: NewVar
+                                     , imperativeFeaturesEnabled :: Bool }
+                                     deriving Show
 
 runInference
   :: Inference a
@@ -128,6 +130,11 @@ resetVarPrefix ps = do
 
 innerVarPrefix :: VarName
 innerVarPrefix = "\x03b2"
+
+checkImperativeFeaturesEnabled :: Term -> Inference ()
+checkImperativeFeaturesEnabled t = do
+  enabled <- gets imperativeFeaturesEnabled
+  unless enabled (throwError (ExcImperativeFeaturesDisabled t))
 
 infer :: Term -> Inference Type
 infer (TmVar x) = reader (Map.lookup x) >>= \case
@@ -194,13 +201,16 @@ infer (TmVariant l t) = do
   ty <- infer t
   r  <- CofRowVar <$> newVar innerVarPrefix
   return (TyVariant (TyRow (Map.singleton l (Present ty)) r))
-infer (TmRef   t) = TyRef <$> infer t
+infer (TmRef t) =
+  checkImperativeFeaturesEnabled (TmRef t) >> (TyRef <$> infer t)
 infer (TmDeref t) = do
+  checkImperativeFeaturesEnabled (TmDeref t)
   ty <- infer t
   x  <- TyVar <$> newVar innerVarPrefix
   unifyProper ty (TyRef x)
   return x
 infer (TmAssign t1 t2) = do
+  checkImperativeFeaturesEnabled (TmAssign t1 t2)
   ty1 <- infer t1
   ty2 <- infer t2
   unifyProper ty1 (TyRef ty2)
@@ -295,9 +305,11 @@ generalize t ty = do
   tFv <- liftEither (fvWithKind tyDesc)
   liftEither
     (sequence_ (Map.intersectionWithKey mergeFvWithKindSingle tFv envFv))
-  let xs = tFv `Map.difference` envFv
-      xs' =
-        if isValue t then xs else xs `Map.withoutKeys` dangerousVariable tyDesc
+  imperative <- gets imperativeFeaturesEnabled
+  let xs  = tFv `Map.difference` envFv
+      xs' = if imperative && not (isValue t)
+        then xs `Map.withoutKeys` dangerousVariable tyDesc
+        else xs
   (sub, newXs) <- replacePrefix xs'
   let tyDesc' = applySubst sub tyDesc
   return (Map.foldrWithKey ScmForall (ScmMono tyDesc') newXs)

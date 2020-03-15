@@ -74,7 +74,10 @@ mymliEval t = do
 
 mymliGc :: Monad m => Mymli m ()
 mymliGc = do
-  bindings <- gets envValueBindings
-  store    <- gets envStore
-  let store' = markSweepClear (Map.elems bindings) store
-  modify (\e -> e { envStore = store' })
+  bindings   <- gets envValueBindings
+  maybeStore <- gets envStore
+  case maybeStore of
+    Nothing    -> return ()
+    Just store -> do
+      let store' = markSweepClear (Map.elems bindings) store
+      modify (\e -> e { envStore = Just store' })

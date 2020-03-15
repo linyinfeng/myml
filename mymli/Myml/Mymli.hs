@@ -10,6 +10,9 @@ import           Myml.Mymli.Input
 import           Myml.Mymli.Command.Parser
 import           Myml.Mymli.Input.Parser
 import           Myml.Mymli.Text
+import           Myml.Mymli.Option
+import qualified Options.Applicative           as O
+import           Data.Semigroup                 ( (<>) )
 import qualified Data.Text.IO                  as Text.IO
 import           Text.Trifecta
 import           System.Console.Haskeline
@@ -28,7 +31,17 @@ main = do
         , historyFile    = Just $ homeDir </> historyFileName
         , autoAddHistory = True
         }
-  runInputT haskelineSettings (evalMymli (greeting >> loop >> bye) emptyMymlEnv)
+  options <- liftIO (O.execParser optsInfo)
+  let env = emptyMymlEnv options
+  runInputT haskelineSettings (evalMymli (greeting >> loop >> bye) env)
+ where
+  optsInfo = O.info
+    (mymliOptions O.<**> O.helper)
+    (  O.fullDesc
+    <> O.progDesc "Simple REPL for the language myml"
+    <> O.header "mymli -- myml's interactive environment"
+    <> O.header mymlOptionHelpHeaderString
+    )
 
 greeting :: Mymli (InputT IO) ()
 greeting = liftIO (Text.IO.putStrLn mymliGreetingText)

@@ -4,6 +4,8 @@ module Myml.Mymli.Text
   ( mymliGreetingText
   , mymliHelpText
   , mymliByeText
+  , mymlVersionText
+  , mymlOptionHelpHeaderString
   )
 where
 
@@ -18,6 +20,11 @@ mymlVersionText = pack (showVersion version)
 mymliGreetingText :: Text
 mymliGreetingText = [trimming|
   mymli, version ${mymlVersionText}: https://github.com/linyinfeng/myml/  :help for help
+  |]
+
+mymlOptionHelpHeaderString :: String
+mymlOptionHelpHeaderString = unpack [trimming|
+  mymli ${mymlVersionText}, Lin Yinfeng <lin.yinfeng@outlook.com>
   |]
 
 mymliHelpText :: Text

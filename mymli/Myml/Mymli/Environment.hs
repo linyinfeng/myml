@@ -1,6 +1,8 @@
 module Myml.Mymli.Environment
   ( MymliEnv(..)
   , emptyMymlEnv
+  , emptyEnvStore
+  , emptyInferenceState
   , Mymli
   , runMymli
   , execMymli
@@ -13,27 +15,35 @@ where
 import           Myml.Syntax
 import           Myml.Typing
 import           Myml.Eval.Store
+import           Myml.Mymli.Option
 import           Control.Monad.State
 import qualified Data.Map                      as Map
 
-data MymliEnv = MymliEnv {
-  envStore :: Store (WithMark Term),
-  envTermBindings :: Map.Map VarName Term,
-  envValueBindings :: Map.Map VarName Term,
-  envTypeBindings :: Map.Map VarName TypeScheme,
-  envInferState :: InferenceState
-}
+data MymliEnv = MymliEnv
+  { envOption :: MymliOptions
+  , envStore :: Maybe (Store (WithMark Term))
+  , envTermBindings :: Map.Map VarName Term
+  , envValueBindings :: Map.Map VarName Term
+  , envTypeBindings :: Map.Map VarName TypeScheme
+  , envInferState :: InferenceState
+  }
 
-emptyMymlEnv :: MymliEnv
-emptyMymlEnv = MymliEnv { envStore         = emptyStore
-                        , envTermBindings  = Map.empty
-                        , envValueBindings = Map.empty
-                        , envTypeBindings  = Map.empty
-                        , envInferState    = emptyInferenceState
-                        }
+emptyMymlEnv :: MymliOptions -> MymliEnv
+emptyMymlEnv opt = MymliEnv { envOption        = opt
+                            , envStore         = emptyEnvStore opt
+                            , envTermBindings  = Map.empty
+                            , envValueBindings = Map.empty
+                            , envTypeBindings  = Map.empty
+                            , envInferState    = emptyInferenceState opt
+                            }
 
-emptyInferenceState :: InferenceState
-emptyInferenceState = InferenceState (NewVar Map.empty)
+emptyEnvStore :: MymliOptions -> Maybe (Store (WithMark Term))
+emptyEnvStore opt =
+  if optImperativeFeaturesEnabled opt then Just emptyStore else Nothing
+
+emptyInferenceState :: MymliOptions -> InferenceState
+emptyInferenceState opt =
+  InferenceState (NewVar Map.empty) (optImperativeFeaturesEnabled opt)
 
 type Mymli m = (StateT MymliEnv m)
 

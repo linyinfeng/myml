@@ -73,6 +73,7 @@ executable mymli
       Myml.Mymli.Command.Parser
       Myml.Mymli.Input
       Myml.Mymli.Input.Parser
+      Myml.Mymli.Option
       Myml.Mymli.Output
       Myml.Mymli.Text
       Paths_myml
@@ -86,6 +87,7 @@ executable mymli
     , haskeline
     , text
     , neat-interpolation
+    , optparse-applicative
 
 test-suite myml-test
   import:

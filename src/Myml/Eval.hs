@@ -19,18 +19,24 @@ import qualified Data.Map                      as Map
 data EvalExcept = ExcNoRuleApplied
   deriving (Show, Eq)
 
-bigStep :: Term -> (State (Store (WithMark Term))) Term
+bigStep :: Term -> (State (Maybe (Store (WithMark Term)))) Term
 bigStep t = runExceptT (smallStep t) >>= \case
   Left  ExcNoRuleApplied -> return t
   Right t'               -> bigStep t'
 
-type SmallStepState = ExceptT EvalExcept (State (Store (WithMark Term))) Term
+type SmallStepState
+  = ExceptT EvalExcept (State (Maybe (Store (WithMark Term)))) Term
 
 runSmallStepState
   :: SmallStepState
-  -> Store (WithMark Term)
-  -> (Either EvalExcept Term, Store (WithMark Term))
+  -> Maybe (Store (WithMark Term))
+  -> (Either EvalExcept Term, Maybe (Store (WithMark Term)))
 runSmallStepState s = runState (runExceptT s)
+
+maybeToExcept :: (Monad m) => Maybe a -> ExceptT EvalExcept m a
+maybeToExcept m = case m of
+  Just x  -> return x
+  Nothing -> throwError ExcNoRuleApplied
 
 smallStep :: Term -> SmallStepState
 smallStep (TmApp (TmAbs x t1) v2) | isValue v2 =
@@ -69,18 +75,20 @@ smallStep (TmMatchExtend (TmMatch m) l c) = return (TmMatch (Map.insert l c m))
 smallStep (TmMatchExtend t l c) = (\t' -> TmMatchExtend t' l c) <$> smallStep t
 smallStep (TmVariant l t                ) = TmVariant l <$> smallStep t
 smallStep (TmRef v) | isValue v           = do
-  s <- get
+  s <- get >>= maybeToExcept
   let (l, s') = allocate s v
-  put s'
+  put (Just s')
   return (TmLoc l)
-smallStep (TmRef   t        ) = TmRef <$> smallStep t
-smallStep (TmDeref (TmLoc l)) = gets (lookupStore l) >>= \case
-  Nothing -> throwError ExcNoRuleApplied
-  Just v  -> return v
-smallStep (TmDeref t)                        = TmDeref <$> smallStep t
-smallStep (TmAssign (TmLoc l) v) | isValue v = gets (lookupStore l) >>= \case
-  Nothing -> throwError ExcNoRuleApplied
-  Just _  -> TmUnit <$ modify (\s -> assign s l v)
+smallStep (TmRef t) = TmRef <$> smallStep t
+smallStep (TmDeref (TmLoc l)) =
+  gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
+    Nothing -> throwError ExcNoRuleApplied
+    Just v  -> return v
+smallStep (TmDeref t) = TmDeref <$> smallStep t
+smallStep (TmAssign (TmLoc l) v) | isValue v =
+  gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
+    Nothing -> throwError ExcNoRuleApplied
+    Just _  -> TmUnit <$ modify (fmap (\s -> assign s l v))
 smallStep (TmAssign v1 t2) | isValue v1 = TmAssign v1 <$> smallStep t2
 smallStep (TmAssign t1 t2)              = flip TmAssign t2 <$> smallStep t1
 smallStep (TmSeq v1 t2) | isValue v1    = return t2
