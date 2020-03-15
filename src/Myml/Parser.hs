@@ -119,7 +119,7 @@ parseTermAtom =
     reserve identStyle "with"
     rep     <- ident identStyle
     methods <- Map.fromList <$> braces (recordPair `sepBy` symbol ",")
-    let k = TmClass inherits rep methods
+    let k = TermClass inherits rep methods
     return (deriveTermClass k)
   new  = termNew <$ reserve identStyle "new"
   self = termSelf <$ reserve identStyle "self"

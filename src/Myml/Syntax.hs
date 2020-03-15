@@ -63,7 +63,7 @@ data Term = TmAbs VarName Term
           | TmIsZero
           deriving (Eq, Show)
 
-data TermClass = TmClass {
+data TermClass = TermClass {
     classInherits :: [(Term, VarName)],
     classRep :: VarName,
     classMethods :: Map.Map LabelName Term
@@ -71,7 +71,7 @@ data TermClass = TmClass {
   deriving (Eq, Show)
 
 deriveTermClass :: TermClass -> Term
-deriveTermClass (TmClass inherits rep methods) = TmAbs
+deriveTermClass (TermClass inherits rep methods) = TmAbs
   rep
   (TmAbs "self" (TmAbs "unit" (inheritsToLet inherits (TmRcd methods))))
  where
@@ -81,7 +81,7 @@ deriveTermClass (TmClass inherits rep methods) = TmAbs
     (inheritsToLet ps inner)
   inheritsToLet [] inner = inner
 
--- λ f . (λ x . f (λ v . x x v)) (λ x . f (λ v . x x v))
+-- λ f . (λ x . f (λ v . x x  v)) (λ x . f (λ v . x x v))
 termZ :: Term
 termZ = TmAbs "f" (TmApp half half)
  where
