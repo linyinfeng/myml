@@ -71,7 +71,7 @@ termOperatorTable =
   opRef    = TmRef <$ reserve identStyle "ref"
   opDeref  = TmDeref <$ reserve identStyle "!"
   opAssign = TmAssign <$ reserve identStyle ":="
-  opSeq    = TmSeq <$ symbol ";"
+  opSeq    = TmSeq <$ (notFollowedBy (symbol ";;") *> symbol ";")
 
 parseTermAtom :: Parser Term
 parseTermAtom =

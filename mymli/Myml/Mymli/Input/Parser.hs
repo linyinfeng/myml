@@ -10,10 +10,10 @@ import           Text.Trifecta
 import           Control.Applicative
 
 parseInput :: Parser Input
-parseInput = parseInputBind <|> parseInputTerm <|> parseInputEmpty
+parseInput = (parseInputBind <|> parseInputTerm <|> parseInputEmpty) <* symbol ";;"
 
 parseInputs :: Parser [Input]
-parseInputs = parseInput `sepBy` (symbol ",")
+parseInputs = many parseInput
 
 parseInputBind :: Parser Input
 parseInputBind = do

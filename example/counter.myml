@@ -3,7 +3,7 @@ Counter =
     with r
     { get = λ _ . ! r.x
     , inc = λ _ . r.x := succ (! r.x)
-    },
+    } ;;
 BackupCounter =
   class
     inherit Counter as super
@@ -12,7 +12,7 @@ BackupCounter =
     , inc = super.inc
     , backup = λ _ . r.b := ! r.x
     , restore = λ _ . r.x := ! r.b
-    },
+    } ;;
 ResetCounter =
   class
     inherit Counter as super
@@ -20,7 +20,7 @@ ResetCounter =
     { get = super.get
     , inc = super.inc
     , reset = λ _ . r.x := 0
-    },
+    } ;;
 MixinCounter =
   class
     inherit Counter as super
@@ -32,7 +32,7 @@ MixinCounter =
     , backup = superBackup.backup
     , restore = superBackup.restore
     , reset = superReset.reset
-    },
+    } ;;
 Inc2Counter =
   class
     inherit Counter as super
@@ -40,7 +40,7 @@ Inc2Counter =
     { get = super.get
     , inc = super.inc
     , inc2 = λ _ . self.inc (); self.inc ()
-    },
+    } ;;
 Inc2EvenCounter =
   class
     inherit Inc2Counter as super
@@ -48,16 +48,16 @@ Inc2EvenCounter =
     { get = super.get
     , inc = λ _ . super.inc (); super.inc ()
     , inc2 = super.inc2
-    },
+    } ;;
 
-rep = { x = ref 0, b = ref 0 },
-counter = new Counter rep,
-backupCounter = new BackupCounter rep,
-resetCounter = new ResetCounter rep,
+rep = { x = ref 0, b = ref 0 } ;;
+counter = new Counter rep ;;
+backupCounter = new BackupCounter rep ;;
+resetCounter = new ResetCounter rep ;;
 
-incAndGet = λ c . c.inc (); c.get (),
-incAndGetCounter = incAndGet counter,
-incAndGetBackupCounter = incAndGet backupCounter,
+incAndGet = λ c . c.inc (); c.get () ;;
+incAndGetCounter = incAndGet counter ;;
+incAndGetBackupCounter = incAndGet backupCounter ;;
 
-selectedCounter = if true then resetCounter else backupCounter,
-incAndGetSelectedCounter = incAndGet selectedCounter
+selectedCounter = if true then resetCounter else backupCounter ;;
+incAndGetSelectedCounter = incAndGet selectedCounter ;;
