@@ -40,7 +40,7 @@ testInfer t =
   let parsed   = pTerm t
       (res, _) = runInference (infer parsed >>= generalize parsed)
                               Map.empty
-                              (InferenceState (NewVar Map.empty))
+                              (InferenceState (NewVar Map.empty) True)
   in  case res of
         Right s -> print (pretty s)
         Left  e -> print e

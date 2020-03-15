@@ -21,7 +21,7 @@ unitTests =
   testGroup "Unit tests" [describeTests, instantiateTests, regTreeEqTests]
 
 emptyInferenceState :: InferenceState
-emptyInferenceState = InferenceState (NewVar Map.empty)
+emptyInferenceState = InferenceState (NewVar Map.empty) True
 
 unifyAndTestDescribe :: [(String, String)] -> String -> String -> Assertion
 unifyAndTestDescribe us t1 t2 =
@@ -94,7 +94,9 @@ describeTests = testGroup
   ]
 
 instantiateTests :: TestTree
-instantiateTests = testGroup "Describe Tests" []
+instantiateTests = testGroup "Describe Tests"
+  [ testCase "class self reference" $ testInstantiate
+      "∀ α :: * . ∀ α1 :: * . ∀ α2 :: * . ∀ α3 :: * . ∀ ψ :: * => Presence . α -> (Unit -> α3) -> α1 -> { returnSelf : ψ α2 -> α3 }" "β -> (Unit -> β3) -> β1 -> { returnSelf : β4 β2 -> β3 }" []]
 
 regTreeEqTests :: TestTree
 regTreeEqTests = testGroup
