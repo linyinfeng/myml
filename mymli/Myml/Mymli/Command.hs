@@ -29,7 +29,6 @@ data Command = CmdExit
              | CmdShowValueBindings
              | CmdShowTermBindings
              | CmdShowTypeBindings
-             | CmdInput
              | CmdLoadFile String -- filename
              deriving (Show)
 
@@ -47,8 +46,8 @@ processCommand (CmdShowType t) = do
 processCommand CmdShowStore = do
   maybeStore <- gets envStore
   case maybeStore of
-    Nothing                     -> return ()
-    Just Store { storeData, ..} -> do
+    Nothing -> return ()
+    Just Store { storeData, ..} ->
       liftIO (print (pretty (Map.toList (Map.map removeMark storeData))))
   return MymliContinue
 processCommand CmdShowValueBindings = do
@@ -63,22 +62,6 @@ processCommand CmdShowTypeBindings = do
   typeBindings <- gets envTypeBindings
   liftIO (print (pretty (Map.toList typeBindings)))
   return MymliContinue
-processCommand CmdInput = do
-  inputRes <- multiLineInput
-  case inputRes of
-    Nothing          -> return MymliExit
-    Just inputString -> do
-      res <- liftIO (parseAndPrintError (parseInput <* eof) inputString)
-      case res of
-        Nothing    -> return MymliContinue
-        Just input -> processInput input
- where
-  multiLineInput = do
-    res <- lift (getInputLine inputCmdPrompt)
-    case res of
-      Nothing -> return Nothing
-      Just "" -> return (Just "")
-      Just l  -> fmap (l ++) <$> multiLineInput
 processCommand (CmdLoadFile file) = do
   result <- liftIO
     (handle (\(e :: IOException) -> print e >> return Nothing)

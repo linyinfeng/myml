@@ -15,7 +15,6 @@ parseCommand =
     <|> parseShowTypeCommand
     <|> parseShowStoreCommand
     <|> parseShowBindingsCommand
-    <|> parseInputCommand
     <|> parseLoadFileCommand
 
 parseHelpCommand :: Parser Command
@@ -38,9 +37,6 @@ parseShowBindingsCommand = symbol "bindings" *> (v <|> t <|> ty)
   v  = CmdShowValueBindings <$ symbol "value"
   t  = CmdShowTermBindings <$ symbol "term"
   ty = CmdShowTypeBindings <$ symbol "type"
-
-parseInputCommand :: Parser Command
-parseInputCommand = CmdInput <$ symbol "input"
 
 parseLoadFileCommand :: Parser Command
 parseLoadFileCommand = CmdLoadFile <$> (symbol "load" *> stringLiteral)

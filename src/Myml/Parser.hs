@@ -9,6 +9,7 @@ module Myml.Parser
   , parseKind
   , parseKindAtom
   , identStyle
+  , punctureStyle
   )
 where
 
@@ -46,7 +47,7 @@ termOperatorTable =
   opAbs = do
     reserve identStyle "\x3bb" <|> reserve identStyle "\\"
     x <- ident identStyle
-    _ <- symbol "."
+    _ <- reserve punctureStyle  "."
     return (TmAbs x)
   opLet = do
     reserve identStyle "let"
@@ -57,21 +58,21 @@ termOperatorTable =
     return (TmLet x t)
   opApp       = return TmApp
   opVariant   = TmVariant <$> variantLabel
-  opRcdAccess = flip TmRcdAccess <$> (symbol "." *> ident identStyle)
+  opRcdAccess = flip TmRcdAccess <$> (reserve punctureStyle  "." *> ident identStyle)
   opRcdExtend = do
-    try $ reserve identStyle "with" <* symbol "{"
+    try $ reserve identStyle "with" <* reserve punctureStyle  "{"
     (l, t) <- recordPair
-    _      <- symbol "}"
+    _      <- reserve punctureStyle  "}"
     return (\e -> TmRcdExtend e l t)
   opMatchExtend = do
-    try $ reserve identStyle "with" <* symbol "["
+    try $ reserve identStyle "with" <* reserve punctureStyle  "["
     (l, c) <- matchPair
-    _      <- symbol "]"
+    _      <- reserve punctureStyle  "]"
     return (\t -> TmMatchExtend t l c)
   opRef    = TmRef <$ reserve identStyle "ref"
   opDeref  = TmDeref <$ reserve identStyle "!"
   opAssign = TmAssign <$ reserve identStyle ":="
-  opSeq    = TmSeq <$ (notFollowedBy (symbol ";;") *> symbol ";")
+  opSeq    = TmSeq <$ reserve punctureStyle  ";"
 
 parseTermAtom :: Parser Term
 parseTermAtom =
@@ -94,11 +95,11 @@ parseTermAtom =
     <?> "termAtom"
  where
   var   = TmVar <$> ident identStyle
-  rcd   = TmRcd . Map.fromList <$> braces (recordPair `sepBy` symbol ",")
-  match = TmMatch . Map.fromList <$> brackets (matchPair `sepBy` symbol ",")
+  rcd   = TmRcd . Map.fromList <$> braces (recordPair `sepBy` reserve punctureStyle  ",")
+  match = TmMatch . Map.fromList <$> brackets (matchPair `sepBy` reserve punctureStyle  ",")
   unit =
     TmUnit
-      <$ (reserve identStyle "unit" <|> (try (symbol "(" *> symbol ")") $> ()))
+      <$ (reserve identStyle "unit" <|> (try (reserve punctureStyle  "(" *> reserve punctureStyle  ")") $> ()))
   true   = TmTrue <$ reserve identStyle "true"
   false  = TmFalse <$ reserve identStyle "false"
   zero   = TmNat 0 <$ reserve identStyle "zero"
@@ -118,7 +119,7 @@ parseTermAtom =
       )
     reserve identStyle "with"
     rep     <- ident identStyle
-    methods <- Map.fromList <$> braces (recordPair `sepBy` symbol ",")
+    methods <- Map.fromList <$> braces (recordPair `sepBy` reserve punctureStyle ",")
     let k = TermClass inherits rep methods
     return (deriveTermClass k)
   new  = termNew <$ reserve identStyle "new"
@@ -153,7 +154,7 @@ typeOperatorTable =
     TyMu
       <$> (  (reserve identStyle "\x3bc" <|> reserve identStyle "Rec")
           *> ident identStyle
-          <* symbol "."
+          <* reserve punctureStyle "."
           )
   opArrow = TyArrow <$ reserve identStyle "->"
 
@@ -164,9 +165,9 @@ parseTypeAtom =
  where
   var = TyVar <$> ident identStyle
   rcd =
-    TyRecord <$> (symbol "{" *> parseTypeRow (ident identStyle) <* symbol "}")
+    TyRecord <$> (reserve punctureStyle "{" *> parseTypeRow (ident identStyle) <* reserve punctureStyle "}")
   variant =
-    TyVariant <$> (symbol "[" *> parseTypeRow variantLabel <* symbol "]")
+    TyVariant <$> (reserve punctureStyle "[" *> parseTypeRow variantLabel <* reserve punctureStyle "]")
   unit = TyUnit <$ reserve identStyle "Unit"
   bool = TyBool <$ reserve identStyle "Bool"
   nat  = TyNat <$ reserve identStyle "Nat"
@@ -183,7 +184,7 @@ schemeOperatorTable = [[Prefix (chainedPrefix opForall)]]
     x <- ident identStyle
     reserve identStyle "::"
     kind <- parseKind
-    _    <- symbol "."
+    _    <- reserve punctureStyle "."
     return (ScmForall x kind)
 
 parseSchemeAtom :: Parser TypeScheme
@@ -203,14 +204,14 @@ parseKindAtom = proper <|> presence <|> row <|> parens parseKind
   presence = KPresence <$ reserve identStyle "Presence"
   row      = do
     reserve identStyle "Row"
-    _  <- symbol "("
+    _  <- reserve punctureStyle "("
     ls <- commaSep (ident identStyle)
-    _  <- symbol ")"
+    _  <- reserve punctureStyle ")"
     return (KRow (Set.fromList ls))
 
 parseTypeRow :: Parser LabelName -> Parser TypeRow
 parseTypeRow parseLabel = do
-  finitePart <- Map.fromList <$> (typeRowPair parseLabel `sepBy` symbol ",")
+  finitePart <- Map.fromList <$> (typeRowPair parseLabel `sepBy` reserve punctureStyle ",")
   TyRow finitePart <$> typeRowCofinite parseLabel
 
 typeRowPair :: Parser LabelName -> Parser (LabelName, TypePresence)
@@ -236,7 +237,7 @@ typeRowCofinite parseLabel = rowVar <|> mu <|> allAbsent
     reserve identStyle "|"
     reserve identStyle "\x3bc"
     x <- ident identStyle
-    _ <- symbol "."
+    _ <- reserve punctureStyle "."
     r <- parens (parseTypeRow parseLabel)
     return (CofMu x r)
 
@@ -287,40 +288,43 @@ reservedTokens = H.fromList
   ]
 
 identStyle :: IdentifierStyle Parser
-identStyle = IdentifierStyle { _styleName              = "identifer"
-                             , _styleStart             = identLetter
-                             , _styleLetter            = identLetter
-                             , _styleReserved          = reservedTokens
-                             , _styleHighlight         = Identifier
-                             , _styleReservedHighlight = ReservedIdentifier
-                             }
+identStyle = IdentifierStyle
+  { _styleName              = "identifer"
+  , _styleStart             = identLetter
+  , _styleLetter            = identLetter
+  , _styleReserved          = reservedTokens
+  , _styleHighlight         = Identifier
+  , _styleReservedHighlight = ReservedIdentifier
+  }
 
 identLetter :: Parser Char
 identLetter = satisfy isTokenChar
  where
-  isTokenChar c =
-    not (isSpace c)
-      && c
-      /= '('
-      && c
-      /= ')'
-      && c
-      /= '['
-      && c
-      /= ']'
-      && c
-      /= '{'
-      && c
-      /= '}'
-      && c
-      /= '.'
-      && c
-      /= ','
-      && c
-      /= ';'
+  isTokenChar c = not (isSpace c) && not (H.member c punctureChars)
 
 chainedPrefix :: Parser (a -> a) -> Parser (a -> a)
 chainedPrefix p = chainl1 p (return (.))
 
 chainedPostfix :: Parser (a -> a) -> Parser (a -> a)
 chainedPostfix p = chainr1 p (return $ flip (.))
+
+punctureChars :: H.HashSet Char
+punctureChars = H.fromList ['(', ')', '[', ']', '{', '}', '.', ',', ';']
+
+punctureLetter :: Parser Char
+punctureLetter = satisfy (flip H.member punctureChars)
+
+punctureStyle :: IdentifierStyle Parser
+punctureStyle = IdentifierStyle
+  { _styleName              = "puncture"
+  , _styleStart             = punctureLetter
+  , _styleLetter            = punctureLetter
+  , _styleReserved          = reservedPunctures
+  , _styleHighlight         = Symbol
+  , _styleReservedHighlight = Symbol
+  }
+
+reservedPunctures :: H.HashSet String
+reservedPunctures = H.fromList
+  [ "(", ")", "[", "]", "{", "}", ".", ",", ";", ";;"
+  ]

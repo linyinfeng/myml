@@ -15,6 +15,7 @@ import           Control.Monad.Trans
 data Input = InputBind VarName Term
            | InputTerm Term
            | InputEmpty
+           deriving (Show)
 
 processInput :: MonadIO m => Input -> Mymli m MymliRequest
 processInput (InputTerm t) = do

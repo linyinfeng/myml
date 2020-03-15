@@ -75,6 +75,7 @@ executable mymli
       Myml.Mymli.Input.Parser
       Myml.Mymli.Option
       Myml.Mymli.Output
+      Myml.Mymli.Parser
       Myml.Mymli.Text
       Paths_myml
   hs-source-dirs:
