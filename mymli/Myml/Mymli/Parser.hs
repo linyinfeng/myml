@@ -17,6 +17,7 @@ type InputAndCommand = Either Input Command
 parseMymliInput :: Parser InputAndCommand
 parseMymliInput = (Left <$> parseInput) <|> (Right <$> parseCommand)
 
+-- TODO: refactor input and command structure
 getMymliInput :: IO ParseResult
 getMymliInput = getMymliInput' (stepParser parseMymliInput mempty)
 
