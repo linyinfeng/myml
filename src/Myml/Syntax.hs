@@ -44,8 +44,8 @@ data Term = TmAbs VarName Term
           | TmMatchExtend Term LabelName TermCase
           | TmVariant LabelName Term
           -- Reference
-          | TmRef Term
-          | TmDeref Term
+          | TmRef
+          | TmDeref
           | TmAssign Term Term
           | TmLoc Integer
           -- Sequence
@@ -115,8 +115,8 @@ instance Monad m => Serial m Term where
       \/ cons2 (\c1 c2 -> TmMatch (Map.fromList [("l1", c1), ("l2", c2)]))
       \/ cons2 (\t c -> TmMatchExtend t "l" c)
       \/ cons1 (TmVariant "l")
-      \/ cons1 TmRef
-      \/ cons1 TmDeref
+      \/ cons0 TmRef
+      \/ cons0 TmDeref
       \/ cons2 TmAssign
       -- do not generate TmLoc
       \/ pure TmUnit -- no decDepth for TmUnit
@@ -233,8 +233,8 @@ isValue TmRcdAccess{}   = False
 isValue TmMatch{}       = True
 isValue TmMatchExtend{} = False
 isValue (TmVariant _ t) = isValue t
-isValue TmRef{}         = False
-isValue TmDeref{}       = False
+isValue TmRef           = True
+isValue TmDeref         = True
 isValue TmAssign{}      = False
 isValue TmLoc{}         = True
 isValue TmSeq{}         = False
@@ -265,9 +265,9 @@ instance FreeVariable Term where
     Map.foldl (\a b -> a `Set.union` freeVariable b) Set.empty m
   freeVariable (TmMatchExtend t1 _ t2) =
     freeVariable t1 `Set.union` freeVariable t2
-  freeVariable (TmVariant _ t ) = freeVariable t
-  freeVariable (TmRef   t     ) = freeVariable t
-  freeVariable (TmDeref t     ) = freeVariable t
+  freeVariable (TmVariant _ t)  = freeVariable t
+  freeVariable TmRef            = Set.empty
+  freeVariable TmDeref          = Set.empty
   freeVariable (TmAssign t1 t2) = freeVariable t1 `Set.union` freeVariable t2
   freeVariable (TmLoc _       ) = Set.empty
   freeVariable TmUnit           = Set.empty
@@ -411,14 +411,8 @@ instance PrettyPrec Term where
     (n > prec)
     (align (prettyVariantLabel l <> softline <> prettyPrec prec t))
     where prec = 4
-  prettyPrec n (TmRef t) = parensPrec
-    (n > prec)
-    (align (pretty "ref" <> softline <> prettyPrec prec t))
-    where prec = 4
-  prettyPrec n (TmDeref t) = parensPrec
-    (n > prec)
-    (align (pretty "!" <> softline <> prettyPrec prec t))
-    where prec = 4
+  prettyPrec _ TmRef            = pretty "ref"
+  prettyPrec _ TmDeref          = pretty "!"
   prettyPrec n (TmAssign t1 t2) = parensPrec
     (n > prec)
     (hang

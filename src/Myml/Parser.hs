@@ -26,7 +26,7 @@ parseTerm = buildExpressionParser termOperatorTable parseTermAtom <?> "term"
 termOperatorTable :: OperatorTable Parser Term
 termOperatorTable =
   [ [Postfix (chainedPostfix (opRcdAccess <|> opRcdExtend <|> opMatchExtend))]
-  , [Prefix (chainedPrefix (opVariant <|> opRef <|> opDeref))]
+  , [Prefix (chainedPrefix opVariant)]
   , [Infix opApp AssocLeft]
   , [Infix opAssign AssocNone]
   , [Infix opSeq AssocRight]
@@ -66,8 +66,6 @@ termOperatorTable =
     pairs <- matchPair `sepBy` symbol ","
     _     <- symbol "]"
     return (\t -> foldl (\inner (l, c) -> TmMatchExtend inner l c) t pairs)
-  opRef    = TmRef <$ reserve identStyle "ref"
-  opDeref  = TmDeref <$ reserve identStyle "!"
   opAssign = TmAssign <$ reserve identStyle ":="
   opSeq    = TmSeq <$ try (symbol ";" <* notFollowedBy (char ';'))
   opClass  = do
@@ -87,6 +85,8 @@ parseTermAtom :: Parser Term
 parseTermAtom =
   (   rcd
     <|> match
+    <|> ref
+    <|> deref
     <|> unit
     <|> true
     <|> false
@@ -105,6 +105,8 @@ parseTermAtom =
   var   = TmVar <$> ident identStyle
   rcd   = TmRcd . Map.fromList <$> braces (recordPair `sepBy` symbol ",")
   match = TmMatch . Map.fromList <$> brackets (matchPair `sepBy` symbol ",")
+  ref   = TmRef <$ reserve identStyle "ref"
+  deref = TmDeref <$ reserve identStyle "!"
   unit =
     TmUnit
       <$ (reserve identStyle "unit" <|> (() <$ try (symbol "(" *> symbol ")")))

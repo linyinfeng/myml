@@ -201,14 +201,14 @@ infer (TmVariant l t) = do
   ty <- infer t
   r  <- CofRowVar <$> newVar innerVarPrefix
   return (TyVariant (TyRow (Map.singleton l (Present ty)) r))
-infer (TmRef t) =
-  checkImperativeFeaturesEnabled (TmRef t) >> (TyRef <$> infer t)
-infer (TmDeref t) = do
-  checkImperativeFeaturesEnabled (TmDeref t)
-  ty <- infer t
-  x  <- TyVar <$> newVar innerVarPrefix
-  unifyProper ty (TyRef x)
-  return x
+infer TmRef = do
+  checkImperativeFeaturesEnabled TmRef
+  instantiate
+    (ScmForall "a" KProper (ScmMono (TyArrow (TyVar "a") (TyRef (TyVar "a")))))
+infer TmDeref = do
+  checkImperativeFeaturesEnabled TmDeref
+  instantiate
+    (ScmForall "a" KProper (ScmMono (TyArrow (TyRef (TyVar "a")) (TyVar "a"))))
 infer (TmAssign t1 t2) = do
   checkImperativeFeaturesEnabled (TmAssign t1 t2)
   ty1 <- infer t1

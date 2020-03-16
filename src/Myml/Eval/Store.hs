@@ -115,10 +115,10 @@ instance Locations Term where
     Map.foldl (\a b -> a `Set.union` locations b) Set.empty m
   locations (TmMatchExtend t _ c) = locations t `Set.union` locations c
   locations (TmVariant _ t      ) = locations t
-  locations (TmRef   t          ) = locations t
-  locations (TmDeref t          ) = locations t
-  locations (TmAssign t1 t2     ) = locations t1 `Set.union` locations t2
-  locations (TmLoc l            ) = Set.singleton l
+  locations TmRef                 = Set.empty
+  locations TmDeref               = Set.empty
+  locations (TmAssign t1 t2)      = locations t1 `Set.union` locations t2
+  locations (TmLoc l       )      = Set.singleton l
   locations TmUnit                = Set.empty
   locations (TmSeq t1 t2)         = locations t1 `Set.union` locations t2
   locations TmTrue                = Set.empty

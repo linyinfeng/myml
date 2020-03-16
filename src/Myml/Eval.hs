@@ -45,6 +45,15 @@ smallStep (TmApp (TmMatch m) (TmVariant l v2)) | isValue v2 =
   case Map.lookup l m of
     Nothing            -> throwError ExcNoRuleApplied
     Just (TmCase x t1) -> return (applySubst (Map.singleton x v2) t1)
+smallStep (TmApp TmRef v) | isValue v = do
+  s <- get >>= maybeToExcept
+  let (l, s') = allocate s v
+  put (Just s')
+  return (TmLoc l)
+smallStep (TmApp TmDeref (TmLoc l)) =
+  gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
+    Nothing -> throwError ExcNoRuleApplied
+    Just v  -> return v
 smallStep (TmApp TmSucc (TmNat n)) = return (TmNat (succ n))
 smallStep (TmApp TmPred (TmNat n)) =
   return (TmNat (if n == 0 then 0 else n - 1))
@@ -74,17 +83,6 @@ smallStep (TmRcdAccess t l              ) = flip TmRcdAccess l <$> smallStep t
 smallStep (TmMatchExtend (TmMatch m) l c) = return (TmMatch (Map.insert l c m))
 smallStep (TmMatchExtend t l c) = (\t' -> TmMatchExtend t' l c) <$> smallStep t
 smallStep (TmVariant l t                ) = TmVariant l <$> smallStep t
-smallStep (TmRef v) | isValue v           = do
-  s <- get >>= maybeToExcept
-  let (l, s') = allocate s v
-  put (Just s')
-  return (TmLoc l)
-smallStep (TmRef t) = TmRef <$> smallStep t
-smallStep (TmDeref (TmLoc l)) =
-  gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
-    Nothing -> throwError ExcNoRuleApplied
-    Just v  -> return v
-smallStep (TmDeref t) = TmDeref <$> smallStep t
 smallStep (TmAssign (TmLoc l) v) | isValue v =
   gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
     Nothing -> throwError ExcNoRuleApplied

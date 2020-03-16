@@ -83,10 +83,10 @@ instance ApplySubst Term Term where
   subst (TmMatch m          ) = TmMatch <$> sequence (Map.map subst m)
   subst (TmMatchExtend t l c) = flip TmMatchExtend l <$> subst t <*> subst c
   subst (TmVariant l t      ) = TmVariant l <$> subst t
-  subst (TmRef   t          ) = TmRef <$> subst t
-  subst (TmDeref t          ) = TmDeref <$> subst t
-  subst (TmAssign t1 t2     ) = TmAssign <$> subst t1 <*> subst t2
-  subst (TmLoc n            ) = return (TmLoc n)
+  subst TmRef                 = return TmRef
+  subst TmDeref               = return TmDeref
+  subst (TmAssign t1 t2)      = TmAssign <$> subst t1 <*> subst t2
+  subst (TmLoc n       )      = return (TmLoc n)
   subst TmUnit                = return TmUnit
   subst (TmSeq t1 t2)         = TmSeq <$> subst t1 <*> subst t2
   subst TmTrue                = return TmTrue
