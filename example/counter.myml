@@ -1,52 +1,44 @@
 Counter =
   class
     with r
-    { get = λ _ . ! r.x
-    , inc = λ _ . r.x := succ (! r.x)
-    } ;;
+    { get _ = ! r.x
+    , inc _ = r.x := succ (! r.x) } ;;
 BackupCounter =
   class
     with r
     inherit Counter as super
-    super
-      with { backup = λ _ . r.b := ! r.x }
-      with { restore = λ _ . r.x := ! r.b } ;;
+    super with
+      { backup _ =  r.b := ! r.x
+      , restore _ = r.x := ! r.b } ;;
 ResetCounter =
   class
     with r
     inherit Counter as super
-    { get = super.get
-    , inc = super.inc
-    , reset = λ _ . r.x := 0
-    } ;;
+    super with
+      { reset _ = r.x := 0 } ;;
 MixinCounter =
   class
     with r
     inherit Counter as super
     inherit BackupCounter as superBackup
     inherit ResetCounter as superReset
-    { get = super.get
-    , inc = super.inc
-    , backup = superBackup.backup
-    , restore = superBackup.restore
-    , reset = superReset.reset
-    } ;;
+    super with
+      { backup = superBackup.backup
+      , restore = superBackup.restore
+      , reset = superReset.reset } ;;
 Inc2Counter =
   class
     with r
     inherit Counter as super
-    { get = super.get
-    , inc = super.inc
-    , inc2 = λ _ . self.inc (); self.inc ()
-    } ;;
+    super with
+      { inc2 _ = self.inc (); self.inc () } ;;
 Inc2EvenCounter =
   class
     with r
     inherit Inc2Counter as super
-    { get = super.get
-    , inc = λ _ . super.inc (); super.inc ()
-    , inc2 = super.inc2
-    } ;;
+    super with
+      { inc _ = super.inc (); super.inc ()
+      , inc2 = super.inc2 } ;;
 
 rep = { x = ref 0, b = ref 0 } ;;
 counter = new Counter rep ;;
