@@ -42,16 +42,17 @@ termOperatorTable =
     return (TmIf t1 t2)
   opAbs = do
     reserve identStyle "\x3bb" <|> reserve identStyle "\\"
-    x <- ident identStyle
-    _ <- symbol "."
-    return (TmAbs x)
+    xs <- some (ident identStyle)
+    _  <- symbol "."
+    return (\t -> foldr TmAbs t xs)
   opLet = do
     reserve identStyle "let"
-    x <- ident identStyle
+    x      <- ident identStyle
+    params <- many (ident identStyle)
     reserve identStyle "="
     t <- parseTerm
     reserve identStyle "in"
-    return (TmLet x t)
+    return (TmLet x (foldr TmAbs t params))
   opApp       = return TmApp
   opVariant   = TmVariant <$> variantLabel
   opRcdAccess = flip TmRcdAccess <$> (symbol "." *> ident identStyle)
