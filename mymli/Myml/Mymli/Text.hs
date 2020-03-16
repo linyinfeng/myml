@@ -30,14 +30,14 @@ mymlOptionHelpHeaderString = unpack [trimming|
 mymliHelpText :: Text
 mymliHelpText = [trimming|
   Commands available from the prompt:
-    <term> ;;           Evaluate <term>
-    <x> = <term> ;;     Evaluate <term> and add binding
-    :quit               Quit myml
-    :help               Show help
-    :store              Show current store
-    :bindings value     Show value bindings
-    :bindings term      Show term bindings
-    :bindings type      Show type bindings
+    <term> ;;                     Evaluate <term>
+    <x> <params> ... = <term> ;;  Evaluate <term> and add binding
+    :quit                         Quit myml
+    :help                         Show this help message
+    :store                        Show current store
+    :bindings value               Show value bindings
+    :bindings term                Show term bindings
+    :bindings type                Show type bindings
   |]
 
 mymliByeText :: Text

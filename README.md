@@ -11,7 +11,17 @@ My toy programming language (working in progress).
 cabal v2-run mymli
 ```
 
+## Installation
+
+```bash
+git clone https://github.com/linyinfeng/myml.git
+cd myml
+cabal v2-install mymli
+```
+
 ## Usage
+
+Pass command line option `--help` to mymli for help information of mymli CLI.
 
 Use command `:help` in mymli for help information.
 
