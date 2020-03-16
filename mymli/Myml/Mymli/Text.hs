@@ -30,8 +30,8 @@ mymlOptionHelpHeaderString = unpack [trimming|
 mymliHelpText :: Text
 mymliHelpText = [trimming|
   Commands available from the prompt:
-    <term>              Evaluate <term>
-    <x> = <term>        Evaluate <term> and add binding
+    <term> ;;           Evaluate <term>
+    <x> = <term> ;;     Evaluate <term> and add binding
     :exit               Exit
     :quit               Same as :exit
     :help               Show help
