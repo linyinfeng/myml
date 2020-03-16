@@ -39,7 +39,6 @@ mymliHelpText = [trimming|
     :bindings value     Show value bindings
     :bindings term      Show term bindings
     :bindings type      Show type bindings
-    :load "<filename>"  Load file
   |]
 
 mymliByeText :: Text

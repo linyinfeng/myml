@@ -50,9 +50,13 @@ library
       Myml.Eval
       Myml.Eval.Store
       Myml.Parser
+      Myml.Parser.Style
+      Myml.Parser.Helper
       Myml.Subst
       Myml.Syntax
       Myml.Typing
+      Myml.Lang.Syntax
+      Myml.Lang.Parser
   other-modules:
       Paths_myml
   hs-source-dirs:
@@ -71,11 +75,10 @@ executable mymli
       Myml.Mymli.Environment
       Myml.Mymli.Command
       Myml.Mymli.Command.Parser
-      Myml.Mymli.Input
-      Myml.Mymli.Input.Parser
+      Myml.Mymli.Lang
       Myml.Mymli.Option
       Myml.Mymli.Output
-      Myml.Mymli.Parser
+      Myml.Mymli.Input
       Myml.Mymli.Text
       Paths_myml
   hs-source-dirs:

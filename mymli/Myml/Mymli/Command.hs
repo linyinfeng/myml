@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, NamedFieldPuns, ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards, NamedFieldPuns #-}
 
 module Myml.Mymli.Command
   ( Command(..)
@@ -11,14 +11,10 @@ import           Myml.Syntax
 import           Myml.Eval.Store
 import           Myml.Mymli.Common
 import           Myml.Mymli.Output
-import           Myml.Mymli.Input
-import           Myml.Mymli.Input.Parser
 import           Myml.Mymli.Text
 import qualified Data.Text.IO                  as Text.IO
 import           Control.Monad.Trans
 import           Control.Monad.State
-import           Text.Trifecta
-import           System.Console.Haskeline
 import           Data.Text.Prettyprint.Doc
 import qualified Data.Map                      as Map
 
@@ -29,10 +25,9 @@ data Command = CmdExit
              | CmdShowValueBindings
              | CmdShowTermBindings
              | CmdShowTypeBindings
-             | CmdLoadFile String -- filename
              deriving (Show)
 
-processCommand :: Command -> Mymli (InputT IO) MymliRequest
+processCommand :: MonadIO m => Command -> Mymli m MymliRequest
 processCommand CmdExit = return MymliExit
 processCommand CmdHelp = do
   liftIO (Text.IO.putStrLn mymliHelpText)
@@ -62,94 +57,3 @@ processCommand CmdShowTypeBindings = do
   typeBindings <- gets envTypeBindings
   liftIO (print (pretty (Map.toList typeBindings)))
   return MymliContinue
-processCommand (CmdLoadFile file) = do
-  result <- liftIO
-    (handle (\(e :: IOException) -> print e >> return Nothing)
-            (parseFromFile (whiteSpace *> parseInputs <* eof) file)
-    )
-  case result of
-    Nothing     -> return MymliContinue
-    Just inputs -> do
-      env                <- mymliEnvForFile
-      (success, fileEnv) <- liftIO (runMymli (processInputsFromFile inputs) env)
-      when success (mymliMergeFileEnv fileEnv >> mymliGc)
-      return MymliContinue
-
-mymliEnvForFile :: Monad m => Mymli m MymliEnv
-mymliEnvForFile = do
-  MymliEnv { envOption, envStore = _, envTermBindings = _, envValueBindings = _, envTypeBindings = _, envInferState } <-
-    get
-  return MymliEnv { envOption
-                  , envStore         = emptyEnvStore envOption
-                  , envTermBindings  = Map.empty
-                  , envValueBindings = Map.empty
-                  , envTypeBindings  = Map.empty
-                  , envInferState    = envInferState
-                  }
-
-mymliMergeFileEnv :: Monad m => MymliEnv -> Mymli m ()
-mymliMergeFileEnv fileEnv = do
-  let
-    MymliEnv { envOption = _, envStore = fileStore, envTermBindings = fileTermBindings, envValueBindings = fileValueBindings, envTypeBindings = fileTypeBindings, envInferState = fileInferState }
-      = fileEnv
-  MymliEnv { envOption = envOption, envStore = currentStore, envTermBindings = currentTermBindings, envValueBindings = currentValueBindings, envTypeBindings = currentTypeBindings, envInferState = _currentInferState } <-
-    get
-  let
-    env = MymliEnv
-      { envOption
-      , envStore         = case (fileStore, currentStore) of
-        (Nothing, Nothing) -> Nothing
-        (Just f, Just c) -> Just (mymliMergeFileStore f c)
-        _ -> error "file imperative option mismatch with current environment"
-      , envTermBindings  = Map.unionWith const
-                                         fileTermBindings
-                                         currentTermBindings
-      , envValueBindings = Map.unionWith const
-                                         fileValueBindings
-                                         currentValueBindings
-      , envTypeBindings  = Map.unionWith const
-                                         fileTypeBindings
-                                         currentTypeBindings
-      , envInferState    = fileInferState
-      }
-  put env
-
-mymliMergeFileStore
-  :: Store (WithMark Term) -> Store (WithMark Term) -> Store (WithMark Term)
-mymliMergeFileStore (Store fm fmf) (Store cm _) = Store
-  { storeData    = Map.unionWith
-                     (\_ _ -> error "store collied after file loading")
-                     cm
-                     fm
-  , storeMinFree = fmf
-  }
-
-processInputsFromFile :: MonadIO m => [Input] -> Mymli m Bool
-processInputsFromFile []               = return True
-processInputsFromFile (input : remain) = do
-  success <- processInputFromFile input
-  if success then processInputsFromFile remain else return False
-
-processInputFromFile :: MonadIO m => Input -> Mymli m Bool
-processInputFromFile (InputTerm t) = do
-  inferRes <- mymliInferTypeAndUpdateBinding t
-  case inferRes of
-    Left e -> do
-      liftIO (typingErrorLabel >> print e)
-      return False
-    Right _ -> do
-      _ <- mymliEval t
-      mymliGc
-      return True
-processInputFromFile (InputBind x t) = do
-  inferRes <- mymliInferTypeAndUpdateBinding t
-  case inferRes of
-    Left e -> do
-      liftIO (typingErrorLabel >> print e)
-      return False
-    Right s -> do
-      v <- mymliEval t
-      mymliAddBinding x t v s
-      mymliGc
-      return True
-processInputFromFile InputEmpty = return True

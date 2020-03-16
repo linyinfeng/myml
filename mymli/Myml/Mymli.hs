@@ -4,19 +4,15 @@ module Myml.Mymli
 where
 
 import           Myml.Mymli.Environment
-import           Myml.Mymli.Common
-import           Myml.Mymli.Command
 import           Myml.Mymli.Input
-import           Myml.Mymli.Command.Parser
-import           Myml.Mymli.Input.Parser
 import           Myml.Mymli.Text
 import           Myml.Mymli.Option
+import Text.Trifecta
+import           Control.Monad.State
 import qualified Options.Applicative           as O
 import           Data.Semigroup                 ( (<>) )
 import qualified Data.Text.IO                  as Text.IO
-import           Text.Trifecta
 import           System.Console.Haskeline
-import           Control.Monad.State
 import           System.Directory
 import           System.FilePath
 
@@ -51,21 +47,10 @@ bye = liftIO (Text.IO.putStrLn mymliByeText)
 
 loop :: Mymli (InputT IO) ()
 loop = do
-  minput <- lift (getInputLine prompt)
-  case minput of
-    Nothing                -> return ()
-    Just (':' : cmdString) -> do
-      res <- liftIO
-        (parseAndPrintError (whiteSpace *> parseCommand <* eof) cmdString)
-      case res of
-        Nothing  -> handleMymliRequest MymliContinue
-        Just cmd -> processCommand cmd >>= handleMymliRequest
-    Just inputString -> do
-      res <- liftIO
-        (parseAndPrintError (whiteSpace *> parseInput <* eof) inputString)
-      case res of
-        Nothing    -> handleMymliRequest MymliContinue
-        Just input -> processInput input >>= handleMymliRequest
+  res <- lift getMymliInput
+  case res of
+    Left info  -> liftIO (print (_errDoc info)) >> handleMymliRequest MymliContinue
+    Right input -> processInput input >>= handleMymliRequest
 
 handleMymliRequest :: MymliRequest -> Mymli (InputT IO) ()
 handleMymliRequest MymliContinue = loop

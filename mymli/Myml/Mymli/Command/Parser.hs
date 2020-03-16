@@ -9,13 +9,12 @@ import           Text.Trifecta
 import           Control.Applicative
 
 parseCommand :: Parser Command
-parseCommand =
-  parseHelpCommand
+parseCommand = symbol ":" *>
+  (parseHelpCommand
     <|> parseExitCommand
     <|> parseShowTypeCommand
     <|> parseShowStoreCommand
-    <|> parseShowBindingsCommand
-    <|> parseLoadFileCommand
+    <|> parseShowBindingsCommand)
 
 parseHelpCommand :: Parser Command
 parseHelpCommand = CmdHelp <$ symbol "help"
@@ -37,6 +36,3 @@ parseShowBindingsCommand = symbol "bindings" *> (v <|> t <|> ty)
   v  = CmdShowValueBindings <$ symbol "value"
   t  = CmdShowTermBindings <$ symbol "term"
   ty = CmdShowTypeBindings <$ symbol "type"
-
-parseLoadFileCommand :: Parser Command
-parseLoadFileCommand = CmdLoadFile <$> (symbol "load" *> stringLiteral)

@@ -8,21 +8,17 @@ module Myml.Parser
   , parseSchemeAtom
   , parseKind
   , parseKindAtom
-  , identStyle
-  , punctureStyle
   )
 where
 
 import           Myml.Syntax
+import           Myml.Parser.Style
+import           Myml.Parser.Helper
 import           Text.Trifecta
-import           Text.Parser.Token.Highlight
 import           Text.Parser.Expression
-import qualified Data.HashSet                  as H
 import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set
 import           Control.Applicative
-import           Data.Functor
-import           Data.Char
 
 parseTerm :: Parser Term
 parseTerm = buildExpressionParser termOperatorTable parseTermAtom <?> "term"
@@ -47,7 +43,7 @@ termOperatorTable =
   opAbs = do
     reserve identStyle "\x3bb" <|> reserve identStyle "\\"
     x <- ident identStyle
-    _ <- reserve punctureStyle  "."
+    _ <- reserve punctureStyle "."
     return (TmAbs x)
   opLet = do
     reserve identStyle "let"
@@ -56,23 +52,24 @@ termOperatorTable =
     t <- parseTerm
     reserve identStyle "in"
     return (TmLet x t)
-  opApp       = return TmApp
-  opVariant   = TmVariant <$> variantLabel
-  opRcdAccess = flip TmRcdAccess <$> (reserve punctureStyle  "." *> ident identStyle)
+  opApp     = return TmApp
+  opVariant = TmVariant <$> variantLabel
+  opRcdAccess =
+    flip TmRcdAccess <$> (reserve punctureStyle "." *> ident identStyle)
   opRcdExtend = do
-    try $ reserve identStyle "with" <* reserve punctureStyle  "{"
+    try $ reserve identStyle "with" <* reserve punctureStyle "{"
     (l, t) <- recordPair
-    _      <- reserve punctureStyle  "}"
+    _      <- reserve punctureStyle "}"
     return (\e -> TmRcdExtend e l t)
   opMatchExtend = do
-    try $ reserve identStyle "with" <* reserve punctureStyle  "["
+    try $ reserve identStyle "with" <* reserve punctureStyle "["
     (l, c) <- matchPair
-    _      <- reserve punctureStyle  "]"
+    _      <- reserve punctureStyle "]"
     return (\t -> TmMatchExtend t l c)
   opRef    = TmRef <$ reserve identStyle "ref"
   opDeref  = TmDeref <$ reserve identStyle "!"
   opAssign = TmAssign <$ reserve identStyle ":="
-  opSeq    = TmSeq <$ reserve punctureStyle  ";"
+  opSeq    = TmSeq <$ reserve punctureStyle ";"
 
 parseTermAtom :: Parser Term
 parseTermAtom =
@@ -94,12 +91,16 @@ parseTermAtom =
     )
     <?> "termAtom"
  where
-  var   = TmVar <$> ident identStyle
-  rcd   = TmRcd . Map.fromList <$> braces (recordPair `sepBy` reserve punctureStyle  ",")
-  match = TmMatch . Map.fromList <$> brackets (matchPair `sepBy` reserve punctureStyle  ",")
+  var = TmVar <$> ident identStyle
+  rcd = TmRcd . Map.fromList <$> braces
+    (recordPair `sepBy` reserve punctureStyle ",")
+  match = TmMatch . Map.fromList <$> brackets
+    (matchPair `sepBy` reserve punctureStyle ",")
   unit =
     TmUnit
-      <$ (reserve identStyle "unit" <|> (try (reserve punctureStyle  "(" *> reserve punctureStyle  ")") $> ()))
+      <$ (   reserve identStyle "unit"
+         <|> reserve punctureStyle "()"
+         )
   true   = TmTrue <$ reserve identStyle "true"
   false  = TmFalse <$ reserve identStyle "false"
   zero   = TmNat 0 <$ reserve identStyle "zero"
@@ -119,7 +120,8 @@ parseTermAtom =
       )
     reserve identStyle "with"
     rep     <- ident identStyle
-    methods <- Map.fromList <$> braces (recordPair `sepBy` reserve punctureStyle ",")
+    methods <- Map.fromList
+      <$> braces (recordPair `sepBy` reserve punctureStyle ",")
     let k = TermClass inherits rep methods
     return (deriveTermClass k)
   new  = termNew <$ reserve identStyle "new"
@@ -165,9 +167,17 @@ parseTypeAtom =
  where
   var = TyVar <$> ident identStyle
   rcd =
-    TyRecord <$> (reserve punctureStyle "{" *> parseTypeRow (ident identStyle) <* reserve punctureStyle "}")
+    TyRecord
+      <$> (  reserve punctureStyle "{"
+          *> parseTypeRow (ident identStyle)
+          <* reserve punctureStyle "}"
+          )
   variant =
-    TyVariant <$> (reserve punctureStyle "[" *> parseTypeRow variantLabel <* reserve punctureStyle "]")
+    TyVariant
+      <$> (reserve punctureStyle "[" *> parseTypeRow variantLabel <* reserve
+            punctureStyle
+            "]"
+          )
   unit = TyUnit <$ reserve identStyle "Unit"
   bool = TyBool <$ reserve identStyle "Bool"
   nat  = TyNat <$ reserve identStyle "Nat"
@@ -211,7 +221,8 @@ parseKindAtom = proper <|> presence <|> row <|> parens parseKind
 
 parseTypeRow :: Parser LabelName -> Parser TypeRow
 parseTypeRow parseLabel = do
-  finitePart <- Map.fromList <$> (typeRowPair parseLabel `sepBy` reserve punctureStyle ",")
+  finitePart <-
+    Map.fromList <$> (typeRowPair parseLabel `sepBy` reserve punctureStyle ",")
   TyRow finitePart <$> typeRowCofinite parseLabel
 
 typeRowPair :: Parser LabelName -> Parser (LabelName, TypePresence)
@@ -240,91 +251,3 @@ typeRowCofinite parseLabel = rowVar <|> mu <|> allAbsent
     _ <- reserve punctureStyle "."
     r <- parens (parseTypeRow parseLabel)
     return (CofMu x r)
-
--- no need to include ".", ",", ";"
-reservedTokens :: H.HashSet String
-reservedTokens = H.fromList
-  [ "let"
-  , "in"
-  , "with"
-  , "ref"
-  , "unit"
-  , "true"
-  , "false"
-  , "if"
-  , "then"
-  , "else"
-  , "zero"
-  , "succ"
-  , "pred"
-  , "isZero"
-  , "class"
-  , "inherit"
-  , "new"
-  , "self"
-  , "as"
-  , "Unit"
-  , "Bool"
-  , "Nat"
-  , "Rec"
-  , "Ref"
-  , "Absent"
-  , "Present"
-  , "Row"
-  , "Presence"
-  , ":"
-  , "->"
-  , "=>"
-  , "::"
-  , ":"
-  , "|"
-  , "="
-  , "*"
-  , "`"
-  , ":="
-  , "!"
-  , "\x3bb"
-  , "\x3bc"
-  ]
-
-identStyle :: IdentifierStyle Parser
-identStyle = IdentifierStyle
-  { _styleName              = "identifer"
-  , _styleStart             = identLetter
-  , _styleLetter            = identLetter
-  , _styleReserved          = reservedTokens
-  , _styleHighlight         = Identifier
-  , _styleReservedHighlight = ReservedIdentifier
-  }
-
-identLetter :: Parser Char
-identLetter = satisfy isTokenChar
- where
-  isTokenChar c = not (isSpace c) && not (H.member c punctureChars)
-
-chainedPrefix :: Parser (a -> a) -> Parser (a -> a)
-chainedPrefix p = chainl1 p (return (.))
-
-chainedPostfix :: Parser (a -> a) -> Parser (a -> a)
-chainedPostfix p = chainr1 p (return $ flip (.))
-
-punctureChars :: H.HashSet Char
-punctureChars = H.fromList ['(', ')', '[', ']', '{', '}', '.', ',', ';']
-
-punctureLetter :: Parser Char
-punctureLetter = satisfy (flip H.member punctureChars)
-
-punctureStyle :: IdentifierStyle Parser
-punctureStyle = IdentifierStyle
-  { _styleName              = "puncture"
-  , _styleStart             = punctureLetter
-  , _styleLetter            = punctureLetter
-  , _styleReserved          = reservedPunctures
-  , _styleHighlight         = Symbol
-  , _styleReservedHighlight = Symbol
-  }
-
-reservedPunctures :: H.HashSet String
-reservedPunctures = H.fromList
-  [ "(", ")", "[", "]", "{", "}", ".", ",", ";", ";;"
-  ]
