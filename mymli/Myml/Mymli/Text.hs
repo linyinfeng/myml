@@ -32,8 +32,7 @@ mymliHelpText = [trimming|
   Commands available from the prompt:
     <term> ;;           Evaluate <term>
     <x> = <term> ;;     Evaluate <term> and add binding
-    :exit               Exit
-    :quit               Same as :exit
+    :quit               Quit myml
     :help               Show help
     :store              Show current store
     :bindings value     Show value bindings

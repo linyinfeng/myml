@@ -22,7 +22,7 @@ parseHelpCommand :: Parser Command
 parseHelpCommand = CmdHelp <$ symbol "help"
 
 parseExitCommand :: Parser Command
-parseExitCommand = CmdExit <$ (symbol "exit" <|> symbol "quit")
+parseExitCommand = CmdExit <$ symbol "quit"
 
 parseShowStoreCommand :: Parser Command
 parseShowStoreCommand = CmdShowStore <$ symbol "store"
