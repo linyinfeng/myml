@@ -1,0 +1,10 @@
+import "fix.myml" ;;
+
+Counter =
+  let gen C =
+    class
+      with r
+      { get _ = r.x
+      , inc _ = new C (r with { x = succ r.x }) }
+  in
+    fix gen ;;
