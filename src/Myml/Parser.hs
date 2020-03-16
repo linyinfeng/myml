@@ -119,11 +119,15 @@ parseTermAtom =
   self   = termSelf <$ reserve identStyle "self"
 
 recordPair :: Parser (LabelName, Term)
-recordPair =
-  (\x y -> (x, y)) <$> ident identStyle <* reserve identStyle "=" <*> parseTerm
+recordPair = do
+  l      <- ident identStyle
+  params <- many (ident identStyle)
+  reserve identStyle "="
+  t <- parseTerm
+  return (l, foldr TmAbs t params)
 
 matchPair :: Parser (LabelName, TermCase)
-matchPair = (\x y -> (x, y)) <$> variantLabel <*> matchCase
+matchPair = (,) <$> variantLabel <*> matchCase
 
 matchCase :: Parser TermCase
 matchCase =
