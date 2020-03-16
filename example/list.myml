@@ -1,0 +1,26 @@
+import "fix.myml" ;;
+
+nil = `nil unit ;;
+cons x xs = `cons { head = x, tail = xs } ;;
+singleton x = cons x nil ;;
+
+length =
+  let gen len =
+    [ `nil _ -> 0
+    , `cons l -> succ (len l.tail) ]
+  in
+    fix gen ;;
+
+++ =
+  let gen ++ =
+    [ `nil _ -> \ ys . ys
+    , `cons l -> \ ys . cons l.head (++ l.tail ys) ]
+  in
+    fix gen ;;
+
+map f =
+  let gen m =
+    [ `nil _ -> nil
+    , `cons l -> cons (f l.head) (m l.tail) ]
+  in
+    fix gen ;;
