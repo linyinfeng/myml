@@ -1,6 +1,5 @@
 module Myml.Parser.Style
-  ( punctureStyle
-  , identStyle
+  ( identStyle
   )
 where
 
@@ -9,28 +8,9 @@ import qualified Data.HashSet                  as H
 import           Text.Trifecta
 import           Text.Parser.Token.Highlight
 
-reservedPunctures :: H.HashSet String
-reservedPunctures = H.fromList (coreReserved ++ langReserved)
- where
-  coreReserved = ["(", ")", "()", "[", "]", "{", "}", ".", ",", ";"]
-  langReserved = [";;"]
-
 punctureChars :: H.HashSet Char
 punctureChars = H.fromList ['(', ')', '[', ']', '{', '}', '.', ',', ';']
 
-punctureLetter :: Parser Char
-punctureLetter = satisfy (flip H.member punctureChars)
-
-punctureStyle :: IdentifierStyle Parser
-punctureStyle = IdentifierStyle { _styleName              = "puncture"
-                                , _styleStart             = punctureLetter
-                                , _styleLetter            = punctureLetter
-                                , _styleReserved          = reservedPunctures
-                                , _styleHighlight         = Symbol
-                                , _styleReservedHighlight = Symbol
-                                }
-
--- no need to include ".", ",", ";"
 reservedTokens :: H.HashSet String
 reservedTokens = H.fromList (coreReserved ++ langReserved)
  where

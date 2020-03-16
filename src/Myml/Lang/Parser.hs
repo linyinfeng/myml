@@ -12,14 +12,14 @@ import           Control.Applicative
 
 parseTopLevel :: Parser TopLevel
 parseTopLevel = (parseTopBind <|> parseTopTerm <|> parseTopImport)
-  <* reserve punctureStyle ";;"
+  <* symbol ";;"
 
 parseTopLevels :: Parser [TopLevel]
 parseTopLevels = many parseTopLevel
 
 parseTopBind :: Parser TopLevel
 parseTopBind = do
-  x <- try (ident identStyle <* reserve punctureStyle "=")
+  x <- try (ident identStyle <* reserve identStyle "=")
   TopBind x <$> parseTerm
 
 parseTopTerm :: Parser TopLevel

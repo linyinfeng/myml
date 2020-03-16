@@ -43,7 +43,7 @@ termOperatorTable =
   opAbs = do
     reserve identStyle "\x3bb" <|> reserve identStyle "\\"
     x <- ident identStyle
-    _ <- reserve punctureStyle "."
+    _ <- symbol "."
     return (TmAbs x)
   opLet = do
     reserve identStyle "let"
@@ -55,21 +55,21 @@ termOperatorTable =
   opApp     = return TmApp
   opVariant = TmVariant <$> variantLabel
   opRcdAccess =
-    flip TmRcdAccess <$> (reserve punctureStyle "." *> ident identStyle)
+    flip TmRcdAccess <$> (symbol "." *> ident identStyle)
   opRcdExtend = do
-    try $ reserve identStyle "with" <* reserve punctureStyle "{"
+    try $ reserve identStyle "with" <* symbol "{"
     (l, t) <- recordPair
-    _      <- reserve punctureStyle "}"
+    _      <- symbol "}"
     return (\e -> TmRcdExtend e l t)
   opMatchExtend = do
-    try $ reserve identStyle "with" <* reserve punctureStyle "["
+    try $ reserve identStyle "with" <* symbol "["
     (l, c) <- matchPair
-    _      <- reserve punctureStyle "]"
+    _      <- symbol "]"
     return (\t -> TmMatchExtend t l c)
   opRef    = TmRef <$ reserve identStyle "ref"
   opDeref  = TmDeref <$ reserve identStyle "!"
   opAssign = TmAssign <$ reserve identStyle ":="
-  opSeq    = TmSeq <$ reserve punctureStyle ";"
+  opSeq    = TmSeq <$ (symbol ";" <* notFollowedBy (char ';'))
 
 parseTermAtom :: Parser Term
 parseTermAtom =
@@ -93,10 +93,10 @@ parseTermAtom =
  where
   var = TmVar <$> ident identStyle
   rcd = TmRcd . Map.fromList <$> braces
-    (recordPair `sepBy` reserve punctureStyle ",")
+    (recordPair `sepBy` symbol ",")
   match = TmMatch . Map.fromList <$> brackets
-    (matchPair `sepBy` reserve punctureStyle ",")
-  unit   = TmUnit <$ (reserve identStyle "unit" <|> reserve punctureStyle "()")
+    (matchPair `sepBy` symbol ",")
+  unit   = TmUnit <$ (reserve identStyle "unit" <|> (() <$ try (symbol "(" *> symbol ")")))
   true   = TmTrue <$ reserve identStyle "true"
   false  = TmFalse <$ reserve identStyle "false"
   zero   = TmNat 0 <$ reserve identStyle "zero"
@@ -117,7 +117,7 @@ parseTermAtom =
     reserve identStyle "with"
     rep     <- ident identStyle
     methods <- Map.fromList
-      <$> braces (recordPair `sepBy` reserve punctureStyle ",")
+      <$> braces (recordPair `sepBy` symbol ",")
     let k = TermClass inherits rep methods
     return (deriveTermClass k)
   new  = termNew <$ reserve identStyle "new"
@@ -152,7 +152,7 @@ typeOperatorTable =
     TyMu
       <$> (  (reserve identStyle "\x3bc" <|> reserve identStyle "Rec")
           *> ident identStyle
-          <* reserve punctureStyle "."
+          <* symbol "."
           )
   opArrow = TyArrow <$ reserve identStyle "->"
 
@@ -164,14 +164,13 @@ parseTypeAtom =
   var = TyVar <$> ident identStyle
   rcd =
     TyRecord
-      <$> (  reserve punctureStyle "{"
+      <$> (  symbol "{"
           *> parseTypeRow (ident identStyle)
-          <* reserve punctureStyle "}"
+          <* symbol "}"
           )
   variant =
     TyVariant
-      <$> (reserve punctureStyle "[" *> parseTypeRow variantLabel <* reserve
-            punctureStyle
+      <$> (symbol "[" *> parseTypeRow variantLabel <* symbol
             "]"
           )
   unit = TyUnit <$ reserve identStyle "Unit"
@@ -190,7 +189,7 @@ schemeOperatorTable = [[Prefix (chainedPrefix opForall)]]
     x <- ident identStyle
     reserve identStyle "::"
     kind <- parseKind
-    _    <- reserve punctureStyle "."
+    _    <- symbol "."
     return (ScmForall x kind)
 
 parseSchemeAtom :: Parser TypeScheme
@@ -210,15 +209,15 @@ parseKindAtom = proper <|> presence <|> row <|> parens parseKind
   presence = KPresence <$ reserve identStyle "Presence"
   row      = do
     reserve identStyle "Row"
-    _  <- reserve punctureStyle "("
+    _  <- symbol "("
     ls <- commaSep (ident identStyle)
-    _  <- reserve punctureStyle ")"
+    _  <- symbol ")"
     return (KRow (Set.fromList ls))
 
 parseTypeRow :: Parser LabelName -> Parser TypeRow
 parseTypeRow parseLabel = do
   finitePart <-
-    Map.fromList <$> (typeRowPair parseLabel `sepBy` reserve punctureStyle ",")
+    Map.fromList <$> (typeRowPair parseLabel `sepBy` symbol ",")
   TyRow finitePart <$> typeRowCofinite parseLabel
 
 typeRowPair :: Parser LabelName -> Parser (LabelName, TypePresence)
@@ -244,6 +243,6 @@ typeRowCofinite parseLabel = rowVar <|> mu <|> allAbsent
     reserve identStyle "|"
     reserve identStyle "\x3bc"
     x <- ident identStyle
-    _ <- reserve punctureStyle "."
+    _ <- symbol "."
     r <- parens (parseTypeRow parseLabel)
     return (CofMu x r)
