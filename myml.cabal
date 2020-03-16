@@ -50,6 +50,7 @@ library
       Myml.Eval
       Myml.Eval.Store
       Myml.Parser
+      Myml.Parser.Common
       Myml.Parser.Style
       Myml.Parser.Helper
       Myml.Subst

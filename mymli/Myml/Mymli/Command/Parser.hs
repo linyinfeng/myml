@@ -5,7 +5,8 @@ where
 
 import           Myml.Mymli.Command
 import           Myml.Parser
-import           Text.Trifecta
+import Myml.Parser.Common
+import           Text.Trifecta hiding (Parser)
 import           Control.Applicative
 
 parseCommand :: Parser Command

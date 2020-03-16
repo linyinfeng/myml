@@ -7,11 +7,12 @@ import           Data.Text.Prettyprint.Doc      ( pretty
                                                 , Pretty
                                                 )
 import           Myml.Parser
+import           Myml.Parser.Common
 import           Myml.Syntax
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.SmallCheck         as SC
-import           Text.Trifecta
+import           Text.Trifecta hiding (Parser)
 
 tests :: TestTree
 tests = testGroup "Myml.Parser.Spec" [scProps, unitTests]
@@ -39,10 +40,10 @@ propPrintParse p t = case parsed of
   Failure _error -> False
  where
   printed = show (pretty t)
-  parsed  = runParser p mempty printed
+  parsed  = runParser (unParser p) mempty printed
 
 testTermParser :: String -> Term -> Assertion
-testTermParser s t = case parseString parseTerm mempty s of
+testTermParser s t = case parseString (unParser parseTerm) mempty s of
   Success res           -> res @?= t
   Failure (ErrInfo d _) -> assertFailure (show d)
 

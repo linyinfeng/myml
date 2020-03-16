@@ -11,13 +11,14 @@ where
 import           Myml.Syntax
 import           Myml.Parser
 import           Myml.Parser.Style
-import           Text.Trifecta
+import           Myml.Parser.Common
+import           Text.Trifecta hiding (Parser)
 import           Myml.Typing
 import           Data.Text.Prettyprint.Doc
 import qualified Data.Map                      as Map
 
 parseHelper :: Parser a -> String -> a
-parseHelper p s = case parseString p mempty s of
+parseHelper p s = case parseString (unParser p) mempty s of
   Success t -> t
   Failure e -> error (show e)
 

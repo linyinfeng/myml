@@ -10,12 +10,13 @@ where
 
 import           Myml.Lang.Syntax
 import           Myml.Lang.Parser
+import           Myml.Parser.Common
 import           Myml.Mymli.Common
 import           Myml.Mymli.Lang
 import           Myml.Mymli.Command
 import           Myml.Mymli.Command.Parser
 import           Myml.Mymli.Environment
-import           Text.Trifecta
+import           Text.Trifecta hiding (Parser)
 import           Control.Applicative
 import           Control.Monad.Trans
 import           System.Console.Haskeline
@@ -31,7 +32,7 @@ parseMymliInput =
 
 getMymliInput :: (InputT IO) ParseResult
 getMymliInput =
-  getMymliInput' True (stepParser (parseMymliInput <* eof) mempty)
+  getMymliInput' True (stepParser (unParser (parseMymliInput <* eof)) mempty)
 
 getMymliInput' :: Bool -> Step Input -> (InputT IO) ParseResult
 getMymliInput' firstLine step = case step of

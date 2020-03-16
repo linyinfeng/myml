@@ -7,8 +7,9 @@ where
 import           Myml.Syntax
 import           Myml.Lang.Syntax
 import           Myml.Parser
+import           Myml.Parser.Common
 import           Myml.Parser.Style
-import           Text.Trifecta
+import           Text.Trifecta hiding (Parser)
 import           Control.Applicative
 
 parseTopLevel :: Parser TopLevel

@@ -11,10 +11,11 @@ import           Myml.Mymli.Common
 import           Myml.Mymli.Environment
 import           Myml.Mymli.Output
 import           Myml.Syntax
+import Myml.Parser.Common
 import           Myml.Lang.Syntax
 import           Myml.Lang.Parser
 import           Myml.Eval.Store
-import           Text.Trifecta
+import           Text.Trifecta hiding (Parser)
 import           System.Console.ANSI
 import           Data.Text.Prettyprint.Doc
 import           Control.Monad.Trans
@@ -61,7 +62,7 @@ processTopLevel silent (TopBind x t) = do
 processTopLevel _ (TopImport file) = do
   result <- liftIO
     (handle (\(e :: IOException) -> print e >> return Nothing)
-            (parseFromFile (whiteSpace *> parseTopLevels <* eof) file)
+            (parseFromFile (unParser (whiteSpace *> parseTopLevels <* eof)) file)
     )
   case result of
     Nothing     -> return False
