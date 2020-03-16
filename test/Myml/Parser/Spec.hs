@@ -12,7 +12,7 @@ import           Myml.Syntax
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.SmallCheck         as SC
-import           Text.Trifecta hiding (Parser)
+import           Text.Trifecta           hiding ( Parser )
 
 tests :: TestTree
 tests = testGroup "Myml.Parser.Spec" [scProps, unitTests]

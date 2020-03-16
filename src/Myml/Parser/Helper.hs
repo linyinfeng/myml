@@ -4,8 +4,8 @@ module Myml.Parser.Helper
   )
 where
 
-import Myml.Parser.Common
-import           Text.Trifecta hiding (Parser)
+import           Myml.Parser.Common
+import           Text.Trifecta           hiding ( Parser )
 
 chainedPrefix :: Parser (a -> a) -> Parser (a -> a)
 chainedPrefix p = chainl1 p (return (.))

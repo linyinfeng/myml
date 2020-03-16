@@ -15,7 +15,7 @@ import           Myml.Syntax
 import           Myml.Parser.Common
 import           Myml.Parser.Style
 import           Myml.Parser.Helper
-import           Text.Trifecta hiding (Parser)
+import           Text.Trifecta           hiding ( Parser )
 import           Text.Parser.Expression
 import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set

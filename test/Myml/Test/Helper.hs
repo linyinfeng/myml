@@ -12,7 +12,7 @@ import           Myml.Syntax
 import           Myml.Parser
 import           Myml.Parser.Style
 import           Myml.Parser.Common
-import           Text.Trifecta hiding (Parser)
+import           Text.Trifecta           hiding ( Parser )
 import           Myml.Typing
 import           Data.Text.Prettyprint.Doc
 import qualified Data.Map                      as Map

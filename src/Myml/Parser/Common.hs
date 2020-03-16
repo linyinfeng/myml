@@ -5,10 +5,10 @@ module Myml.Parser.Common
   )
 where
 
-import Myml.Parser.Style
-import Data.Char
+import           Myml.Parser.Style
+import           Data.Char
 import qualified Text.Trifecta
-import           Text.Trifecta hiding (Parser)
+import           Text.Trifecta           hiding ( Parser )
 import           Text.Trifecta.Delta
 import           Text.Parser.LookAhead
 import           Text.Parser.Token.Style

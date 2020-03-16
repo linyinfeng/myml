@@ -16,7 +16,7 @@ import           Myml.Mymli.Lang
 import           Myml.Mymli.Command
 import           Myml.Mymli.Command.Parser
 import           Myml.Mymli.Environment
-import           Text.Trifecta hiding (Parser)
+import           Text.Trifecta           hiding ( Parser )
 import           Control.Applicative
 import           Control.Monad.Trans
 import           System.Console.Haskeline
