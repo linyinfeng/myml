@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, ScopedTypeVariables #-}
+{-# LANGUAGE NamedFieldPuns, ScopedTypeVariables, TupleSections #-}
 
 module Myml.Mymli.Lang
   ( processTopLevel
@@ -18,6 +18,8 @@ import           Myml.Eval.Store
 import           Text.Trifecta           hiding ( Parser )
 import           System.Console.ANSI
 import           Data.Text.Prettyprint.Doc
+import           System.FilePath
+import           System.Directory
 import           Control.Monad.Trans
 import           Control.Monad.Trans.State
 import           Control.Exception
@@ -60,18 +62,29 @@ processTopLevel silent (TopBind x t) = do
       mymliGc
       return True
 processTopLevel _ (TopImport file) = do
-  result <- liftIO
-    (handle
-      (\(e :: IOException) -> print e >> return Nothing)
-      (parseFromFile (unParser (whiteSpace *> parseTopLevels <* eof)) file)
-    )
+  result <- searchAndParseFile file
   case result of
-    Nothing     -> return False
-    Just inputs -> do
-      env                <- mymliEnvForFile
+    Nothing             -> return False
+    Just (inputs, path) -> do
+      env                <- mymliEnvForFile path
       (success, fileEnv) <- liftIO (runMymli (processTopLevels True inputs) env)
       when success (mymliMergeFileEnv fileEnv >> mymliGc)
       return success
+
+searchAndParseFile
+  :: MonadIO m => FilePath -> Mymli m (Maybe ([TopLevel], FilePath))
+searchAndParseFile file = do
+  searchPath <- gets envSearchPath
+  exists     <- liftIO
+    (mapM (\sp -> let p = sp </> file in (, p) <$> doesFileExist p) searchPath)
+  let res = lookup True exists
+  case res of
+    Nothing -> Nothing <$ liftIO
+      (ioErrorLabel >> putStrLn ("unable to find file \"" ++ file ++ "\""))
+    Just path -> fmap (, path) <$> liftIO (parseSingleFile path)
+ where
+  parseSingleFile = handle (\(e :: IOException) -> print e >> return Nothing)
+    . parseFromFile (unParser (whiteSpace *> parseTopLevels <* eof))
 
 processTopLevels :: MonadIO m => Bool -> [TopLevel] -> Mymli m Bool
 processTopLevels _      []           = return True
@@ -79,9 +92,9 @@ processTopLevels silent (t : remain) = do
   success <- processTopLevel silent t
   if success then processTopLevels silent remain else return False
 
-mymliEnvForFile :: Monad m => Mymli m MymliEnv
-mymliEnvForFile = do
-  MymliEnv { envOption, envStore = _, envTermBindings = _, envValueBindings = _, envTypeBindings = _, envInferState } <-
+mymliEnvForFile :: Monad m => FilePath -> Mymli m MymliEnv
+mymliEnvForFile path = do
+  MymliEnv { envOption, envStore = _, envTermBindings = _, envValueBindings = _, envTypeBindings = _, envInferState, envSearchPath } <-
     get
   return MymliEnv { envOption
                   , envStore         = emptyEnvStore envOption
@@ -89,14 +102,15 @@ mymliEnvForFile = do
                   , envValueBindings = Map.empty
                   , envTypeBindings  = Map.empty
                   , envInferState    = envInferState
+                  , envSearchPath    = takeDirectory path : envSearchPath
                   }
 
 mymliMergeFileEnv :: Monad m => MymliEnv -> Mymli m ()
 mymliMergeFileEnv fileEnv = do
   let
-    MymliEnv { envOption = _, envStore = fileStore, envTermBindings = fileTermBindings, envValueBindings = fileValueBindings, envTypeBindings = fileTypeBindings, envInferState = fileInferState }
+    MymliEnv { envOption = _, envStore = fileStore, envTermBindings = fileTermBindings, envValueBindings = fileValueBindings, envTypeBindings = fileTypeBindings, envInferState = fileInferState, envSearchPath = _ }
       = fileEnv
-  MymliEnv { envOption = envOption, envStore = currentStore, envTermBindings = currentTermBindings, envValueBindings = currentValueBindings, envTypeBindings = currentTypeBindings, envInferState = _currentInferState } <-
+  MymliEnv { envOption = envOption, envStore = currentStore, envTermBindings = currentTermBindings, envValueBindings = currentValueBindings, envTypeBindings = currentTypeBindings, envInferState = _currentInferState, envSearchPath } <-
     get
   let
     env = MymliEnv
@@ -115,6 +129,7 @@ mymliMergeFileEnv fileEnv = do
                                          fileTypeBindings
                                          currentTypeBindings
       , envInferState    = fileInferState
+      , envSearchPath    = envSearchPath
       }
   put env
 

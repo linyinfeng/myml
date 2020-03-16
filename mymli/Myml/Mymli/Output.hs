@@ -1,5 +1,6 @@
 module Myml.Mymli.Output
-  ( errorLabel
+  ( ioErrorLabel
+  , errorLabel
   , typingErrorLabel
   , bold
   , withColor
@@ -8,6 +9,9 @@ module Myml.Mymli.Output
 where
 
 import           System.Console.ANSI
+
+ioErrorLabel :: IO ()
+ioErrorLabel = errorLabel "IO Error"
 
 typingErrorLabel :: IO ()
 typingErrorLabel = errorLabel "Typing Error"

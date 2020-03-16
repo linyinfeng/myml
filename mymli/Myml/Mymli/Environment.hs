@@ -26,6 +26,7 @@ data MymliEnv = MymliEnv
   , envValueBindings :: Map.Map VarName Term
   , envTypeBindings :: Map.Map VarName TypeScheme
   , envInferState :: InferenceState
+  , envSearchPath :: [FilePath]
   }
 
 emptyMymlEnv :: MymliOptions -> MymliEnv
@@ -35,6 +36,7 @@ emptyMymlEnv opt = MymliEnv { envOption        = opt
                             , envValueBindings = Map.empty
                             , envTypeBindings  = Map.empty
                             , envInferState    = emptyInferenceState opt
+                            , envSearchPath    = [".", ""]
                             }
 
 emptyEnvStore :: MymliOptions -> Maybe (Store (WithMark Term))
