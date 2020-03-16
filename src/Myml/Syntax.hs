@@ -66,14 +66,14 @@ data Term = TmAbs VarName Term
 data TermClass = TermClass {
     classInherits :: [(Term, VarName)],
     classRep :: VarName,
-    classMethods :: Map.Map LabelName Term
+    classBody :: Term
   }
   deriving (Eq, Show)
 
 deriveTermClass :: TermClass -> Term
-deriveTermClass (TermClass inherits rep methods) = TmAbs
+deriveTermClass (TermClass inherits rep body) = TmAbs
   rep
-  (TmAbs "self" (TmAbs "unit" (inheritsToLet inherits (TmRcd methods))))
+  (TmAbs "self" (TmAbs "_" (inheritsToLet inherits body)))
  where
   inheritsToLet ((t, x) : ps) inner = TmLet
     x

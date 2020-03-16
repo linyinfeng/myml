@@ -30,7 +30,7 @@ termOperatorTable =
   , [Infix opApp AssocLeft]
   , [Infix opAssign AssocNone]
   , [Infix opSeq AssocRight]
-  , [Prefix (chainedPrefix (opIf <|> opAbs <|> opLet))]
+  , [Prefix (chainedPrefix (opIf <|> opAbs <|> opLet <|> opClass))]
   ]
  where
   opIf = do
@@ -68,7 +68,19 @@ termOperatorTable =
   opRef    = TmRef <$ reserve identStyle "ref"
   opDeref  = TmDeref <$ reserve identStyle "!"
   opAssign = TmAssign <$ reserve identStyle ":="
-  opSeq    = TmSeq <$ (symbol ";" <* notFollowedBy (char ';'))
+  opSeq    = TmSeq <$ try (symbol ";" <* notFollowedBy (char ';'))
+  opClass  = do
+    reserve identStyle "class"
+    rep     <- reserve identStyle "with" *> ident identStyle
+    inherits <- many
+      (do
+        reserve identStyle "inherit"
+        t <- parseTermAtom
+        reserve identStyle "as"
+        x <- ident identStyle
+        return (t, x)
+      )
+    return (deriveTermClass . TermClass inherits rep)
 
 parseTermAtom :: Parser Term
 parseTermAtom =
@@ -82,7 +94,6 @@ parseTermAtom =
     <|> suc
     <|> prd
     <|> isZero
-    <|> klass
     <|> new
     <|> self
     <|> var
@@ -103,21 +114,6 @@ parseTermAtom =
   suc    = TmSucc <$ reserve identStyle "succ"
   prd    = TmPred <$ reserve identStyle "pred"
   isZero = TmIsZero <$ reserve identStyle "isZero"
-  klass  = do
-    reserve identStyle "class"
-    inherits <- many
-      (do
-        reserve identStyle "inherit"
-        t <- parseTermAtom
-        reserve identStyle "as"
-        x <- ident identStyle
-        return (t, x)
-      )
-    reserve identStyle "with"
-    rep     <- ident identStyle
-    methods <- Map.fromList <$> braces (recordPair `sepBy` symbol ",")
-    let k = TermClass inherits rep methods
-    return (deriveTermClass k)
   new  = termNew <$ reserve identStyle "new"
   self = termSelf <$ reserve identStyle "self"
 

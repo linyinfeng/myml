@@ -2,10 +2,10 @@ A = class
       with _
       { returnSelf = λ _ . self } ;;
 B = class
-      inherit A as super
       with _
-      { returnSelf = super.returnSelf
-      , id = λ x . x } ;;
+      inherit A as super
+      super
+        with { id = λ x . x } ;;
 
 a = new A () ;;
 b = new B () ;;
