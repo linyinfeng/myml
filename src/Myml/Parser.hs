@@ -96,11 +96,7 @@ parseTermAtom =
     (recordPair `sepBy` reserve punctureStyle ",")
   match = TmMatch . Map.fromList <$> brackets
     (matchPair `sepBy` reserve punctureStyle ",")
-  unit =
-    TmUnit
-      <$ (   reserve identStyle "unit"
-         <|> reserve punctureStyle "()"
-         )
+  unit   = TmUnit <$ (reserve identStyle "unit" <|> reserve punctureStyle "()")
   true   = TmTrue <$ reserve identStyle "true"
   false  = TmFalse <$ reserve identStyle "false"
   zero   = TmNat 0 <$ reserve identStyle "zero"

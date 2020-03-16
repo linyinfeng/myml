@@ -7,7 +7,7 @@ import           Myml.Mymli.Environment
 import           Myml.Mymli.Input
 import           Myml.Mymli.Text
 import           Myml.Mymli.Option
-import Text.Trifecta
+import           Text.Trifecta
 import           Control.Monad.State
 import qualified Options.Applicative           as O
 import           Data.Semigroup                 ( (<>) )
@@ -49,7 +49,8 @@ loop :: Mymli (InputT IO) ()
 loop = do
   res <- lift getMymliInput
   case res of
-    Left info  -> liftIO (print (_errDoc info)) >> handleMymliRequest MymliContinue
+    Left info ->
+      liftIO (print (_errDoc info)) >> handleMymliRequest MymliContinue
     Right input -> processInput input >>= handleMymliRequest
 
 handleMymliRequest :: MymliRequest -> Mymli (InputT IO) ()

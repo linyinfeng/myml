@@ -9,12 +9,14 @@ import           Text.Trifecta
 import           Control.Applicative
 
 parseCommand :: Parser Command
-parseCommand = symbol ":" *>
-  (parseHelpCommand
-    <|> parseExitCommand
-    <|> parseShowTypeCommand
-    <|> parseShowStoreCommand
-    <|> parseShowBindingsCommand)
+parseCommand =
+  symbol ":"
+    *> (   parseHelpCommand
+       <|> parseExitCommand
+       <|> parseShowTypeCommand
+       <|> parseShowStoreCommand
+       <|> parseShowBindingsCommand
+       )
 
 parseHelpCommand :: Parser Command
 parseHelpCommand = CmdHelp <$ symbol "help"
