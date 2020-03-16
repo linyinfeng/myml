@@ -34,4 +34,4 @@ newtype Parser a = Parser { unParser :: Text.Trifecta.Parser a }
            )
 
 instance TokenParsing Parser where
-  someSpace = buildSomeSpaceParser (skipSome (satisfy isSpace)) commentStyle
+  someSpace = Parser (buildSomeSpaceParser someSpace commentStyle)
