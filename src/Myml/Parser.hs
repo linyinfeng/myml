@@ -57,21 +57,21 @@ termOperatorTable =
   opRcdAccess = flip TmRcdAccess <$> (symbol "." *> ident identStyle)
   opRcdExtend = do
     try $ reserve identStyle "with" <* symbol "{"
-    (l, t) <- recordPair
-    _      <- symbol "}"
-    return (\e -> TmRcdExtend e l t)
+    pairs <- recordPair `sepBy` symbol ","
+    _     <- symbol "}"
+    return (\e -> foldl (\inner (l, t) -> TmRcdExtend inner l t) e pairs)
   opMatchExtend = do
     try $ reserve identStyle "with" <* symbol "["
-    (l, c) <- matchPair
-    _      <- symbol "]"
-    return (\t -> TmMatchExtend t l c)
+    pairs <- matchPair `sepBy` symbol ","
+    _     <- symbol "]"
+    return (\t -> foldl (\inner (l, c) -> TmMatchExtend inner l c) t pairs)
   opRef    = TmRef <$ reserve identStyle "ref"
   opDeref  = TmDeref <$ reserve identStyle "!"
   opAssign = TmAssign <$ reserve identStyle ":="
   opSeq    = TmSeq <$ try (symbol ";" <* notFollowedBy (char ';'))
   opClass  = do
     reserve identStyle "class"
-    rep     <- reserve identStyle "with" *> ident identStyle
+    rep      <- reserve identStyle "with" *> ident identStyle
     inherits <- many
       (do
         reserve identStyle "inherit"
@@ -114,8 +114,8 @@ parseTermAtom =
   suc    = TmSucc <$ reserve identStyle "succ"
   prd    = TmPred <$ reserve identStyle "pred"
   isZero = TmIsZero <$ reserve identStyle "isZero"
-  new  = termNew <$ reserve identStyle "new"
-  self = termSelf <$ reserve identStyle "self"
+  new    = termNew <$ reserve identStyle "new"
+  self   = termSelf <$ reserve identStyle "self"
 
 recordPair :: Parser (LabelName, Term)
 recordPair =
