@@ -11,8 +11,8 @@ import           Text.Trifecta
 import           Control.Applicative
 
 parseTopLevel :: Parser TopLevel
-parseTopLevel = (parseTopBind <|> parseTopTerm <|> parseTopImport)
-  <* symbol ";;"
+parseTopLevel =
+  (parseTopBind <|> parseTopTerm <|> parseTopImport) <* symbol ";;"
 
 parseTopLevels :: Parser [TopLevel]
 parseTopLevels = many parseTopLevel

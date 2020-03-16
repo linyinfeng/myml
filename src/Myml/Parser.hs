@@ -52,10 +52,9 @@ termOperatorTable =
     t <- parseTerm
     reserve identStyle "in"
     return (TmLet x t)
-  opApp     = return TmApp
-  opVariant = TmVariant <$> variantLabel
-  opRcdAccess =
-    flip TmRcdAccess <$> (symbol "." *> ident identStyle)
+  opApp       = return TmApp
+  opVariant   = TmVariant <$> variantLabel
+  opRcdAccess = flip TmRcdAccess <$> (symbol "." *> ident identStyle)
   opRcdExtend = do
     try $ reserve identStyle "with" <* symbol "{"
     (l, t) <- recordPair
@@ -91,12 +90,12 @@ parseTermAtom =
     )
     <?> "termAtom"
  where
-  var = TmVar <$> ident identStyle
-  rcd = TmRcd . Map.fromList <$> braces
-    (recordPair `sepBy` symbol ",")
-  match = TmMatch . Map.fromList <$> brackets
-    (matchPair `sepBy` symbol ",")
-  unit   = TmUnit <$ (reserve identStyle "unit" <|> (() <$ try (symbol "(" *> symbol ")")))
+  var   = TmVar <$> ident identStyle
+  rcd   = TmRcd . Map.fromList <$> braces (recordPair `sepBy` symbol ",")
+  match = TmMatch . Map.fromList <$> brackets (matchPair `sepBy` symbol ",")
+  unit =
+    TmUnit
+      <$ (reserve identStyle "unit" <|> (() <$ try (symbol "(" *> symbol ")")))
   true   = TmTrue <$ reserve identStyle "true"
   false  = TmFalse <$ reserve identStyle "false"
   zero   = TmNat 0 <$ reserve identStyle "zero"
@@ -116,8 +115,7 @@ parseTermAtom =
       )
     reserve identStyle "with"
     rep     <- ident identStyle
-    methods <- Map.fromList
-      <$> braces (recordPair `sepBy` symbol ",")
+    methods <- Map.fromList <$> braces (recordPair `sepBy` symbol ",")
     let k = TermClass inherits rep methods
     return (deriveTermClass k)
   new  = termNew <$ reserve identStyle "new"
@@ -163,16 +161,9 @@ parseTypeAtom =
  where
   var = TyVar <$> ident identStyle
   rcd =
-    TyRecord
-      <$> (  symbol "{"
-          *> parseTypeRow (ident identStyle)
-          <* symbol "}"
-          )
+    TyRecord <$> (symbol "{" *> parseTypeRow (ident identStyle) <* symbol "}")
   variant =
-    TyVariant
-      <$> (symbol "[" *> parseTypeRow variantLabel <* symbol
-            "]"
-          )
+    TyVariant <$> (symbol "[" *> parseTypeRow variantLabel <* symbol "]")
   unit = TyUnit <$ reserve identStyle "Unit"
   bool = TyBool <$ reserve identStyle "Bool"
   nat  = TyNat <$ reserve identStyle "Nat"
@@ -216,8 +207,7 @@ parseKindAtom = proper <|> presence <|> row <|> parens parseKind
 
 parseTypeRow :: Parser LabelName -> Parser TypeRow
 parseTypeRow parseLabel = do
-  finitePart <-
-    Map.fromList <$> (typeRowPair parseLabel `sepBy` symbol ",")
+  finitePart <- Map.fromList <$> (typeRowPair parseLabel `sepBy` symbol ",")
   TyRow finitePart <$> typeRowCofinite parseLabel
 
 typeRowPair :: Parser LabelName -> Parser (LabelName, TypePresence)
