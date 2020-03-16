@@ -31,8 +31,9 @@ parseMymliInput =
   (InputCommand <$> parseCommand) <|> (InputTopLevel <$> parseTopLevel)
 
 getMymliInput :: (InputT IO) ParseResult
-getMymliInput =
-  getMymliInput' True (stepParser (unParser (parseMymliInput <* eof)) mempty)
+getMymliInput = getMymliInput'
+  True
+  (stepParser (unParser (whiteSpace *> parseMymliInput <* eof)) mempty)
 
 getMymliInput' :: Bool -> Step Input -> (InputT IO) ParseResult
 getMymliInput' firstLine step = case step of
