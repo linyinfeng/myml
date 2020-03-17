@@ -1,24 +1,24 @@
 Counter =
   class
-    with r
+    from r
     { get _ = ! r.x
     , inc _ = r.x := succ (! r.x) } ;;
 BackupCounter =
   class
-    with r
+    from r
     inherit Counter as super
     super with
       { backup _ =  r.b := ! r.x
       , restore _ = r.x := ! r.b } ;;
 ResetCounter =
   class
-    with r
+    from r
     inherit Counter as super
     super with
       { reset _ = r.x := 0 } ;;
 MixinCounter =
   class
-    with r
+    from r
     inherit Counter as super
     inherit BackupCounter as superBackup
     inherit ResetCounter as superReset
@@ -28,13 +28,13 @@ MixinCounter =
       , reset = superReset.reset } ;;
 Inc2Counter =
   class
-    with r
+    from r
     inherit Counter as super
     super with
       { inc2 _ = self.inc (); self.inc () } ;;
 Inc2EvenCounter =
   class
-    with r
+    from r
     inherit Inc2Counter as super
     super with
       { inc _ = super.inc (); super.inc ()
