@@ -58,6 +58,7 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
     , "!"
     , "\x3bb"
     , "\x3bc"
+    , "\xb7"
     ]
   langReserved = ["import", "="]
 

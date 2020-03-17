@@ -7,102 +7,88 @@ import           Myml.Syntax
 import           Myml.Test.Helper
 import           Test.Tasty
 import           Test.Tasty.HUnit
+import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set
 
 tests :: TestTree
 tests = testGroup "Myml.Syntax.Spec" [unitTests]
 
 unitTests :: TestTree
-unitTests = testGroup "Unit tests" [freeVariableTests, isValueTests]
+unitTests = testGroup "Unit tests" [fvTests, isValueTests]
 
-freeVariableTests :: TestTree
-freeVariableTests =
-  testGroup "freeVariable tests" [freeVariableTermTests, freeVariableTypeTests]
+fvTests :: TestTree
+fvTests = testGroup "freeVariable tests" [fvTermTests, fvTypeTests]
 
-freeVariableTermTests :: TestTree
-freeVariableTermTests = testGroup
-  "freeVariable term tests"
+fvTermTests :: TestTree
+fvTermTests = testGroup
+  "fvTerm tests"
   [ testCase "freeVariable simple variable"
-  $   freeVariable (pTerm "x")
+  $   fvTerm (pTerm "x")
   @?= Set.fromList ["x"]
   , testCase "freeVariable bind 1"
-  $   freeVariable (pTerm "\x3bb x . x x")
+  $   fvTerm (pTerm "\x3bb x . x x")
   @?= Set.empty
-  , testCase "freeVariable bind 2"
-  $   freeVariable (pTerm "\x3bb x . x y")
-  @?= Set.fromList ["y"]
-  , testCase "freeVariable bind 3"
-  $   freeVariable (pTerm "\x3bb x . x y (\x3bb y . x z)")
+  , testCase "fvTerm bind 2" $ fvTerm (pTerm "\x3bb x . x y") @?= Set.fromList
+    ["y"]
+  , testCase "fvTerm bind 3"
+  $   fvTerm (pTerm "\x3bb x . x y (\x3bb y . x z)")
   @?= Set.fromList ["y", "z"]
-  , testCase "freeVariable let 1"
-  $   freeVariable (pTerm "let x = y in z")
-  @?= Set.fromList ["y", "z"]
-  , testCase "freeVariable let 2"
-  $   freeVariable (pTerm "let x = x in z")
-  @?= Set.fromList ["x", "z"]
-  , testCase "freeVariable record"
-  $   freeVariable (pTerm "{ x = x, y = y }")
+  , testCase "fvTerm let 1" $ fvTerm (pTerm "let x = y in z") @?= Set.fromList
+    ["y", "z"]
+  , testCase "fvTerm let 2" $ fvTerm (pTerm "let x = x in z") @?= Set.fromList
+    ["x", "z"]
+  , testCase "fvTerm record"
+  $   fvTerm (pTerm "{ x = x, y = y }")
   @?= Set.fromList ["x", "y"]
-  , testCase "freeVariable record extend"
-  $   freeVariable (pTerm "{ x = x, y = y } with { z = z }")
+  , testCase "fvTerm record extend"
+  $   fvTerm (pTerm "{ x = x, y = y } with { z = z }")
   @?= Set.fromList ["x", "y", "z"]
-  , testCase "freeVariable record access"
-  $   freeVariable (pTerm "{ x = x, y = y }.x")
+  , testCase "fvTerm record access"
+  $   fvTerm (pTerm "{ x = x, y = y }.x")
   @?= Set.fromList ["x", "y"]
-  , testCase "freeVariable match"
-  $   freeVariable (pTerm "[`l1 x -> x y, `l2 y -> z y]")
+  , testCase "fvTerm match"
+  $   fvTerm (pTerm "[`l1 x -> x y, `l2 y -> z y]")
   @?= Set.fromList ["y", "z"]
-  , testCase "freeVariable match extend"
-  $   freeVariable (pTerm "[`l1 x -> x y] with [`l2 y -> z y]")
+  , testCase "fvTerm match extend"
+  $   fvTerm (pTerm "[`l1 x -> x y] with [`l2 y -> z y]")
   @?= Set.fromList ["y", "z"]
-  , testCase "freeVariable variant"
-  $   freeVariable (pTerm "`x x")
-  @?= Set.fromList ["x"]
-  , testCase "freeVariable ref"
-  $   freeVariable (pTerm "ref (x y)")
-  @?= Set.fromList ["x", "y"]
-  , testCase "freeVariable deref"
-  $   freeVariable (pTerm "!(x y)")
-  @?= Set.fromList ["x", "y"]
-  , testCase "freeVariable assign"
-  $   freeVariable (pTerm "x := y")
-  @?= Set.fromList ["x", "y"]
-  , testCase "freeVariable location" $ freeVariable (TmLoc 0) @?= Set.empty
-  , testCase "freeVariable unit" $ freeVariable (pTerm "unit") @?= Set.empty
-  , testCase "freeVariable seq" $ freeVariable (pTerm "x; y") @?= Set.fromList
+  , testCase "fvTerm variant" $ fvTerm (pTerm "`x x") @?= Set.fromList ["x"]
+  , testCase "fvTerm ref" $ fvTerm (pTerm "ref (x y)") @?= Set.fromList
     ["x", "y"]
-  , testCase "freeVariable true and false"
-  $   freeVariable (pTerm "true false")
-  @?= Set.empty
-  , testCase "freeVariable if"
-  $   freeVariable (pTerm "if x then y else z")
-  @?= Set.fromList ["x", "y", "z"]
-  , testCase "freeVariable 0" $ freeVariable (pTerm "0") @?= Set.empty
-  , testCase "freeVariable succ"
-  $   freeVariable (pTerm "succ x")
-  @?= Set.fromList ["x"]
+  , testCase "fvTerm deref" $ fvTerm (pTerm "!(x y)") @?= Set.fromList
+    ["x", "y"]
+  , testCase "fvTerm assign" $ fvTerm (pTerm "x := y") @?= Set.fromList
+    ["x", "y"]
+  , testCase "fvTerm location" $ fvTerm (TmLoc 0) @?= Set.empty
+  , testCase "fvTerm unit" $ fvTerm (pTerm "unit") @?= Set.empty
+  , testCase "fvTerm seq" $ fvTerm (pTerm "x; y") @?= Set.fromList ["x", "y"]
+  , testCase "fvTerm true and false" $ fvTerm (pTerm "true false") @?= Set.empty
+  , testCase "fvTerm if" $ fvTerm (pTerm "if x then y else z") @?= Set.fromList
+    ["x", "y", "z"]
+  , testCase "fvTerm 0" $ fvTerm (pTerm "0") @?= Set.empty
+  , testCase "fvTerm succ" $ fvTerm (pTerm "succ x") @?= Set.fromList ["x"]
   ]
 
-freeVariableTypeTests :: TestTree
-freeVariableTypeTests = testGroup
+fvTypeTests :: TestTree
+fvTypeTests = testGroup
   "freeVariable type tests"
-  [ testCase "freeVariable variable" $ freeVariable (pType "X") @?= Set.fromList
-    ["X"]
-  , testCase "freeVariable arrow"
-  $   freeVariable (pType "X -> Y -> X")
-  @?= Set.fromList ["X", "Y"]
-  , testCase "freeVariable record"
-  $   freeVariable (pType "{ l1 : P Unit, l2 : Absent, l3 : Present X | R }")
-  @?= Set.fromList ["P", "X", "R"]
-  , testCase "freeVariable record"
-  $   freeVariable (pType "[ `l1 : P Unit, `l2 : Absent, `l3 : Present X | R ]")
-  @?= Set.fromList ["P", "X", "R"]
-  , testCase "freeVariable mu"
-  $   freeVariable (pType "\x3bc X . (X -> T)")
-  @?= Set.fromList ["T"]
-  , testCase "freeVariable Unit" $ freeVariable (pType "Unit") @?= Set.empty
-  , testCase "freeVariable Bool" $ freeVariable (pType "Bool") @?= Set.empty
-  , testCase "freeVariable Nat" $ freeVariable (pType "Nat") @?= Set.empty
+  [ testCase "fvType variable" $ fvType (pType "X") @?= Right
+    (Map.fromList [("X", KProper)])
+  , testCase "fvType arrow" $ fvType (pType "X -> Y -> X") @?= Right
+    (Map.fromList [("X", KProper), ("Y", KProper)])
+  , testCase "fvType record"
+  $   fvType (pType "{ l1 : P Unit, l2 : Absent, l3 : Present X, R }")
+  @?= Right
+        (Map.fromList [("P", KPresenceWithType), ("X", KProper), ("R", KRow)])
+  , testCase "fvType record"
+  $   fvType (pType "[ `l1 : P Unit, `l2 : Absent, `l3 : Present X, R ]")
+  @?= Right
+        (Map.fromList [("P", KPresenceWithType), ("X", KProper), ("R", KRow)])
+  , testCase "fvType mu" $ fvType (pType "\x3bc X . (X -> T)") @?= Right
+    (Map.fromList [("T", KProper)])
+  , testCase "fvType Unit" $ fvType (pType "Unit") @?= Right (Map.empty)
+  , testCase "fvType Bool" $ fvType (pType "Bool") @?= Right (Map.empty)
+  , testCase "fvType Nat" $ fvType (pType "Nat") @?= Right (Map.empty)
   ]
 
 isValueTests :: TestTree

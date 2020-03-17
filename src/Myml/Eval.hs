@@ -40,11 +40,11 @@ maybeToExcept m = case m of
 
 smallStep :: Term -> SmallStepState
 smallStep (TmApp (TmAbs x t1) v2) | isValue v2 =
-  return (applySubst (Map.singleton x v2) t1)
+  return (substTerm (Map.singleton x v2) t1)
 smallStep (TmApp (TmMatch m) (TmVariant l v2)) | isValue v2 =
   case Map.lookup l m of
     Nothing            -> throwError ExcNoRuleApplied
-    Just (TmCase x t1) -> return (applySubst (Map.singleton x v2) t1)
+    Just (TmCase x t1) -> return (substTerm (Map.singleton x v2) t1)
 smallStep (TmApp TmRef v) | isValue v = do
   s <- get >>= maybeToExcept
   let (l, s') = allocate s v
@@ -62,7 +62,7 @@ smallStep (TmApp TmIsZero (TmNat n)) =
 smallStep (TmApp v1 t2) | isValue v1 = TmApp v1 <$> smallStep t2
 smallStep (TmApp t1 t2)              = flip TmApp t2 <$> smallStep t1
 smallStep (TmLet x v1 t2) | isValue v1 =
-  return (applySubst (Map.singleton x v1) t2)
+  return (substTerm (Map.singleton x v1) t2)
 smallStep (TmLet x t1 t2) = (\t1' -> TmLet x t1' t2) <$> smallStep t1
 smallStep (TmRcd m      ) = if Map.null notValue
   then throwError ExcNoRuleApplied

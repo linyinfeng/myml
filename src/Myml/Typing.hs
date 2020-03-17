@@ -1,32 +1,29 @@
 {-# LANGUAGE LambdaCase, RankNTypes #-}
 
 module Myml.Typing
-  ( TypingExcept(..)
-  , NewVar(..)
+  ( NewVar(..)
   , TypingEnv
-  , Constraint
   , Inference
   , InferenceState(..)
   , newVar
   , runInference
+  -- main infer function
   , infer
+  -- instantiate and generalize
   , instantiate
   , instantiateType
   , instantiateRow
   , instantiatePresence
   , generalize
+  -- unify
   , unifyProper
   , unifyPresenceWithType
   , unifyPresence
   , unifyRow
+  -- describe
   , describeProper
   , describePresence
   , describeRow
-  , regTreeEq
-  , regTreeEqRow
-  , regTreeEqPresence
-  , regTreeEq'
-  , regTreeNeq'
   )
 where
 
@@ -37,64 +34,21 @@ import           Data.Maybe
 import           Control.Monad.Except
 import           Control.Monad.State
 import           Control.Monad.Reader
-import           Control.Monad.Trans.Maybe
 import           Data.Text.Prettyprint.Doc
 import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set
 
-data TypingExcept = ExcUnifyKindMismatch Kind Kind
-                  | ExcUnifyNoRuleApplied TypeSubstitutor TypeSubstitutor
-                  | ExcUnifyRowLabelCollided (Set.Set LabelName)
-                  | ExcUnboundedVariable VarName
-                  | ExcFreeVarKindConflict VarName Kind Kind
-                  | ExcStoreTypingNotImplemented
-                  | ExcDescribeNoRuleApplied TypeSubstitutor
-                  | ExcCanNotHandleCofMu TypeRow
-                  | ExcImperativeFeaturesDisabled Term
-                  deriving Eq
 
-instance Show TypingExcept where
-  show (ExcUnifyKindMismatch k1 k2) =
-    "Kind mismatch in unification, kind "
-      ++ show (pretty k1)
-      ++ " mismatch with kind "
-      ++ show (pretty k2)
-  show (ExcUnifyNoRuleApplied s1 s2) =
-    "Unable to unify " ++ show (pretty s1) ++ " with " ++ show (pretty s2)
-  show (ExcUnifyRowLabelCollided s) = "Row label collided: " ++ show s
-  show (ExcUnboundedVariable     x) = "Unbounded variable: " ++ x
-  show (ExcFreeVarKindConflict x k1 k2) =
-    "Free variable kind conflict in generalization, var: "
-      ++ show x
-      ++ ", kind 1: "
-      ++ show (pretty k1)
-      ++ ", kind 2:"
-      ++ show (pretty k2)
-  show ExcStoreTypingNotImplemented = "Store typing is not implemented"
-  show (ExcDescribeNoRuleApplied s) =
-    "Unable to describe from unification result: " ++ show (pretty s)
-  show (ExcCanNotHandleCofMu r) =
-    "Can not handle cofinite mu row: "
-      ++ show
-           (prettyTypeRow (pretty "(")
-                          (pretty ")")
-                          (\l -> pretty l <+> pretty ":")
-                          r
-           )
-  show (ExcImperativeFeaturesDisabled t) =
-    "Imperative features disabled, can not type: " ++ show (pretty t)
 
 newtype NewVar = NewVar (Map.Map VarName Integer)
   deriving Show
 
 type TypingEnv = Map.Map VarName TypeScheme
 
-type Constraint = (Type, Type)
-
 type Inference a
   =  forall s
    . ExceptT
-    TypingExcept
+    Error
     ( EquivT
         s
         TypeSubstitutor
@@ -111,7 +65,7 @@ runInference
   :: Inference a
   -> TypingEnv
   -> InferenceState
-  -> (Either TypingExcept a, InferenceState)
+  -> (Either Error a, InferenceState)
 runInference m =
   runState . runReaderT (runEquivT id (flip const) (runExceptT m))
 
@@ -125,7 +79,8 @@ newVar prefix = do
 resetVarPrefix :: Set.Set VarName -> Inference ()
 resetVarPrefix ps = do
   NewVar m <- gets inferStateNewVar
-  let m' = Map.map (const 0) (Map.restrictKeys m ps) `Map.union` m -- union = unionWith const
+  -- union = unionWith const
+  let m' = Map.map (const 0) (Map.restrictKeys m ps) `Map.union` m
   modify (\s -> s { inferStateNewVar = NewVar m' })
 
 innerVarPrefix :: VarName
@@ -134,11 +89,11 @@ innerVarPrefix = "\x03b2"
 checkImperativeFeaturesEnabled :: Term -> Inference ()
 checkImperativeFeaturesEnabled t = do
   enabled <- gets imperativeFeaturesEnabled
-  unless enabled (throwError (ExcImperativeFeaturesDisabled t))
+  unless enabled (throwError (ErrImperativeFeaturesDisabled t))
 
 infer :: Term -> Inference Type
 infer (TmVar x) = reader (Map.lookup x) >>= \case
-  Nothing -> throwError (ExcUnboundedVariable x)
+  Nothing -> throwError (ErrUnboundedVariable x)
   Just s  -> instantiate s
 infer (TmApp t1 t2) = do
   ty1 <- infer t1
@@ -156,28 +111,34 @@ infer (TmLet x t1 t2) = do
   local (Map.insert x s) (infer t2)
 infer (TmRcd m) = do
   ps <- sequence (Map.map genPresence m)
-  return (TyRecord (TyRow ps CofAllAbsent))
+  return (TyRecord (foldr (uncurry RowPresence) RowEmpty (Map.toList ps)))
  where
   genPresence t = PresenceVarWithType <$> newVar innerVarPrefix <*> infer t
 infer (TmRcdExtend t1 l t2) = do
   ty1 <- infer t1
   ty2 <- infer t2
   p1  <- PresenceVar <$> newVar innerVarPrefix
-  r   <- CofRowVar <$> newVar innerVarPrefix
-  unifyProper ty1 (TyRecord (TyRow (Map.singleton l p1) r))
+  r   <- RowVar <$> newVar innerVarPrefix
+  unifyProper ty1 (TyRecord (RowPresence l p1 r))
   p2 <- newVar innerVarPrefix
-  return (TyRecord (TyRow (Map.singleton l (PresenceVarWithType p2 ty2)) r))
+  return (TyRecord (RowPresence l (PresenceVarWithType p2 ty2) r))
 infer (TmRcdAccess t l) = do
   ty <- infer t
   x  <- TyVar <$> newVar innerVarPrefix
-  r  <- CofRowVar <$> newVar innerVarPrefix
-  unifyProper ty (TyRecord (TyRow (Map.singleton l (Present x)) r))
+  r  <- RowVar <$> newVar innerVarPrefix
+  unifyProper ty (TyRecord (RowPresence l (Present x) r))
   return x
 infer (TmMatch m) = do
   m'  <- sequence (Map.map genSingle m)
   res <- TyVar <$> newVar innerVarPrefix
   sequence_ (Map.map (unifyProper res . snd) m')
-  return (TyArrow (TyVariant (TyRow (Map.map fst m') CofAllAbsent)) res)
+  return
+    (TyArrow
+      (TyVariant
+        (foldr (\(l, (p, _)) -> RowPresence l p) RowEmpty (Map.toList m'))
+      )
+      res
+    )
  where
   genSingle (TmCase x t) = do
     nv <- TyVar <$> newVar innerVarPrefix
@@ -189,18 +150,15 @@ infer (TmMatchExtend t1 l (TmCase x t2)) = do
   tyX <- TyVar <$> newVar innerVarPrefix
   ty2 <- local (Map.insert x (ScmMono tyX)) (infer t2)
   p1  <- PresenceVar <$> newVar innerVarPrefix
-  r   <- CofRowVar <$> newVar innerVarPrefix
-  unifyProper ty1 (TyArrow (TyVariant (TyRow (Map.singleton l p1) r)) ty2)
+  r   <- RowVar <$> newVar innerVarPrefix
+  unifyProper ty1 (TyArrow (TyVariant (RowPresence l p1 r)) ty2)
   p2 <- newVar innerVarPrefix
   return
-    (TyArrow
-      (TyVariant (TyRow (Map.singleton l (PresenceVarWithType p2 tyX)) r))
-      ty2
-    )
+    (TyArrow (TyVariant (RowPresence l (PresenceVarWithType p2 tyX) r)) ty2)
 infer (TmVariant l t) = do
   ty <- infer t
-  r  <- CofRowVar <$> newVar innerVarPrefix
-  return (TyVariant (TyRow (Map.singleton l (Present ty)) r))
+  r  <- RowVar <$> newVar innerVarPrefix
+  return (TyVariant (RowPresence l (Present ty) r))
 infer TmRef = do
   checkImperativeFeaturesEnabled TmRef
   instantiate
@@ -215,7 +173,7 @@ infer (TmAssign t1 t2) = do
   ty2 <- infer t2
   unifyProper ty1 (TyRef ty2)
   return TyUnit
-infer (TmLoc _    ) = throwError ExcStoreTypingNotImplemented
+infer (TmLoc _    ) = throwError ErrStoreTypingNotImplemented
 infer (TmSeq t1 t2) = do
   _ <- infer t1
   infer t2
@@ -237,23 +195,24 @@ infer TmIsZero  = return (TyArrow TyNat TyBool)
 instantiate :: TypeScheme -> Inference Type
 instantiate (ScmForall x KProper s) = do
   nv <- newVar innerVarPrefix
-  let s' = applySubst (Map.singleton x (TySubProper (TyVar nv))) s
+  s' <- liftEither (substType (Map.singleton x (TySubProper (TyVar nv))) s)
   instantiate s'
 instantiate (ScmForall x KPresence s) = do
   nv <- newVar innerVarPrefix
-  let s' = applySubst (Map.singleton x (TySubPresence (PresenceVar nv))) s
+  s' <- liftEither
+    (substType (Map.singleton x (TySubPresence (PresenceVar nv))) s)
   instantiate s'
 instantiate (ScmForall x (KArrow KProper KPresence) s) = do
   nv <- newVar innerVarPrefix
-  let s' = applySubst
-        (Map.singleton x (TySubPresenceWithType (PresenceWithTypeVar nv)))
-        s
+  s' <- liftEither
+    (substType
+      (Map.singleton x (TySubPresenceWithType (PresenceWithTypeVar nv)))
+      s
+    )
   instantiate s'
-instantiate (ScmForall x (KRow _) s) = do
+instantiate (ScmForall x KRow s) = do
   nv <- newVar innerVarPrefix
-  let
-    s' =
-      applySubst (Map.singleton x (TySubRow (TyRow Map.empty (CofRowVar nv)))) s
+  s' <- liftEither (substType (Map.singleton x (TySubRow (RowVar nv))) s)
   instantiate s'
 instantiate (ScmForall _ k _) = error ("Unknown kind: " ++ show (pretty k))
 instantiate (ScmMono t      ) = instantiateType t
@@ -275,16 +234,14 @@ instantiateType TyBool    = return TyBool
 instantiateType TyNat     = return TyNat
 
 instantiateRow :: TypeRow -> Inference TypeRow
-instantiateRow (TyRow f cof) = do
-  f'   <- sequence (Map.map instantiatePresence f)
-  cof' <- case cof of
-    CofAllAbsent -> return CofAllAbsent
-    CofRowVar x  -> return (CofRowVar x)
-    CofMu x r    -> do
-      r' <- instantiateRow r
-      unifyRow (TyRow Map.empty (CofRowVar x)) r'
-      return (CofRowVar x)
-  return (TyRow f' cof')
+instantiateRow RowEmpty   = return RowEmpty
+instantiateRow (RowVar x) = return (RowVar x)
+instantiateRow (RowPresence l p r) =
+  RowPresence l <$> instantiatePresence p <*> instantiateRow r
+instantiateRow (RowMu x r) = do
+  r' <- instantiateRow r
+  unifyRow (RowVar x) r'
+  return (RowVar x)
 
 instantiatePresence :: TypePresence -> Inference TypePresence
 instantiatePresence Absent          = return Absent
@@ -295,28 +252,37 @@ instantiatePresence (PresenceVarWithType x t) =
 
 generalize :: Term -> Type -> Inference TypeScheme
 generalize t ty = do
-  tyDesc <- describeProper Set.empty ty
+  tyDesc <- describeProper False Set.empty ty
+  tFv    <- liftEither (fvType tyDesc)
   env    <- ask
-  -- TODO: is `describeScheme Set.empty` right?
-  envFv  <- Map.foldl
-    (\a b ->
-      bind2 mergeFvWithKind a (describeScheme Set.empty b >>= fvWithKindScm)
+  envFv  <-
+    (Map.foldl
+      (\a b -> bind2AndLift
+        mapUnionWithKind
+        a
+        (describeScheme True Set.empty b >>= liftEither . fvScheme)
+      )
+      (return Map.empty)
+      env
     )
-    (return Map.empty)
-    env
-  tFv <- fvWithKind tyDesc
-  sequence_ (Map.intersectionWithKey mergeFvWithKindSingle tFv envFv)
+  -- check kind conflicts
+  _          <- liftEither (mapUnionWithKind tFv envFv)
   imperative <- gets imperativeFeaturesEnabled
-  let xs  = tFv `Map.difference` envFv
-      xs' = if imperative && not (isValue t)
-        then xs `Map.withoutKeys` dangerousVariable tyDesc
-        else xs
+  let xs = tFv `Map.difference` envFv
+  xs' <- if imperative && not (isValue t)
+    then liftEither (dangerousVariable tyDesc >>= mapDiffWithKind xs)
+    else return xs
   (sub, newXs) <- replacePrefix xs'
-  let tyDesc' = applySubst sub tyDesc
+  tyDesc'      <- liftEither (substType sub tyDesc)
   return (Map.foldrWithKey ScmForall (ScmMono tyDesc') newXs)
+ where
+  bind2AndLift f ma mb = do
+    a <- ma
+    b <- mb
+    liftEither (f a b)
 
-dangerousVariable :: Type -> Set.Set VarName
-dangerousVariable = freeVariable -- traditional value restriction
+dangerousVariable :: Type -> Either Error (Map.Map VarName Kind)
+dangerousVariable = fvType -- traditional value restriction
 -- dangerousVariable (TyVar _) = Set.empty
 -- dangerousVariable (TyArrow t1 t2) =
 --   freeVariable t1 `Set.union` dangerousVariable t2
@@ -349,10 +315,10 @@ kindPrefixes :: Set.Set VarName
 kindPrefixes = Set.fromList ["\x03b1", "\x03c6", "\x03c8", "\x03c1"]
 
 kindToPrefix :: Kind -> VarName
-kindToPrefix KProper                    = "\x03b1"
-kindToPrefix KPresence                  = "\x03c6"
-kindToPrefix (KArrow KProper KPresence) = "\x03c8"
-kindToPrefix (KRow _                  ) = "\x03c1"
+kindToPrefix KProper           = "\x03b1"
+kindToPrefix KPresence         = "\x03c6"
+kindToPrefix KPresenceWithType = "\x03c8"
+kindToPrefix KRow              = "\x03c1"
 kindToPrefix k = error ("Unknown kind for prefix" ++ show (pretty k))
 
 replacePrefix
@@ -361,101 +327,28 @@ replacePrefix
 replacePrefix m = do
   resetVarPrefix kindPrefixes
   nameMap <- sequence (Map.map (newVar . kindToPrefix) m)
-  let inv      = Map.fromList [ (v, k) | (k, v) <- Map.toList nameMap ]
-      kindMap  = Map.map (m Map.!) inv
-      substMap = Map.intersectionWith varToSubstitutor m nameMap
+  let inv     = Map.fromList [ (v, k) | (k, v) <- Map.toList nameMap ]
+      kindMap = Map.map (m Map.!) inv
+  substMap <- liftEither (sequence (Map.intersectionWith varToTySub m nameMap))
   return (substMap, kindMap)
 
-mergeFvWithKind
-  :: Map.Map VarName Kind
-  -> Map.Map VarName Kind
-  -> Inference (Map.Map VarName Kind)
-mergeFvWithKind m1 m2 = (\updated -> updated `Map.union` m1 `Map.union` m2) -- union == unionWith const
-  <$> sequence (Map.intersectionWithKey mergeFvWithKindSingle m1 m2)
-
-mergeFvWithKindSingle :: VarName -> Kind -> Kind -> Inference Kind
-mergeFvWithKindSingle x a b = case (a, b) of
-  (KRow l1, KRow l2) -> return (KRow (l1 `Set.union` l2))
-  (k1, k2) | k1 == k2  -> return k1
-           | otherwise -> throwError (ExcFreeVarKindConflict x k1 k2)
-
-bind2 :: Monad m => (a -> b -> m c) -> m a -> m b -> m c
-bind2 f ma mb = do
-  a <- ma
-  b <- mb
-  f a b
-
-fvWithKindScm :: TypeScheme -> Inference (Map.Map VarName Kind)
-fvWithKindScm (ScmForall x k s) = do
-  m <- fvWithKindScm s
-  case Map.lookup x m of
-    Nothing -> return m
-    Just k' | k == k'   -> return (Map.delete x m)
-            | otherwise -> throwError (ExcFreeVarKindConflict x k k')
-fvWithKindScm (ScmMono t) = fvWithKind t
-
-fvWithKind :: Type -> Inference (Map.Map VarName Kind)
-fvWithKind (TyVar x) = return (Map.singleton x KProper)
-fvWithKind (TyArrow t1 t2) =
-  bind2 mergeFvWithKind (fvWithKind t1) (fvWithKind t2)
-fvWithKind (TyRecord  row) = fvWithKindRow row
-fvWithKind (TyVariant row) = fvWithKindRow row
-fvWithKind (TyMu x t     ) = do
-  m <- fvWithKind t
-  case Map.lookup x m of
-    Nothing      -> return m
-    Just KProper -> return (Map.delete x m)
-    Just k       -> throwError (ExcFreeVarKindConflict x k KProper)
-fvWithKind (TyRef t) = fvWithKind t
-fvWithKind TyUnit    = return Map.empty
-fvWithKind TyBool    = return Map.empty
-fvWithKind TyNat     = return Map.empty
-
-fvWithKindRow :: TypeRow -> Inference (Map.Map VarName Kind)
-fvWithKindRow (TyRow f cof) = do
-  fvF <- Map.foldl (\a b -> bind2 mergeFvWithKind a (fvWithKindPresence b))
-                   (return Map.empty)
-                   f
-  fvCof <- case cof of
-    CofAllAbsent -> return Map.empty
-    CofRowVar x  -> return (Map.singleton x (KRow (Map.keysSet f)))
-    CofMu x r    -> do
-      m <- fvWithKindRow r
-      case Map.lookup x m of
-        Nothing       -> return m
-        Just (KRow _) -> return (Map.delete x m) -- TODO: Maybe can change to KRow (Map.keysSet f)?
-        Just k ->
-          throwError (ExcFreeVarKindConflict x (KRow (Map.keysSet f)) k)
-  mergeFvWithKind fvF fvCof
-
-fvWithKindPresence :: TypePresence -> Inference (Map.Map VarName Kind)
-fvWithKindPresence Absent          = return Map.empty
-fvWithKindPresence (Present     t) = fvWithKind t
-fvWithKindPresence (PresenceVar x) = return (Map.singleton x KPresence)
-fvWithKindPresence (PresenceVarWithType x t) =
-  fvWithKind t >>= mergeFvWithKind (Map.singleton x (KArrow KProper KPresence))
-
-ensureProper :: (Monad m) => TypeSubstitutor -> ExceptT TypingExcept m Type
+ensureProper :: (Monad m) => TypeSubstitutor -> ExceptT Error m Type
 ensureProper (TySubProper t) = return t
-ensureProper s =
-  throwError (ExcUnifyKindMismatch KProper (kindOfSubstitutor s))
+ensureProper s = throwError (ErrUnifyKindMismatch KProper (kindOfTySub s))
 
-ensurePresence
-  :: (Monad m) => TypeSubstitutor -> ExceptT TypingExcept m TypePresence
+ensurePresence :: (Monad m) => TypeSubstitutor -> ExceptT Error m TypePresence
 ensurePresence (TySubPresence p) = return p
-ensurePresence s =
-  throwError (ExcUnifyKindMismatch KPresence (kindOfSubstitutor s))
+ensurePresence s = throwError (ErrUnifyKindMismatch KPresence (kindOfTySub s))
 
 ensurePresenceWithType
-  :: (Monad m) => TypeSubstitutor -> ExceptT TypingExcept m PresenceWithType
+  :: (Monad m) => TypeSubstitutor -> ExceptT Error m PresenceWithType
 ensurePresenceWithType (TySubPresenceWithType p) = return p
 ensurePresenceWithType s =
-  throwError (ExcUnifyKindMismatch kindOfPresenceWithType (kindOfSubstitutor s))
+  throwError (ErrUnifyKindMismatch KPresenceWithType (kindOfTySub s))
 
-ensureRow :: (Monad m) => TypeSubstitutor -> ExceptT TypingExcept m TypeRow
+ensureRow :: (Monad m) => TypeSubstitutor -> ExceptT Error m TypeRow
 ensureRow (TySubRow r) = return r
-ensureRow s =
-  throwError (ExcUnifyKindMismatch kindOfRowForExc (kindOfSubstitutor s))
+ensureRow s            = throwError (ErrUnifyKindMismatch KRow (kindOfTySub s))
 
 unifyProper :: Type -> Type -> Inference ()
 unifyProper t1 t2 = do
@@ -481,7 +374,7 @@ unifyProper' TyUnit         TyUnit         = return ()
 unifyProper' TyBool         TyBool         = return ()
 unifyProper' TyNat          TyNat          = return ()
 unifyProper' t1 t2 =
-  throwError (ExcUnifyNoRuleApplied (TySubProper t1) (TySubProper t2))
+  throwError (ErrUnifyNoRuleApplied (TySubProper t1) (TySubProper t2))
 
 unifyPresenceWithType :: PresenceWithType -> PresenceWithType -> Inference ()
 unifyPresenceWithType p1 p2 = do
@@ -497,7 +390,7 @@ unifyPresenceWithType p1 p2 = do
         (TySubPresenceWithType (PresenceWithTypeVar x2))
         (TySubPresenceWithType p1')
       _ -> throwError
-        (ExcUnifyNoRuleApplied (TySubPresenceWithType p1')
+        (ErrUnifyNoRuleApplied (TySubPresenceWithType p1')
                                (TySubPresenceWithType p2')
         )
 
@@ -529,179 +422,168 @@ unifyPresence' (Present t1) (PresenceVarWithType x1 t2) =
   unifyPresenceWithType (PresenceWithTypeVar x1) PresenceWithTypePresent
     >> unifyProper t1 t2
 unifyPresence' p1 p2 =
-  throwError (ExcUnifyNoRuleApplied (TySubPresence p1) (TySubPresence p2))
+  throwError (ErrUnifyNoRuleApplied (TySubPresence p1) (TySubPresence p2))
 
 unifyRow :: TypeRow -> TypeRow -> Inference ()
 unifyRow r1 r2 = do
-  r1' <- classDesc (TySubRow r1) >>= ensureRow >>= flattenRow
-  r2' <- classDesc (TySubRow r2) >>= ensureRow >>= flattenRow
+  r1' <- classDesc (TySubRow r1) >>= ensureRow
+  r2' <- classDesc (TySubRow r2) >>= ensureRow
   unifyRow' r1' r2'
 
 unifyRow' :: TypeRow -> TypeRow -> Inference ()
-unifyRow' (TyRow f1 cof1) (TyRow f2 cof2) = do
-  -- handle intersection part
-  sequence_ (Map.intersectionWith unifyPresence f1 f2)
-  let f1' = f1 `Map.difference` f2
-      f2' = f2 `Map.difference` f1
-  case (cof1, cof2) of
-    (CofAllAbsent, CofAllAbsent) -> do
-      sequence_ (Map.map (unifyPresence Absent) f1')
-      sequence_ (Map.map (unifyPresence Absent) f2')
-    (CofAllAbsent, CofRowVar x2) -> do
-      equate (TySubRow (TyRow Map.empty (CofRowVar x2)))
-             (TySubRow (TyRow f1' CofAllAbsent))
-      sequence_ (Map.map (unifyPresence Absent) f2')
-    (CofRowVar x1, CofAllAbsent) -> do
-      equate (TySubRow (TyRow Map.empty (CofRowVar x1)))
-             (TySubRow (TyRow f2' CofAllAbsent))
-      sequence_ (Map.map (unifyPresence Absent) f1')
-    (CofRowVar x1, CofRowVar x2) | x1 == x2 -> do
-      sequence_ (Map.map (unifyPresence Absent) f1')
-      sequence_ (Map.map (unifyPresence Absent) f2')
-    (CofRowVar x1, CofRowVar x2) -> do
-      newX <- newVar innerVarPrefix
-      equate (TySubRow (TyRow Map.empty (CofRowVar x1)))
-             (TySubRow (TyRow f2' (CofRowVar newX)))
-      equate (TySubRow (TyRow Map.empty (CofRowVar x2)))
-             (TySubRow (TyRow f1' (CofRowVar newX)))
-    (_, _) -> throwError
-      (ExcUnifyNoRuleApplied (TySubRow (TyRow f1 cof1))
-                             (TySubRow (TyRow f2 cof2))
-      )
+unifyRow' RowEmpty RowEmpty              = return ()
+unifyRow' RowEmpty x@(RowVar _         ) = unifyRow' x RowEmpty
+unifyRow' RowEmpty r@(RowPresence _ _ _) = unifyRow' r RowEmpty
+unifyRow' (RowVar x) RowEmpty =
+  equate (TySubRow (RowVar x)) (TySubRow RowEmpty)
+unifyRow' (RowVar x1) (RowVar x2)
+  | x1 == x2  = return ()
+  | otherwise = equate (TySubRow (RowVar x1)) (TySubRow (RowVar x2))
+unifyRow' (RowVar x) r@(RowPresence _ _ _) =
+  equate (TySubRow (RowVar x)) (TySubRow r)
+unifyRow' (RowPresence _l p r) RowEmpty =
+  unifyPresence p Absent >> unifyRow r RowEmpty
+unifyRow' r@(RowPresence _  _  _ ) x@(RowVar _            ) = unifyRow' x r
+unifyRow' (  RowPresence l1 p1 r1) (  RowPresence l2 p2 r2) = if l1 == l2
+  then unifyPresence p1 p2 >> unifyRow r1 r2
+  else do
+    r3 <- newVar innerVarPrefix
+    let r3' = RowVar r3
+    unifyRow r1 (RowPresence l2 p2 r3')
+    unifyRow r2 (RowPresence l1 p1 r3')
+unifyRow' r1 r2 =
+  throwError (ErrUnifyNoRuleApplied (TySubRow r1) (TySubRow r2))
 
-flattenRow :: TypeRow -> Inference TypeRow
-flattenRow (TyRow f CofAllAbsent)               = return (TyRow f CofAllAbsent)
-flattenRow (TyRow f (CofRowVar x)) | Map.null f = do
-  (TyRow f' inf) <- classDesc (TySubRow (TyRow f (CofRowVar x))) >>= ensureRow
-  if TyRow f' inf == TyRow f (CofRowVar x)
-    then return (TyRow f (CofRowVar x))
-    else flattenRow (TyRow f' inf)
-flattenRow (TyRow f1 (CofRowVar x)) = do
-  (TyRow f2 inf2) <- flattenRow (TyRow Map.empty (CofRowVar x))
-  let overlapped = Map.keysSet (f1 `Map.intersection` f2)
-  unless (Set.null overlapped)
-         (throwError (ExcUnifyRowLabelCollided overlapped))
-  return (TyRow (Map.union f1 f2) inf2)
-flattenRow r@(TyRow _ (CofMu _ _)) = throwError (ExcCanNotHandleCofMu r)
+-- add kind check
+describeScheme :: Bool -> Set.Set VarName -> TypeScheme -> Inference TypeScheme
+describeScheme allowMu ctx (ScmForall x k s) =
+  ScmForall x k <$> describeScheme allowMu (Set.insert x ctx) s
+describeScheme allowMu ctx (ScmMono t) =
+  ScmMono <$> describeProper allowMu ctx t
 
-describeScheme :: Set.Set VarName -> TypeScheme -> Inference TypeScheme
-describeScheme ctx (ScmForall x k s) =
-  ScmForall x k <$> describeScheme (Set.insert x ctx) s
-describeScheme ctx (ScmMono t) = ScmMono <$> describeProper ctx t
-
-describeProper :: Set.Set VarName -> Type -> Inference Type
-describeProper ctx (TyVar x) | x `Set.member` ctx = return (TyVar x)
-describeProper ctx (TyVar x)                      = do
-  t' <- classDesc (TySubProper (TyVar x)) >>= ensureProper
-  if t' == TyVar x
+describeProper :: Bool -> Set.Set VarName -> Type -> Inference Type
+describeProper _ ctx (TyVar x) | x `Set.member` ctx = return (TyVar x)
+describeProper allowMu ctx (TyVar x)                = do
+  t <- classDesc (TySubProper (TyVar x)) >>= ensureProper
+  if t == TyVar x
     then return (TyVar x)
     else do
-      t'' <- describeProper (Set.insert x ctx) t'
-      let fv = freeVariable t''
-      return (if x `Set.member` fv then TyMu x t'' else t'')
-describeProper ctx (TyArrow t1 t2) =
-  TyArrow <$> describeProper ctx t1 <*> describeProper ctx t2
-describeProper ctx (TyRecord  row) = TyRecord <$> describeRow ctx row
-describeProper ctx (TyVariant row) = TyVariant <$> describeRow ctx row
-describeProper ctx (TyRef     t  ) = TyRef <$> describeProper ctx t
-describeProper _   TyUnit          = return TyUnit
-describeProper _   TyBool          = return TyBool
-describeProper _   TyNat           = return TyNat
--- describeProper _ t@(TyMu _ _) =
---   throwError (ExcDescribeNoRuleApplied (TySubProper t))
-describeProper ctx (TyMu x t) = TyMu x <$> describeProper (Set.insert x ctx) t
+      t' <- describeProper allowMu (Set.insert x ctx) t
+      fv <- liftEither (fvType t')
+      case Map.lookup x fv of
+        Nothing      -> return t'
+        Just KProper -> return (TyMu x t')
+        Just k       -> throwError (ErrVarKindConflict x KProper k)
+describeProper allowMu ctx (TyArrow t1 t2) =
+  TyArrow <$> describeProper allowMu ctx t1 <*> describeProper allowMu ctx t2
+describeProper allowMu ctx (TyRecord row) =
+  TyRecord <$> describeRow allowMu ctx row
+describeProper allowMu ctx (TyVariant row) =
+  TyVariant <$> describeRow allowMu ctx row
+describeProper allowMu ctx (TyRef t)  = TyRef <$> describeProper allowMu ctx t
+describeProper _       _   TyUnit     = return TyUnit
+describeProper _       _   TyBool     = return TyBool
+describeProper _       _   TyNat      = return TyNat
+describeProper allowMu ctx (TyMu x t) = if allowMu
+  then TyMu x <$> describeProper allowMu (Set.insert x ctx) t
+  else throwError (ErrCanNotHandleMuType (TyMu x t))
 
-describePresence :: Set.Set VarName -> TypePresence -> Inference TypePresence
-describePresence _   Absent          = return Absent
-describePresence ctx (Present     t) = Present <$> describeProper ctx t
-describePresence ctx (PresenceVar x) = do
+describePresence
+  :: Bool -> Set.Set VarName -> TypePresence -> Inference TypePresence
+describePresence _ _ Absent = return Absent
+describePresence allowMu ctx (Present t) =
+  Present <$> describeProper allowMu ctx t
+describePresence allowMu ctx (PresenceVar x) = do
   p <- classDesc (TySubPresence (PresenceVar x)) >>= ensurePresence
-  if p == PresenceVar x then return (PresenceVar x) else describePresence ctx p
-describePresence ctx (PresenceVarWithType x t) = do
+  if p == PresenceVar x
+    then return (PresenceVar x)
+    else describePresence allowMu ctx p
+describePresence allowMu ctx (PresenceVarWithType x t) = do
   p <-
     classDesc (TySubPresenceWithType (PresenceWithTypeVar x))
       >>= ensurePresenceWithType
   if p == PresenceWithTypeVar x
-    then PresenceVarWithType x <$> describeProper ctx t
+    then PresenceVarWithType x <$> describeProper allowMu ctx t
     else case p of
       PresenceWithTypeAbsent  -> return Absent
-      PresenceWithTypePresent -> Present <$> describeProper ctx t
-      PresenceWithTypeVar x'  -> PresenceVarWithType x' <$> describeProper ctx t
+      PresenceWithTypePresent -> Present <$> describeProper allowMu ctx t
+      PresenceWithTypeVar x' ->
+        PresenceVarWithType x' <$> describeProper allowMu ctx t
 
-describeRow :: Set.Set VarName -> TypeRow -> Inference TypeRow
-describeRow ctx (TyRow f CofAllAbsent) =
-  flip TyRow CofAllAbsent <$> sequence (Map.map (describePresence ctx) f)
-describeRow ctx (TyRow f (CofRowVar x)) | Map.null f && x `Set.member` ctx =
-  return (TyRow f (CofRowVar x))
-describeRow ctx (TyRow f (CofRowVar x)) | Map.null f = do
-  (TyRow f' inf) <- classDesc (TySubRow (TyRow f (CofRowVar x))) >>= ensureRow
-  if TyRow f' inf == TyRow f (CofRowVar x)
-    then return (TyRow f (CofRowVar x))
+describeRow :: Bool -> Set.Set VarName -> TypeRow -> Inference TypeRow
+describeRow _ _ RowEmpty                          = return RowEmpty
+describeRow _ ctx (RowVar x) | x `Set.member` ctx = return (RowVar x)
+describeRow allowMu ctx (RowVar x)                = do
+  r <- classDesc (TySubRow (RowVar x)) >>= ensureRow
+  if r == (RowVar x)
+    then return (RowVar x)
     else do
-      r' <- describeRow (Set.insert x ctx) (TyRow f' inf)
-      let fv = freeVariable r'
-      return (if x `Set.member` fv then TyRow Map.empty (CofMu x r') else r')
-describeRow ctx (TyRow f1 (CofRowVar x)) = do
-  (TyRow f2 inf2) <- describeRow ctx (TyRow Map.empty (CofRowVar x))
-  f1'             <- sequence (Map.map (describePresence ctx) f1)
-  let overlapped = Map.keysSet (f1' `Map.intersection` f2)
-  unless (Set.null overlapped)
-         (throwError (ExcUnifyRowLabelCollided overlapped))
-  return (TyRow (Map.union f1' f2) inf2)
-describeRow _ r@(TyRow _ (CofMu _ _)) = throwError (ExcCanNotHandleCofMu r)
+      r' <- describeRow allowMu (Set.insert x ctx) r
+      fv <- liftEither (fvRow r')
+      case Map.lookup x fv of
+        Nothing   -> return r'
+        Just KRow -> return (RowMu x r')
+        Just k    -> throwError (ErrVarKindConflict x KRow k)
+describeRow allowMu ctx (RowPresence l p r) =
+  RowPresence l
+    <$> (describePresence allowMu ctx p)
+    <*> describeRow allowMu ctx r
+describeRow allowMu ctx (RowMu x r) = if allowMu
+  then RowMu x <$> describeRow allowMu (Set.insert x ctx) r
+  else throwError (ErrCanNotHandleMuRow (RowMu x r))
 
-regTreeEq' :: Type -> Type -> Bool
-regTreeEq' t1 t2 = case runState (runMaybeT (regTreeEq t1 t2)) Set.empty of
-  (Nothing, _) -> False
-  (Just (), _) -> True
+-- regTreeEq' :: Type -> Type -> Bool
+-- regTreeEq' t1 t2 = case runState (runMaybeT (regTreeEq t1 t2)) Set.empty of
+--   (Nothing, _) -> False
+--   (Just (), _) -> True
 
-regTreeNeq' :: Type -> Type -> Bool
-regTreeNeq' t1 t2 = not (regTreeEq' t1 t2)
+-- regTreeNeq' :: Type -> Type -> Bool
+-- regTreeNeq' t1 t2 = not (regTreeEq' t1 t2)
 
-regTreeEq
-  :: (Monad m) => Type -> Type -> MaybeT (StateT (Set.Set (Type, Type)) m) ()
-regTreeEq t1 t2 = gets (Set.member (t1, t2)) >>= \case
-  True  -> return ()
-  False -> modify (Set.insert (t1, t2)) >> case (t1, t2) of
-    (TyUnit, TyUnit) -> return ()
-    (TyBool, TyBool) -> return ()
-    (TyNat , TyNat ) -> return ()
-    (TyArrow t11 t12, TyArrow t21 t22) ->
-      regTreeEq t11 t21 >> regTreeEq t12 t22
-    (TyRef     t1', TyRef t2'   )   -> regTreeEq t1' t2'
-    (TyRecord  r1 , TyRecord r2 )   -> regTreeEqRow r1 r2
-    (TyVariant r1 , TyVariant r2)   -> regTreeEqRow r1 r2
-    (TyVar x1, TyVar x2) | x1 == x2 -> return ()
-    (TyMu x1 t12, _) ->
-      regTreeEq (applySubst (Map.singleton x1 (TySubProper t1)) t12) t2
-    (_, TyMu x2 t22) ->
-      regTreeEq t1 (applySubst (Map.singleton x2 (TySubProper t2)) t22)
-    _ -> mzero
+-- regTreeEq
+--   :: (Monad m) => Type -> Type -> MaybeT (StateT (Set.Set (Type, Type)) m) ()
+-- regTreeEq t1 t2 = gets (Set.member (t1, t2)) >>= \case
+--   True  -> return ()
+--   False -> modify (Set.insert (t1, t2)) >> case (t1, t2) of
+--     (TyUnit, TyUnit) -> return ()
+--     (TyBool, TyBool) -> return ()
+--     (TyNat , TyNat ) -> return ()
+--     (TyArrow t11 t12, TyArrow t21 t22) ->
+--       regTreeEq t11 t21 >> regTreeEq t12 t22
+--     (TyRef     t1', TyRef t2'   )   -> regTreeEq t1' t2'
+--     (TyRecord  r1 , TyRecord r2 )   -> regTreeEqRow r1 r2
+--     (TyVariant r1 , TyVariant r2)   -> regTreeEqRow r1 r2
+--     (TyVar x1, TyVar x2) | x1 == x2 -> return ()
+--     (TyMu x1 t12, _) ->
+--       regTreeEq (applySubst (Map.singleton x1 (TySubProper t1)) t12) t2
+--     (_, TyMu x2 t22) ->
+--       regTreeEq t1 (applySubst (Map.singleton x2 (TySubProper t2)) t22)
+--     _ -> mzero
 
-regTreeEqRow
-  :: (Monad m)
-  => TypeRow
-  -> TypeRow
-  -> MaybeT (StateT (Set.Set (Type, Type)) m) ()
-regTreeEqRow (TyRow f1 cof1) (TyRow f2 cof2)
-  | Map.keysSet f1 == Map.keysSet f2
-  = sequence_ (Map.intersectionWith regTreeEqPresence f1 f2)
-    >> case (cof1, cof2) of
-         (CofAllAbsent, CofAllAbsent) -> return ()
-         (CofRowVar x1, CofRowVar x2) | x1 == x2 -> return ()
-         _                            -> mzero
-  | otherwise
-  = mzero
+-- regTreeEqRow
+--   :: (Monad m)
+--   => TypeRow
+--   -> TypeRow
+--   -> MaybeT (StateT (Set.Set (Type, Type)) m) ()
+-- regTreeEqRow (TyRow f1 cof1) (TyRow f2 cof2)
+--   | Map.keysSet f1 == Map.keysSet f2
+--   = sequence_ (Map.intersectionWith regTreeEqPresence f1 f2)
+--     >> case (cof1, cof2) of
+--          (CofAllAbsent, CofAllAbsent) -> return ()
+--          (CofRowVar x1, CofRowVar x2) | x1 == x2 -> return ()
+--          _                            -> mzero
+--   | otherwise
+--   = mzero
 
-regTreeEqPresence
-  :: (Monad m)
-  => TypePresence
-  -> TypePresence
-  -> MaybeT (StateT (Set.Set (Type, Type)) m) ()
-regTreeEqPresence p1 p2 = case (p1, p2) of
-  (Absent    , Absent    )                    -> return ()
-  (Present t1, Present t2)                    -> regTreeEq t1 t2
-  (PresenceVar x1, PresenceVar x2) | x1 == x2 -> return ()
-  (PresenceVarWithType x1 t1, PresenceVarWithType x2 t2) | x1 == x2 ->
-    regTreeEq t1 t2
-  _ -> mzero
+-- regTreeEqPresence
+--   :: (Monad m)
+--   => TypePresence
+--   -> TypePresence
+--   -> MaybeT (StateT (Set.Set (Type, Type)) m) ()
+-- regTreeEqPresence p1 p2 = case (p1, p2) of
+--   (Absent    , Absent    )                    -> return ()
+--   (Present t1, Present t2)                    -> regTreeEq t1 t2
+--   (PresenceVar x1, PresenceVar x2) | x1 == x2 -> return ()
+--   (PresenceVarWithType x1 t1, PresenceVarWithType x2 t2) | x1 == x2 ->
+--     regTreeEq t1 t2
+--   _ -> mzero

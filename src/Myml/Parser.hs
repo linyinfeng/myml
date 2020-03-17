@@ -18,7 +18,6 @@ import           Myml.Parser.Helper
 import           Text.Trifecta           hiding ( Parser )
 import           Text.Parser.Expression
 import qualified Data.Map                      as Map
-import qualified Data.Set                      as Set
 import           Control.Applicative
 
 parseTerm :: Parser Term
@@ -202,17 +201,26 @@ parseKindAtom = proper <|> presence <|> row <|> parens parseKind
  where
   proper   = KProper <$ reserve identStyle "*"
   presence = KPresence <$ reserve identStyle "Presence"
-  row      = do
-    reserve identStyle "Row"
-    _  <- symbol "("
-    ls <- commaSep (ident identStyle)
-    _  <- symbol ")"
-    return (KRow (Set.fromList ls))
+  row      = KRow <$ reserve identStyle "Row"
 
 parseTypeRow :: Parser LabelName -> Parser TypeRow
-parseTypeRow parseLabel = do
-  finitePart <- Map.fromList <$> (typeRowPair parseLabel `sepBy` symbol ",")
-  TyRow finitePart <$> typeRowCofinite parseLabel
+parseTypeRow parseLabel = rowEmpty <|> try pair <|> var <|> mu
+ where
+  rowEmpty = RowEmpty <$ reserve identStyle "\xb7"
+  var      = RowVar <$> ident identStyle
+  pair     = do
+    (l, p) <- typeRowPair parseLabel
+    _      <- symbol ","
+    r      <- parseTypeRow parseLabel
+    return (RowPresence l p r)
+  mu = do
+    reserve identStyle "\x3bc" <|> reserve identStyle "Rec"
+    x <- ident identStyle
+    r <- parens (parseTypeRow parseLabel)
+    return (RowMu x r)
+
+
+
 
 typeRowPair :: Parser LabelName -> Parser (LabelName, TypePresence)
 typeRowPair parseLabel = do
@@ -227,16 +235,3 @@ typePresence =
     <|> (Present <$> (reserve identStyle "Present" *> parseType))
     <|> try (PresenceVarWithType <$> ident identStyle <*> parseType)
     <|> (PresenceVar <$> ident identStyle)
-
-typeRowCofinite :: Parser LabelName -> Parser TypeRowCofinite
-typeRowCofinite parseLabel = rowVar <|> mu <|> allAbsent
- where
-  rowVar    = CofRowVar <$> try (reserve identStyle "|" *> ident identStyle)
-  allAbsent = return CofAllAbsent
-  mu        = do
-    reserve identStyle "|"
-    reserve identStyle "\x3bc"
-    x <- ident identStyle
-    _ <- symbol "."
-    r <- parens (parseTypeRow parseLabel)
-    return (CofMu x r)
