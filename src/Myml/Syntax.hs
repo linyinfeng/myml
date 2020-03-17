@@ -659,7 +659,7 @@ instance Show Error where
     printf "no rule to unify \"%s\" with \"%s\"" (showPretty s1) (showPretty s2)
   show (ErrUnifyRowLabelCollided s) =
     printf "row label \"%s\" collided" (show s)
-  show (ErrUnboundedVariable x)     = printf "unbounded variable \"%s\"" ++ x
+  show (ErrUnboundedVariable x)     = printf "unbounded variable \"%s\"" x
   show ErrStoreTypingNotImplemented = "store typing is not implemented"
   show (ErrCanNotHandleMuType t) =
     printf "can not handle recursive type here \"%s\"" (showPretty t)
