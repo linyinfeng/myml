@@ -678,6 +678,4 @@ instance Show Error where
   show (ErrImperativeFeaturesDisabled t) = printf
     "imperative features disabled, can not type term \"%s\""
     (showPretty t)
-  show (ErrEvalStuck t) = printf
-    "evaluation stuck at \"%s\""
-    (showPretty t)
+  show (ErrEvalStuck t) = printf "evaluation stuck at \"%s\"" (showPretty t)

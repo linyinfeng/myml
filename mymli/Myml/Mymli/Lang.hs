@@ -24,7 +24,7 @@ import           Control.Monad.Trans.State
 import           Control.Exception
 import           Control.Monad
 import           Data.Text.Prettyprint.Doc
-import Data.Text.Prettyprint.Doc.Render.Text
+import           Data.Text.Prettyprint.Doc.Render.Text
 import qualified Data.Map                      as Map
 
 processTopLevel' :: MonadIO m => TopLevel -> Mymli m MymliRequest
@@ -37,8 +37,8 @@ printTermSchemePair t s = do
   renderDoc (pretty ":" <+> align (pretty s))
   putStr "\n"
  where
-   renderDoc :: Doc ann -> IO ()
-   renderDoc d = renderIO stdout (layoutSmart defaultLayoutOptions d)
+  renderDoc :: Doc ann -> IO ()
+  renderDoc d = renderIO stdout (layoutSmart defaultLayoutOptions d)
 
 processTopLevel :: MonadIO m => Bool -> TopLevel -> Mymli m Bool
 processTopLevel silent (TopTerm t) = do
