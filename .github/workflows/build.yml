@@ -3,14 +3,11 @@ name: Build
 on: [push]
 
 jobs:
-  build:
+  main:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@master
-
-    - name: Check format
-      run: ./tools/format --check-mode
 
     - name: Setup Haskell
       uses: actions/setup-haskell@master
@@ -54,3 +51,30 @@ jobs:
 
     - name: Run tests
       run: cabal run myml-test
+
+  format-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@master
+
+    - name: Check format
+      run: ./tools/format --check-mode
+
+  specification:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@master
+
+    - name: Build
+      uses: xu-cheng/latex-action@master
+      with:
+        root_file: spec/specification.tex
+        args: -xelatex -file-line-error -interaction=nonstopmode -output-directory=spec
+
+    - name: Upload PDF file
+      uses: actions/upload-artifact@master
+      with:
+        name: specification
+        path: spec/specification.pdf
