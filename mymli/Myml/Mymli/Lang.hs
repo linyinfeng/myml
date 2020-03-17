@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, ScopedTypeVariables, TupleSections #-}
+{-# LANGUAGE ScopedTypeVariables, TupleSections #-}
 
 module Myml.Mymli.Lang
   ( processTopLevel
@@ -94,42 +94,38 @@ processTopLevels silent (t : remain) = do
 
 mymliEnvForFile :: Monad m => FilePath -> Mymli m MymliEnv
 mymliEnvForFile path = do
-  MymliEnv { envOption, envStore = _, envTermBindings = _, envValueBindings = _, envTypeBindings = _, envInferState, envSearchPath } <-
-    get
-  return MymliEnv { envOption
-                  , envStore         = emptyEnvStore envOption
+  env <- get
+  let opt = envOption env
+  return MymliEnv { envOption        = opt
+                  , envStore         = emptyEnvStore opt
                   , envTermBindings  = Map.empty
                   , envValueBindings = Map.empty
                   , envTypeBindings  = Map.empty
-                  , envInferState    = envInferState
-                  , envSearchPath    = takeDirectory path : envSearchPath
+                  , envInferState    = envInferState env
+                  , envSearchPath    = takeDirectory path : envSearchPath env
                   }
 
 mymliMergeFileEnv :: Monad m => MymliEnv -> Mymli m ()
-mymliMergeFileEnv fileEnv = do
-  let
-    MymliEnv { envOption = _, envStore = fileStore, envTermBindings = fileTermBindings, envValueBindings = fileValueBindings, envTypeBindings = fileTypeBindings, envInferState = fileInferState, envSearchPath = _ }
-      = fileEnv
-  MymliEnv { envOption = envOption, envStore = currentStore, envTermBindings = currentTermBindings, envValueBindings = currentValueBindings, envTypeBindings = currentTypeBindings, envInferState = _currentInferState, envSearchPath } <-
-    get
+mymliMergeFileEnv file = do
+  current <- get
   let
     env = MymliEnv
-      { envOption
-      , envStore         = case (fileStore, currentStore) of
+      { envOption        = envOption current
+      , envStore         = case (envStore file, envStore current) of
         (Nothing, Nothing) -> Nothing
         (Just f, Just c) -> Just (mymliMergeFileStore f c)
         _ -> error "file imperative option mismatch with current environment"
       , envTermBindings  = Map.unionWith const
-                                         fileTermBindings
-                                         currentTermBindings
+                                         (envTermBindings file)
+                                         (envTermBindings current)
       , envValueBindings = Map.unionWith const
-                                         fileValueBindings
-                                         currentValueBindings
+                                         (envValueBindings file)
+                                         (envValueBindings current)
       , envTypeBindings  = Map.unionWith const
-                                         fileTypeBindings
-                                         currentTypeBindings
-      , envInferState    = fileInferState
-      , envSearchPath    = envSearchPath
+                                         (envTypeBindings file)
+                                         (envTypeBindings current)
+      , envInferState    = envInferState file
+      , envSearchPath    = envSearchPath current
       }
   put env
 
