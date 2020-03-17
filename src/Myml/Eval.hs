@@ -6,6 +6,7 @@ module Myml.Eval
   , runSmallStepState
   , smallStep
   , bigStep
+  , bigStepSafe
   )
 where
 
@@ -23,6 +24,12 @@ bigStep :: Term -> (State (Maybe (Store (WithMark Term)))) Term
 bigStep t = runExceptT (smallStep t) >>= \case
   Left  ExcNoRuleApplied -> return t
   Right t'               -> bigStep t'
+
+bigStepSafe
+  :: Term -> (State (Maybe (Store (WithMark Term)))) (Either Error Term)
+bigStepSafe t = do
+  t' <- bigStep t
+  return (if isValue t' then Right t' else Left (ErrEvalStuck t'))
 
 type SmallStepState
   = ExceptT EvalExcept (State (Maybe (Store (WithMark Term)))) Term

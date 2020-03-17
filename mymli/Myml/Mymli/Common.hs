@@ -57,11 +57,11 @@ updateBinding t s = do
 mymliSubstEnv :: Monad m => Term -> Mymli m Term
 mymliSubstEnv t = flip substTerm t <$> gets envValueBindings
 
-mymliEval :: Monad m => Term -> Mymli m Term
+mymliEval :: Monad m => Term -> Mymli m (Either Error Term)
 mymliEval t = do
   t'    <- mymliSubstEnv t
   store <- gets envStore
-  let (v, store') = runState (bigStep t') store
+  let (v, store') = runState (bigStepSafe t') store
   modify (\e -> e { envStore = store' })
   return v
 

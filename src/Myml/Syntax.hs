@@ -637,6 +637,8 @@ data Error = ErrVarKindConflict VarName Kind Kind
            | ErrCanNotHandleMuType Type
            | ErrCanNotHandleMuRow TypeRow
            | ErrImperativeFeaturesDisabled Term
+           -- evaluation errors
+           | ErrEvalStuck Term
            deriving Eq
 
 showPretty :: Pretty a => a -> String
@@ -675,4 +677,7 @@ instance Show Error where
     )
   show (ErrImperativeFeaturesDisabled t) = printf
     "imperative features disabled, can not type term \"%s\""
+    (showPretty t)
+  show (ErrEvalStuck t) = printf
+    "evaluation stuck at \"%s\""
     (showPretty t)
