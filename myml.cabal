@@ -111,7 +111,7 @@ test-suite myml-test
       Myml.Typing.Spec
       Paths_myml
   hs-source-dirs:
-      test
+      tests
   build-depends:
     , myml
     , tasty
