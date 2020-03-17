@@ -70,7 +70,7 @@ termOperatorTable =
   opSeq    = TmSeq <$ try (symbol ";" <* notFollowedBy (char ';'))
   opClass  = do
     reserve identStyle "class"
-    rep      <- reserve identStyle "with" *> ident identStyle
+    rep      <- reserve identStyle "from" *> ident identStyle
     inherits <- many
       (do
         reserve identStyle "inherit"
@@ -218,9 +218,6 @@ parseTypeRow parseLabel = rowEmpty <|> try pair <|> var <|> mu
     x <- ident identStyle
     r <- parens (parseTypeRow parseLabel)
     return (RowMu x r)
-
-
-
 
 typeRowPair :: Parser LabelName -> Parser (LabelName, TypePresence)
 typeRowPair parseLabel = do
