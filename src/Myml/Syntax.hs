@@ -224,10 +224,11 @@ data TypeSubstitutor = TySubProper Type
 
 varToTySub :: Kind -> VarName -> Either Error TypeSubstitutor
 varToTySub KProper = Right . TySubProper . TyVar
-varToTySub KPresenceWithType = Right . TySubPresenceWithType . PresenceWithTypeVar
+varToTySub KPresenceWithType =
+  Right . TySubPresenceWithType . PresenceWithTypeVar
 varToTySub KPresence = Right . TySubPresence . PresenceVar
-varToTySub KRow = Right . TySubRow . RowVar
-varToTySub k = const (Left (ErrInvalidKind k))
+varToTySub KRow      = Right . TySubRow . RowVar
+varToTySub k         = const (Left (ErrInvalidKind k))
 
 kindOfTySub :: TypeSubstitutor -> Kind
 kindOfTySub (TySubProper           _) = KProper
@@ -331,8 +332,9 @@ mapDiffWithKind m1 m2 = sequence (Map.differenceWithKey diff m1' m2')
  where
   m1' = Map.map Right m1
   m2' = Map.map Right m2
-  diff x (Right k1) (Right k2) | k1 == k2  = Nothing
-                               | otherwise = Just (Left (ErrVarKindConflict x k1 k2))
+  diff x (Right k1) (Right k2)
+    | k1 == k2  = Nothing
+    | otherwise = Just (Left (ErrVarKindConflict x k1 k2))
   diff _ l@(Left _) _ = Just l
   diff _ _          l = Just l
 
@@ -647,21 +649,30 @@ instance Show Error where
     (showPretty k1)
     (showPretty k2)
   show (ErrInvalidKind k) = printf "invalid kind \"%s\"" (showPretty k)
-  show (ErrUnifyKindMismatch k1 k2) = printf "kind \"%s\" mismatch with kind \"%s\" in unification"
-    (showPretty k1) (showPretty k2)
-  show (ErrUnifyNoRuleApplied s1 s2) = printf "no rule to unify \"%s\" with \"%s\"" (showPretty s1) (showPretty s2)
-  show (ErrUnifyRowLabelCollided s) = printf "row label \"%s\" collided" (show s)
-  show (ErrUnboundedVariable     x) = printf "unbounded variable \"%s\"" ++ x
+  show (ErrUnifyKindMismatch k1 k2) = printf
+    "kind \"%s\" mismatch with kind \"%s\" in unification"
+    (showPretty k1)
+    (showPretty k2)
+  show (ErrUnifyNoRuleApplied s1 s2) =
+    printf "no rule to unify \"%s\" with \"%s\"" (showPretty s1) (showPretty s2)
+  show (ErrUnifyRowLabelCollided s) =
+    printf "row label \"%s\" collided" (show s)
+  show (ErrUnboundedVariable x)     = printf "unbounded variable \"%s\"" ++ x
   show ErrStoreTypingNotImplemented = "store typing is not implemented"
-  show (ErrCanNotHandleMuType t) = printf "can not handle recursive type here \"%s\"" (showPretty t)
-  show (ErrCanNotHandleMuRow r) = printf "can not handle recursive row here \"%s\"" (show
-    (align
-      (group
-        (   pretty "("
-        <+> prettyTypeRow (\l -> pretty l <+> pretty ":") r
-        <+> pretty ")"
+  show (ErrCanNotHandleMuType t) =
+    printf "can not handle recursive type here \"%s\"" (showPretty t)
+  show (ErrCanNotHandleMuRow r) = printf
+    "can not handle recursive row here \"%s\""
+    (show
+      (align
+        (group
+          (   pretty "("
+          <+> prettyTypeRow (\l -> pretty l <+> pretty ":") r
+          <+> pretty ")"
+          )
         )
       )
-    ))
-  show (ErrImperativeFeaturesDisabled t) =
-    printf "imperative features disabled, can not type term \"%s\"" (showPretty t)
+    )
+  show (ErrImperativeFeaturesDisabled t) = printf
+    "imperative features disabled, can not type term \"%s\""
+    (showPretty t)
