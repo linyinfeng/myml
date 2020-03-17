@@ -16,18 +16,29 @@ import           Myml.Lang.Syntax
 import           Myml.Lang.Parser
 import           Myml.Eval.Store
 import           Text.Trifecta           hiding ( Parser )
-import           System.Console.ANSI
-import           Data.Text.Prettyprint.Doc
 import           System.FilePath
+import           System.IO
 import           System.Directory
 import           Control.Monad.Trans
 import           Control.Monad.Trans.State
 import           Control.Exception
 import           Control.Monad
+import           Data.Text.Prettyprint.Doc
+import Data.Text.Prettyprint.Doc.Render.Text
 import qualified Data.Map                      as Map
 
 processTopLevel' :: MonadIO m => TopLevel -> Mymli m MymliRequest
 processTopLevel' t = processTopLevel False t >> return MymliContinue
+
+printTermSchemePair :: Term -> TypeScheme -> IO ()
+printTermSchemePair t s = do
+  renderDoc (pretty t)
+  putStr "\n"
+  renderDoc (pretty ":" <+> align (pretty s))
+  putStr "\n"
+ where
+   renderDoc :: Doc ann -> IO ()
+   renderDoc d = renderIO stdout (layoutSmart defaultLayoutOptions d)
 
 processTopLevel :: MonadIO m => Bool -> TopLevel -> Mymli m Bool
 processTopLevel silent (TopTerm t) = do
@@ -35,32 +46,26 @@ processTopLevel silent (TopTerm t) = do
   case inferRes of
     Left  e -> liftIO (typingErrorLabel >> print e) >> return False
     Right s -> do
-      v <- mymliEval t
-      unless
-        silent
-        (liftIO
-          (print (pretty v) >> withColor Dull Green (putStr ": ") >> print
-            (pretty s)
-          )
-        )
-      mymliGc
-      return True
+      evalRes <- mymliEval t
+      case evalRes of
+        Left  e -> liftIO (typingErrorLabel >> print e) >> return False
+        Right v -> do
+          unless silent (liftIO (printTermSchemePair v s))
+          mymliGc
+          return True
 processTopLevel silent (TopBind x t) = do
   inferRes <- mymliInferTypeAndUpdateBinding t
   case inferRes of
     Left  e -> liftIO (typingErrorLabel >> print e) >> return False
     Right s -> do
-      v <- mymliEval t
-      mymliAddBinding x t v s
-      unless
-        silent
-        (liftIO
-          (print (pretty x) >> withColor Dull Green (putStr ": ") >> print
-            (pretty s)
-          )
-        )
-      mymliGc
-      return True
+      evalRes <- mymliEval t
+      case evalRes of
+        Left  e -> liftIO (typingErrorLabel >> print e) >> return False
+        Right v -> do
+          mymliAddBinding x t v s
+          unless silent (liftIO (printTermSchemePair (TmVar x) s))
+          mymliGc
+          return True
 processTopLevel _ (TopImport file) = do
   result <- searchAndParseFile file
   case result of
