@@ -1,7 +1,7 @@
 cabal-version: 2.2
 
 name:           myml
-version:        0.1.0.0
+version:        0.0.1
 synopsis:       My toy programming language(WIP).
 description:    Please see the README on GitHub at <https://github.com/linyinfeng/myml#readme>
 category:       Language
