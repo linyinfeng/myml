@@ -46,20 +46,20 @@ jobs:
           ${{ runner.os }}-dist-newstyle-${{ steps.get-date.outputs.date }}-
 
     - name: Cabal update
-      run: cabal update
+      run: cabal v2-update
 
     - name: Build
       run: |
-        cabal configure
-        cabal build
+        cabal v2-configure
+        cabal v2-build
 
     - name: Run tests
-      run: cabal run myml-test
+      run: cabal v2-run myml-test
 
     - name: Install mymli
       run: |
         mkdir -p bin
-        cabal install mymli --installdir=bin --install-method=copy
+        cabal v2-install mymli --installdir=bin --install-method=copy
 
     - name: Upload mymli executable
       uses: actions/upload-artifact@master
