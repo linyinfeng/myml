@@ -8,6 +8,13 @@ module Myml.Syntax
   , termZ
   , termNew
   , termSelf
+  , termUnit
+  , emptyRecord
+  , emptyMatch
+  , recordExtends
+  , matchExtends
+  , recordLiteral
+  , matchLiteral
   , TermCase(..)
   , Type(..)
   , TypeRow(..)
@@ -120,6 +127,27 @@ termNew = TmAbs
 termSelf :: Term
 termSelf = TmApp (TmVar "self") TmUnit
 
+termUnit :: Term
+termUnit = emptyRecord
+
+emptyRecord :: Term
+emptyRecord = TmRcd Map.empty
+
+emptyMatch :: Term
+emptyMatch = TmMatch Map.empty
+
+recordExtends :: Term -> [(LabelName, Term)] -> Term
+recordExtends = foldl (\inner (l, c) -> TmRcdExtend inner l c)
+
+matchExtends :: Term -> [(LabelName, TermCase)] -> Term
+matchExtends = foldl (\inner (l, c) -> TmMatchExtend inner l c)
+
+recordLiteral :: [(LabelName, Term)] -> Term
+recordLiteral = TmRcd . Map.fromList
+
+matchLiteral :: [(LabelName, TermCase)] -> Term
+matchLiteral = TmMatch . Map.fromList
+
 instance Monad m => Serial m Term where
   series =
     cons1 (TmAbs "x")
@@ -127,13 +155,9 @@ instance Monad m => Serial m Term where
       \/ cons0 (TmVar "x")
       \/ cons2 (TmLet "x")
       \/ cons0 (TmRcd Map.empty)
-      \/ cons1 (TmRcd . Map.singleton "l")
-      \/ cons2 (\t1 t2 -> TmRcd (Map.fromList [("l1", t1), ("l2", t2)]))
       \/ cons2 (\t1 t2 -> TmRcdExtend t1 "l" t2)
       \/ cons1 (flip TmRcdAccess "l")
       \/ cons0 (TmMatch Map.empty)
-      \/ cons1 (TmMatch . Map.singleton "l")
-      \/ cons2 (\c1 c2 -> TmMatch (Map.fromList [("l1", c1), ("l2", c2)]))
       \/ cons2 (\t c -> TmMatchExtend t "l" c)
       \/ cons0 (TmVariant "l")
       \/ cons0 TmRef

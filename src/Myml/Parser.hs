@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Myml.Parser
   ( parseTerm
   , parseTermAtom
@@ -17,7 +19,6 @@ import           Myml.Parser.Style
 import           Myml.Parser.Helper
 import           Text.Trifecta           hiding ( Parser )
 import           Text.Parser.Expression
-import qualified Data.Map                      as Map
 import           Control.Applicative
 
 parseTerm :: Parser Term
@@ -58,12 +59,12 @@ termOperatorTable =
     try $ reserve identStyle "with" <* symbol "{"
     pairs <- recordPair `sepBy` symbol ","
     _     <- symbol "}"
-    return (\e -> foldl (\inner (l, t) -> TmRcdExtend inner l t) e pairs)
+    return (`recordExtends` pairs)
   opMatchExtend = do
     try $ reserve identStyle "with" <* symbol "["
     pairs <- matchPair `sepBy` symbol ","
     _     <- symbol "]"
-    return (\t -> foldl (\inner (l, c) -> TmMatchExtend inner l c) t pairs)
+    return (`matchExtends` pairs)
   opAssign = (\a b -> TmApp (TmApp TmAssign a) b) <$ reserve identStyle ":="
   opSeq    = TmSeq <$ try (symbol ";" <* notFollowedBy (char ';'))
   opClass  = do
@@ -98,20 +99,18 @@ parseTermAtom =
     <|> new
     <|> self
     <|> var
-    <|> parens parseTerm
+    <|> tupleOrParen
     )
     <?> "termAtom"
  where
   var     = TmVar <$> ident identStyle
-  rcd     = TmRcd . Map.fromList <$> braces (recordPair `sepBy` symbol ",")
-  match   = TmMatch . Map.fromList <$> brackets (matchPair `sepBy` symbol ",")
+  rcd     = recordLiteral <$> braces (recordPair `sepBy` symbol ",")
+  match   = matchLiteral <$> brackets (matchPair `sepBy` symbol ",")
   variant = TmVariant <$> variantLabel
   ref     = TmRef <$ reserve identStyle "ref"
   deref   = TmDeref <$ reserve identStyle "!"
   assign  = TmAssign <$ reserve identStyle "_:=_"
-  unit =
-    TmUnit
-      <$ (reserve identStyle "unit" <|> (() <$ try (symbol "(" *> symbol ")")))
+  unit   = TmUnit <$ reserve identStyle "unit"
   true   = TmTrue <$ reserve identStyle "true"
   false  = TmFalse <$ reserve identStyle "false"
   zero   = TmNat 0 <$ reserve identStyle "zero"
@@ -121,6 +120,12 @@ parseTermAtom =
   isZero = TmIsZero <$ reserve identStyle "isZero"
   new    = termNew <$ reserve identStyle "new"
   self   = termSelf <$ reserve identStyle "self"
+  tupleOrParen = (
+    \case
+        [] -> TmUnit
+        [t] -> t
+        l -> recordLiteral (zip (map show [1 :: Integer ..]) l)
+   ) <$> parens (parseTerm `sepBy` symbol ",")
 
 recordPair :: Parser (LabelName, Term)
 recordPair = do
