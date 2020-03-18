@@ -69,12 +69,12 @@ unitTests = testGroup
     (pTerm "{ l1 = ref unit } with { l2 = ref unit }")
     emptyStore
     (TmRcd (Map.fromList [("l1", TmLoc 0), ("l2", TmLoc 1)]))
-    (emptyStore `allocate'` TmUnit `allocate'` TmUnit)
+    (emptyStore `allocate'` termUnit `allocate'` termUnit)
   , testCase "bigStep record access 1" $ assertBigStep
     (pTerm "{ l1 = ref unit } with { l2 = unit }.l1")
     emptyStore
     (TmLoc 0)
-    (emptyStore `allocate'` TmUnit)
+    (emptyStore `allocate'` termUnit)
   , testCase "bigStep record access 2" $ assertBigStep
     (pTerm "{ l1 = unit } with { l2 = unit }.l2")
     emptyStore
@@ -94,12 +94,12 @@ unitTests = testGroup
     (pTerm "`l1 (ref unit)")
     emptyStore
     (TmApp (TmVariant "l1") (TmLoc 0))
-    (emptyStore `allocate'` TmUnit)
+    (emptyStore `allocate'` termUnit)
   , testCase "bigStep ref 1" $ assertBigStep
     (pTerm "ref unit")
     emptyStore
     (TmLoc 0)
-    (Store { storeData    = Map.fromList [(0, WithMark False TmUnit)]
+    (Store { storeData    = Map.fromList [(0, WithMark False termUnit)]
            , storeMinFree = 1
            }
     )
@@ -109,28 +109,28 @@ unitTests = testGroup
     (TmLoc 1)
     (Store
       { storeData    = Map.fromList
-        [(0, WithMark False TmUnit), (1, WithMark False (TmLoc 0))]
+        [(0, WithMark False termUnit), (1, WithMark False (TmLoc 0))]
       , storeMinFree = 2
       }
     )
   , testCase "bigStep deref" $ assertBigStep (pTerm "! (ref unit)")
                                              emptyStore
                                              (pTerm "unit")
-                                             (emptyStore `allocate'` TmUnit)
+                                             (emptyStore `allocate'` termUnit)
   , testCase "bigStep deref invalid location" $ assertBigStep
-    (TmSeq (TmApp TmRef TmUnit) (TmLoc 1))
+    (TmSeq (TmApp TmRef termUnit) (TmLoc 1))
     emptyStore
     (TmLoc 1)
-    (emptyStore `allocate'` TmUnit)
+    (emptyStore `allocate'` termUnit)
   , testCase "bigStep assign" $ assertBigStep
     (pTerm "(ref zero) := (\x3bb x . succ x) zero")
     emptyStore
     (pTerm "unit")
     (emptyStore `allocate'` pTerm "1")
   , testCase "bigStep assign invalid location" $ assertBigStep
-    (TmApp (TmApp TmAssign (TmLoc 0)) TmUnit)
+    (TmApp (TmApp TmAssign (TmLoc 0)) termUnit)
     emptyStore
-    (TmApp (TmApp TmAssign (TmLoc 0)) TmUnit)
+    (TmApp (TmApp TmAssign (TmLoc 0)) termUnit)
     emptyStore
   , testCase "bigStep unit"
     $ assertBigStep (pTerm "unit") emptyStore (pTerm "unit") emptyStore

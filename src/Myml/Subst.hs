@@ -44,8 +44,7 @@ substTerm' (TmVariant l) = return (TmVariant l)
 substTerm' TmRef         = return TmRef
 substTerm' TmDeref       = return TmDeref
 substTerm' TmAssign      = return TmAssign
-substTerm' (TmLoc n)     = return (TmLoc n)
-substTerm' TmUnit        = return TmUnit
+substTerm' (TmLoc n    ) = return (TmLoc n)
 substTerm' (TmSeq t1 t2) = TmSeq <$> substTerm' t1 <*> substTerm' t2
 substTerm' TmTrue        = return TmTrue
 substTerm' TmFalse       = return TmFalse
@@ -96,7 +95,6 @@ instance TypeSubst Type where
   substType' (TyMu x t     ) = handleTypeBind x (TySubProper . TyVar)
     >>= \(newX, inner) -> TyMu newX <$> inner (substType' t)
   substType' (TyRef t) = TyRef <$> substType' t
-  substType' TyUnit    = return TyUnit
   substType' TyBool    = return TyBool
   substType' TyNat     = return TyNat
 

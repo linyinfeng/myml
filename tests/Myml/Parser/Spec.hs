@@ -13,7 +13,7 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.SmallCheck         as SC
 import           Text.Trifecta           hiding ( Parser )
-import qualified Data.Map         as Map
+import qualified Data.Map                      as Map
 
 tests :: TestTree
 tests = testGroup "Myml.Parser.Spec" [scProps, unitTests]
@@ -24,10 +24,10 @@ scProps = testGroup
   [ localOption (SmallCheckDepth 2)
   $ SC.testProperty "parse (pretty term) == term"
   $ propPrintParse parseTerm
-  , localOption (SmallCheckDepth 2)
+  , localOption (SmallCheckDepth 3)
   $ SC.testProperty "parse (pretty type) == type"
   $ propPrintParse parseType
-  , localOption (SmallCheckDepth 2)
+  , localOption (SmallCheckDepth 3)
   $ SC.testProperty "parse (pretty kind) == kind"
   $ propPrintParse parseKind
   , localOption (SmallCheckDepth 3)
@@ -75,13 +75,10 @@ unitTests = testGroup
       )
       (TmApp (TmApp TmAssign (TmVar "x")) (TmRcdAccess (TmVar "x") "l"))
     )
-  , testCase "Tuple 0" $ testTermParser
-    "()"
-    TmUnit
-  , testCase "Tuple 1" $ testTermParser
-    "(x)"
-    (TmVar "x")
+  , testCase "Tuple 0" $ testTermParser "()" termUnit
+  , testCase "Tuple 1" $ testTermParser "(x)" (TmVar "x")
   , testCase "Tuple 3" $ testTermParser
     "(x, y, z)"
-    (TmRcd (Map.fromList [("1", TmVar "x"), ("2", TmVar "y"), ("3", TmVar "z")]))
+    (TmRcd (Map.fromList [("1", TmVar "x"), ("2", TmVar "y"), ("3", TmVar "z")])
+    )
   ]

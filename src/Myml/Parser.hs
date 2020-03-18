@@ -110,22 +110,23 @@ parseTermAtom =
   ref     = TmRef <$ reserve identStyle "ref"
   deref   = TmDeref <$ reserve identStyle "!"
   assign  = TmAssign <$ reserve identStyle "_:=_"
-  unit   = TmUnit <$ reserve identStyle "unit"
-  true   = TmTrue <$ reserve identStyle "true"
-  false  = TmFalse <$ reserve identStyle "false"
-  zero   = TmNat 0 <$ reserve identStyle "zero"
-  nat    = TmNat <$> natural
-  suc    = TmSucc <$ reserve identStyle "succ"
-  prd    = TmPred <$ reserve identStyle "pred"
-  isZero = TmIsZero <$ reserve identStyle "isZero"
-  new    = termNew <$ reserve identStyle "new"
-  self   = termSelf <$ reserve identStyle "self"
-  tupleOrParen = (
-    \case
-        [] -> TmUnit
+  unit    = termUnit <$ reserve identStyle "unit"
+  true    = TmTrue <$ reserve identStyle "true"
+  false   = TmFalse <$ reserve identStyle "false"
+  zero    = TmNat 0 <$ reserve identStyle "zero"
+  nat     = TmNat <$> natural
+  suc     = TmSucc <$ reserve identStyle "succ"
+  prd     = TmPred <$ reserve identStyle "pred"
+  isZero  = TmIsZero <$ reserve identStyle "isZero"
+  new     = termNew <$ reserve identStyle "new"
+  self    = termSelf <$ reserve identStyle "self"
+  tupleOrParen =
+    (\case
+        []  -> termUnit
         [t] -> t
-        l -> recordLiteral (zip (map show [1 :: Integer ..]) l)
-   ) <$> parens (parseTerm `sepBy` symbol ",")
+        l   -> recordLiteral (zip (map show [1 :: Integer ..]) l)
+      )
+      <$> parens (parseTerm `sepBy` symbol ",")
 
 recordPair :: Parser (LabelName, Term)
 recordPair = do
@@ -223,6 +224,7 @@ parseTypeRow parseLabel = rowEmpty <|> try pair <|> var <|> mu
   mu = do
     reserve identStyle "\x3bc" <|> reserve identStyle "Rec"
     x <- ident identStyle
+    _ <- symbol "."
     r <- parens (parseTypeRow parseLabel)
     return (RowMu x r)
 

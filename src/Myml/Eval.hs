@@ -64,7 +64,7 @@ smallStep (TmApp TmDeref (TmLoc l)) =
 smallStep (TmApp (TmApp TmAssign (TmLoc l)) v) | isValue v =
   gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
     Nothing -> throwError ExcNoRuleApplied
-    Just _  -> TmUnit <$ modify (fmap (\s -> assign s l v))
+    Just _  -> termUnit <$ modify (fmap (\s -> assign s l v))
 smallStep (TmApp TmSucc (TmNat n)) = return (TmNat (succ n))
 smallStep (TmApp TmPred (TmNat n)) =
   return (TmNat (if n == 0 then 0 else n - 1))

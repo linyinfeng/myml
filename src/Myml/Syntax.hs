@@ -17,6 +17,7 @@ module Myml.Syntax
   , matchLiteral
   , TermCase(..)
   , Type(..)
+  , pattern TyUnit
   , TypeRow(..)
   , TypePresence(..)
   , PresenceWithType(..)
@@ -47,6 +48,7 @@ module Myml.Syntax
   , mapDiffWithKind
   -- pretty print
   , prettyTypeRow
+  , prettyTypeRow'
   )
 where
 
@@ -77,7 +79,6 @@ data Term = TmAbs VarName Term
           | TmAssign
           | TmLoc Integer
           -- Sequence
-          | TmUnit
           | TmSeq Term Term
           -- Primitives
           -- Boolean
@@ -105,7 +106,7 @@ deriveTermClass (TermClass inherits rep body) = TmAbs
  where
   inheritsToLet ((t, x) : ps) inner = TmLet
     x
-    (TmApp (TmApp (TmApp t (TmVar rep)) (TmVar "self")) TmUnit)
+    (TmApp (TmApp (TmApp t (TmVar rep)) (TmVar "self")) termUnit)
     (inheritsToLet ps inner)
   inheritsToLet [] inner = inner
 
@@ -122,10 +123,10 @@ termZ = TmAbs "f" (TmApp half half)
 termNew :: Term
 termNew = TmAbs
   "k"
-  (TmAbs "r" (TmApp (TmApp termZ (TmApp (TmVar "k") (TmVar "r"))) TmUnit))
+  (TmAbs "r" (TmApp (TmApp termZ (TmApp (TmVar "k") (TmVar "r"))) termUnit))
 
 termSelf :: Term
-termSelf = TmApp (TmVar "self") TmUnit
+termSelf = TmApp (TmVar "self") termUnit
 
 termUnit :: Term
 termUnit = emptyRecord
@@ -154,17 +155,20 @@ instance Monad m => Serial m Term where
       \/ cons2 TmApp
       \/ cons0 (TmVar "x")
       \/ cons2 (TmLet "x")
-      \/ cons0 (TmRcd Map.empty)
+      \/ pure (TmRcd Map.empty) -- Unit
+      \/ cons1 (TmRcd . Map.singleton "l")
+      \/ cons2 (\a b -> TmRcd (Map.fromList [("l1", a), ("l2", b)]))
       \/ cons2 (\t1 t2 -> TmRcdExtend t1 "l" t2)
       \/ cons1 (flip TmRcdAccess "l")
       \/ cons0 (TmMatch Map.empty)
+      \/ cons1 (TmMatch . Map.singleton "l")
+      \/ cons2 (\a b -> TmMatch (Map.fromList [("l1", a), ("l2", b)]))
       \/ cons2 (\t c -> TmMatchExtend t "l" c)
       \/ cons0 (TmVariant "l")
       \/ cons0 TmRef
       \/ cons0 TmDeref
       \/ cons0 TmAssign
       -- do not generate location
-      \/ pure TmUnit -- no decDepth for TmUnit
       \/ cons2 TmSeq
       -- do not generate some primitives
       -- \/ cons0 TmTrue
@@ -188,10 +192,12 @@ data Type = TyVar VarName
           | TyMu VarName Type
           | TyRef Type
           -- Primitives
-          | TyUnit
           | TyBool
           | TyNat
           deriving (Eq, Show, Ord)
+
+pattern TyUnit :: Type
+pattern TyUnit = TyRecord RowEmpty
 
 instance Monad m => Serial m Type where
   series =
@@ -201,7 +207,6 @@ instance Monad m => Serial m Type where
       \/ cons1 TyVariant
       \/ cons1 (TyMu "X")
       \/ cons1 TyRef
-      \/ pure TyUnit -- no decDepth for TyUnit
       \/ cons0 TyBool
       \/ cons0 TyNat
 
@@ -290,7 +295,6 @@ isValue TmDeref                 = True
 isValue TmAssign                = True
 isValue TmLoc{}                 = True
 isValue TmSeq{}                 = False
-isValue TmUnit                  = True
 isValue TmTrue                  = True
 isValue TmFalse                 = True
 isValue TmIf{}                  = False
@@ -313,8 +317,7 @@ fvTerm (TmVariant _label          ) = Set.empty
 fvTerm TmRef                        = Set.empty
 fvTerm TmDeref                      = Set.empty
 fvTerm TmAssign                     = Set.empty
-fvTerm (TmLoc _loc)                 = Set.empty
-fvTerm TmUnit                       = Set.empty
+fvTerm (TmLoc _loc )                = Set.empty
 fvTerm (TmSeq t1 t2)                = fvTerm t1 `Set.union` fvTerm t2
 fvTerm TmTrue                       = Set.empty
 fvTerm TmFalse                      = Set.empty
@@ -374,7 +377,6 @@ fvType (TyRecord  row) = fvRow row
 fvType (TyVariant row) = fvRow row
 fvType (TyMu x t     ) = fvType t >>= mapDeleteWithKind x KProper
 fvType (TyRef t      ) = fvType t
-fvType TyUnit          = return Map.empty
 fvType TyBool          = return Map.empty
 fvType TyNat           = return Map.empty
 
@@ -451,8 +453,8 @@ instance PrettyPrec Term where
     (align (encloseSep open close separator fields'))
    where
     fields'   = map prettyPair (Map.toList fields)
-    open      = pretty "{ "
-    close     = pretty " }"
+    open      = flatAlt (pretty "{ ") (pretty "{")
+    close     = flatAlt (pretty " }") (pretty "}")
     separator = pretty ", "
     prettyPair (l, t) = pretty l <+> pretty '=' <+> prettyPrec 0 t
   prettyPrec n (TmRcdExtend t1 l t2) = parensPrec
@@ -478,8 +480,8 @@ instance PrettyPrec Term where
     (align (encloseSep open close separator cases'))
    where
     cases'    = map prettyPair (Map.toList cases)
-    open      = pretty "[ "
-    close     = pretty " ]"
+    open      = flatAlt (pretty "[ ") (pretty "[")
+    close     = flatAlt (pretty " ]") (pretty "]")
     separator = pretty ", "
     prettyPair (l, c) = prettyVariantLabel l <+> pretty c
   prettyPrec n (TmMatchExtend t l c) = parensPrec
@@ -500,8 +502,7 @@ instance PrettyPrec Term where
   prettyPrec _ TmRef         = pretty "ref"
   prettyPrec _ TmDeref       = pretty "!"
   prettyPrec _ TmAssign      = pretty "_:=_"
-  prettyPrec _ (TmLoc l)     = pretty "loc(" <> pretty l <> pretty ")"
-  prettyPrec _ TmUnit        = pretty "unit"
+  prettyPrec _ (TmLoc l    ) = pretty "loc(" <> pretty l <> pretty ")"
   prettyPrec n (TmSeq t1 t2) = parensPrec
     (n > prec)
     (  align (prettyPrec (prec + 1) t1)
@@ -554,20 +555,11 @@ instance PrettyPrec Type where
       )
     )
     where prec = 1
-  prettyPrec _ (TyRecord rows) = align
-    (group
-      (   pretty "{"
-      <+> prettyTypeRow (\l -> pretty l <+> pretty ":") rows
-      <+> pretty "}"
-      )
-    )
-  prettyPrec _ (TyVariant rows) = align
-    (group
-      (   pretty "["
-      <+> prettyTypeRow (\l -> prettyVariantLabel l <+> pretty ":") rows
-      <+> pretty "]"
-      )
-    )
+  prettyPrec _ (TyRecord rows) =
+    prettyTypeRow "{" "}" (\l -> pretty l <+> pretty ":") rows
+
+  prettyPrec _ (TyVariant rows) =
+    prettyTypeRow "[" "]" (\l -> prettyVariantLabel l <+> pretty ":") rows
   prettyPrec n (TyMu x t) = parensPrec
     (n > prec)
     (pretty "\x3bc" <+> pretty x <+> pretty '.' <+> prettyPrec prec t)
@@ -575,18 +567,25 @@ instance PrettyPrec Type where
   prettyPrec n (TyRef t) = parensPrec (n > prec)
                                       (pretty "Ref" <+> prettyPrec prec t)
     where prec = 2
-  prettyPrec _ TyUnit = pretty "Unit"
   prettyPrec _ TyBool = pretty "Bool"
   prettyPrec _ TyNat  = pretty "Nat"
 
-prettyTypeRow :: (LabelName -> Doc ann) -> TypeRow -> Doc ann
-prettyTypeRow _ RowEmpty   = pretty "\xb7" -- ·
-prettyTypeRow _ (RowVar x) = pretty x
-prettyTypeRow label (RowPresence l p r) =
-  label l <+> pretty p <> line' <> pretty ',' <+> prettyTypeRow label r
-prettyTypeRow label (RowMu x r) =
+prettyTypeRow
+  :: String -> String -> (LabelName -> Doc ann) -> TypeRow -> Doc ann
+prettyTypeRow open close label row = align
+  (group (open' <> prettyTypeRow' label row <> close'))
+ where
+  open'  = flatAlt (pretty (open ++ " ")) (pretty open)
+  close' = flatAlt (pretty (" " ++ close)) (pretty close)
+
+prettyTypeRow' :: (LabelName -> Doc ann) -> TypeRow -> Doc ann
+prettyTypeRow' _ RowEmpty   = pretty "\xb7" -- ·
+prettyTypeRow' _ (RowVar x) = pretty x
+prettyTypeRow' label (RowPresence l p r) =
+  label l <+> pretty p <> line' <> pretty ',' <+> prettyTypeRow' label r
+prettyTypeRow' label (RowMu x r) =
   pretty '\x3bc' <+> pretty x <+> pretty '.' <+> align
-    (group (pretty "(" <+> prettyTypeRow label r <+> pretty ")"))
+    (group (pretty "(" <+> prettyTypeRow' label r <+> pretty ")"))
 
 instance Pretty TypePresence where
   pretty Absent                    = pretty "Absent"
@@ -614,12 +613,7 @@ instance Pretty TypeSubstitutor where
   pretty (TySubProper           t) = pretty t
   pretty (TySubPresenceWithType p) = pretty p
   pretty (TySubPresence         p) = pretty p
-  pretty (TySubRow              r) = align
-    (group
-      (pretty "(" <+> prettyTypeRow (\l -> pretty l <+> pretty ":") r <+> pretty
-        ")"
-      )
-    )
+  pretty (TySubRow r) = prettyTypeRow "(" ")" (\l -> pretty l <+> pretty ":") r
 
 instance Pretty Kind where
   pretty = prettyPrec 0
@@ -678,16 +672,7 @@ instance Show Error where
     printf "can not handle recursive type here \"%s\"" (showPretty t)
   show (ErrCanNotHandleMuRow r) = printf
     "can not handle recursive row here \"%s\""
-    (show
-      (align
-        (group
-          (   pretty "("
-          <+> prettyTypeRow (\l -> pretty l <+> pretty ":") r
-          <+> pretty ")"
-          )
-        )
-      )
-    )
+    (show (prettyTypeRow "(" ")" (\l -> pretty l <+> pretty ":") r))
   show (ErrImperativeFeaturesDisabled t) = printf
     "imperative features disabled, can not type term \"%s\""
     (showPretty t)

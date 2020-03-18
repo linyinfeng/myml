@@ -190,7 +190,6 @@ infer (TmLoc _    ) = throwError ErrStoreTypingNotImplemented
 infer (TmSeq t1 t2) = do
   _ <- infer t1
   infer t2
-infer TmUnit          = return TyUnit
 infer TmTrue          = return TyBool
 infer TmFalse         = return TyBool
 infer (TmIf t1 t2 t3) = do
@@ -242,7 +241,6 @@ instantiateType (TyMu x t   ) = do
   unifyProper (TyVar x) t'
   return (TyVar x)
 instantiateType (TyRef t) = TyRef <$> instantiateType t
-instantiateType TyUnit    = return TyUnit
 instantiateType TyBool    = return TyBool
 instantiateType TyNat     = return TyNat
 
@@ -307,7 +305,6 @@ dangerousVariable = fvType -- traditional value restriction
 --         then freeVariable t -- x included in dangerous variables
 --         else dt
 -- dangerousVariable (TyRef t) = freeVariable t
--- dangerousVariable TyUnit    = Set.empty
 -- dangerousVariable TyBool    = Set.empty
 -- dangerousVariable TyNat     = Set.empty
 
@@ -383,7 +380,6 @@ unifyProper' (TyArrow t11 t12) (TyArrow t21 t22) =
 unifyProper' (TyRecord  r1) (TyRecord  r2) = unifyRow r1 r2
 unifyProper' (TyVariant r1) (TyVariant r2) = unifyRow r1 r2
 unifyProper' (TyRef     t1) (TyRef     t2) = unifyProper t1 t2
-unifyProper' TyUnit         TyUnit         = return ()
 unifyProper' TyBool         TyBool         = return ()
 unifyProper' TyNat          TyNat          = return ()
 unifyProper' t1 t2 =
@@ -494,7 +490,6 @@ describeProper allowMu ctx (TyRecord row) =
 describeProper allowMu ctx (TyVariant row) =
   TyVariant <$> describeRow allowMu ctx row
 describeProper allowMu ctx (TyRef t)  = TyRef <$> describeProper allowMu ctx t
-describeProper _       _   TyUnit     = return TyUnit
 describeProper _       _   TyBool     = return TyBool
 describeProper _       _   TyNat      = return TyNat
 describeProper allowMu ctx (TyMu x t) = if allowMu
@@ -558,7 +553,6 @@ describeRow allowMu ctx (RowMu x r) = if allowMu
 -- regTreeEq t1 t2 = gets (Set.member (t1, t2)) >>= \case
 --   True  -> return ()
 --   False -> modify (Set.insert (t1, t2)) >> case (t1, t2) of
---     (TyUnit, TyUnit) -> return ()
 --     (TyBool, TyBool) -> return ()
 --     (TyNat , TyNat ) -> return ()
 --     (TyArrow t11 t12, TyArrow t21 t22) ->
