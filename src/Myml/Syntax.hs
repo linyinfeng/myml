@@ -63,7 +63,7 @@ data Term = TmAbs VarName Term
           -- Polymorphic variants
           | TmMatch (Map.Map LabelName TermCase)
           | TmMatchExtend Term LabelName TermCase
-          | TmVariant LabelName Term
+          | TmVariant LabelName
           -- Reference
           | TmRef
           | TmDeref
@@ -135,7 +135,7 @@ instance Monad m => Serial m Term where
       \/ cons1 (TmMatch . Map.singleton "l")
       \/ cons2 (\c1 c2 -> TmMatch (Map.fromList [("l1", c1), ("l2", c2)]))
       \/ cons2 (\t c -> TmMatchExtend t "l" c)
-      \/ cons1 (TmVariant "l")
+      \/ cons0 (TmVariant "l")
       \/ cons0 TmRef
       \/ cons0 TmDeref
       \/ cons2 TmAssign
@@ -249,29 +249,30 @@ instance Monad m => Serial m Kind where
   series = pure KProper \/ cons0 KPresence \/ cons0 KRow \/ cons2 KArrow
 
 isValue :: Term -> Bool
-isValue TmVar{}         = False
-isValue TmAbs{}         = True
-isValue TmApp{}         = False
-isValue TmLet{}         = False
-isValue (TmRcd m)       = Map.foldl (\a b -> a && isValue b) True m
-isValue TmRcdExtend{}   = False
-isValue TmRcdAccess{}   = False
-isValue TmMatch{}       = True
-isValue TmMatchExtend{} = False
-isValue (TmVariant _ t) = isValue t
-isValue TmRef           = True
-isValue TmDeref         = True
-isValue TmAssign{}      = False
-isValue TmLoc{}         = True
-isValue TmSeq{}         = False
-isValue TmUnit          = True
-isValue TmTrue          = True
-isValue TmFalse         = True
-isValue TmIf{}          = False
-isValue TmNat{}         = True
-isValue TmSucc          = True
-isValue TmPred          = True
-isValue TmIsZero        = True
+isValue (TmApp (TmVariant _) t) = isValue t
+isValue TmApp{}                 = False
+isValue TmVar{}                 = False
+isValue TmAbs{}                 = True
+isValue TmLet{}                 = False
+isValue (TmRcd m)               = Map.foldl (\a b -> a && isValue b) True m
+isValue TmRcdExtend{}           = False
+isValue TmRcdAccess{}           = False
+isValue TmMatch{}               = True
+isValue TmMatchExtend{}         = False
+isValue TmVariant{}             = True
+isValue TmRef                   = True
+isValue TmDeref                 = True
+isValue TmAssign{}              = False
+isValue TmLoc{}                 = True
+isValue TmSeq{}                 = False
+isValue TmUnit                  = True
+isValue TmTrue                  = True
+isValue TmFalse                 = True
+isValue TmIf{}                  = False
+isValue TmNat{}                 = True
+isValue TmSucc                  = True
+isValue TmPred                  = True
+isValue TmIsZero                = True
 
 fvTerm :: Term -> Set.Set VarName
 fvTerm (TmVar x                   ) = Set.singleton x
@@ -283,7 +284,7 @@ fvTerm (TmRcdExtend t1 _label t2  ) = fvTerm t1 `Set.union` fvTerm t2
 fvTerm (TmRcdAccess t _label      ) = fvTerm t
 fvTerm (TmMatch m) = Map.foldl (\a b -> a `Set.union` fvCase b) Set.empty m
 fvTerm (TmMatchExtend t1 _label c2) = fvTerm t1 `Set.union` fvCase c2
-fvTerm (TmVariant _label t        ) = fvTerm t
+fvTerm (TmVariant _label          ) = Set.empty
 fvTerm TmRef                        = Set.empty
 fvTerm TmDeref                      = Set.empty
 fvTerm (TmAssign t1 t2)             = fvTerm t1 `Set.union` fvTerm t2
@@ -470,10 +471,7 @@ instance PrettyPrec Term where
       )
     )
     where prec = 5
-  prettyPrec n (TmVariant l t) = parensPrec
-    (n > prec)
-    (align (prettyVariantLabel l <> softline <> prettyPrec prec t))
-    where prec = 4
+  prettyPrec _ (TmVariant l)    = prettyVariantLabel l
   prettyPrec _ TmRef            = pretty "ref"
   prettyPrec _ TmDeref          = pretty "!"
   prettyPrec n (TmAssign t1 t2) = parensPrec
@@ -570,7 +568,7 @@ prettyTypeRow :: (LabelName -> Doc ann) -> TypeRow -> Doc ann
 prettyTypeRow _ RowEmpty   = pretty "\xb7" -- ·
 prettyTypeRow _ (RowVar x) = pretty x
 prettyTypeRow label (RowPresence l p r) =
-  label l <+> pretty p <> line <> pretty ',' <+> prettyTypeRow label r
+  label l <+> pretty p <> line' <> pretty ',' <+> prettyTypeRow label r
 prettyTypeRow label (RowMu x r) =
   pretty '\x3bc' <+> pretty x <+> pretty '.' <+> align
     (group (pretty "(" <+> prettyTypeRow label r <+> pretty ")"))

@@ -90,10 +90,11 @@ unitTests = testGroup
     emptyStore
     (pTerm "[ `l1 x -> x, `l2 y -> y, `l3 z -> z ]")
     emptyStore
-  , testCase "bigStep variant" $ assertBigStep (pTerm "`l1 (ref unit)")
-                                               emptyStore
-                                               (TmVariant "l1" (TmLoc 0))
-                                               (emptyStore `allocate'` TmUnit)
+  , testCase "bigStep variant" $ assertBigStep
+    (pTerm "`l1 (ref unit)")
+    emptyStore
+    (TmApp (TmVariant "l1") (TmLoc 0))
+    (emptyStore `allocate'` TmUnit)
   , testCase "bigStep ref 1" $ assertBigStep
     (pTerm "ref unit")
     emptyStore

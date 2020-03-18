@@ -40,7 +40,7 @@ substTerm' (TmRcdAccess t l) = flip TmRcdAccess l <$> substTerm' t
 substTerm' (TmMatch m      ) = TmMatch <$> sequence (Map.map substTermCase' m)
 substTerm' (TmMatchExtend t l c) =
   flip TmMatchExtend l <$> substTerm' t <*> substTermCase' c
-substTerm' (TmVariant l t)  = TmVariant l <$> substTerm' t
+substTerm' (TmVariant l)    = return (TmVariant l)
 substTerm' TmRef            = return TmRef
 substTerm' TmDeref          = return TmDeref
 substTerm' (TmAssign t1 t2) = TmAssign <$> substTerm' t1 <*> substTerm' t2

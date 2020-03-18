@@ -26,7 +26,6 @@ parseTerm = buildExpressionParser termOperatorTable parseTermAtom <?> "term"
 termOperatorTable :: OperatorTable Parser Term
 termOperatorTable =
   [ [Postfix (chainedPostfix (opRcdAccess <|> opRcdExtend <|> opMatchExtend))]
-  , [Prefix (chainedPrefix opVariant)]
   , [Infix opApp AssocLeft]
   , [Infix opAssign AssocNone]
   , [Infix opSeq AssocRight]
@@ -54,7 +53,6 @@ termOperatorTable =
     reserve identStyle "in"
     return (TmLet x (foldr TmAbs t params))
   opApp       = return TmApp
-  opVariant   = TmVariant <$> variantLabel
   opRcdAccess = flip TmRcdAccess <$> (symbol "." *> ident identStyle)
   opRcdExtend = do
     try $ reserve identStyle "with" <* symbol "{"
@@ -85,6 +83,7 @@ parseTermAtom :: Parser Term
 parseTermAtom =
   (   rcd
     <|> match
+    <|> variant
     <|> ref
     <|> deref
     <|> unit
@@ -102,11 +101,12 @@ parseTermAtom =
     )
     <?> "termAtom"
  where
-  var   = TmVar <$> ident identStyle
-  rcd   = TmRcd . Map.fromList <$> braces (recordPair `sepBy` symbol ",")
-  match = TmMatch . Map.fromList <$> brackets (matchPair `sepBy` symbol ",")
-  ref   = TmRef <$ reserve identStyle "ref"
-  deref = TmDeref <$ reserve identStyle "!"
+  var     = TmVar <$> ident identStyle
+  rcd     = TmRcd . Map.fromList <$> braces (recordPair `sepBy` symbol ",")
+  match   = TmMatch . Map.fromList <$> brackets (matchPair `sepBy` symbol ",")
+  variant = TmVariant <$> variantLabel
+  ref     = TmRef <$ reserve identStyle "ref"
+  deref   = TmDeref <$ reserve identStyle "!"
   unit =
     TmUnit
       <$ (reserve identStyle "unit" <|> (() <$ try (symbol "(" *> symbol ")")))

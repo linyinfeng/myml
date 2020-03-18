@@ -155,10 +155,21 @@ infer (TmMatchExtend t1 l (TmCase x t2)) = do
   p2 <- newVar innerVarPrefix
   return
     (TyArrow (TyVariant (RowPresence l (PresenceVarWithType p2 tyX) r)) ty2)
-infer (TmVariant l t) = do
-  ty <- infer t
-  r  <- RowVar <$> newVar innerVarPrefix
-  return (TyVariant (RowPresence l (Present ty) r))
+infer (TmVariant l) = instantiate
+  (ScmForall
+    "a"
+    KProper
+    (ScmForall
+      "r"
+      KRow
+      (ScmMono
+        (TyArrow
+          (TyVar "a")
+          (TyVariant (RowPresence l (Present (TyVar "a")) (RowVar "r")))
+        )
+      )
+    )
+  )
 infer TmRef = do
   checkImperativeFeaturesEnabled TmRef
   instantiate
