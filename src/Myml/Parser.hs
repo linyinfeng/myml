@@ -64,7 +64,7 @@ termOperatorTable =
     pairs <- matchPair `sepBy` symbol ","
     _     <- symbol "]"
     return (\t -> foldl (\inner (l, c) -> TmMatchExtend inner l c) t pairs)
-  opAssign = TmAssign <$ reserve identStyle ":="
+  opAssign = (\a b -> TmApp (TmApp TmAssign a) b) <$ reserve identStyle ":="
   opSeq    = TmSeq <$ try (symbol ";" <* notFollowedBy (char ';'))
   opClass  = do
     reserve identStyle "class"
@@ -86,6 +86,7 @@ parseTermAtom =
     <|> variant
     <|> ref
     <|> deref
+    <|> assign
     <|> unit
     <|> true
     <|> false
@@ -107,6 +108,7 @@ parseTermAtom =
   variant = TmVariant <$> variantLabel
   ref     = TmRef <$ reserve identStyle "ref"
   deref   = TmDeref <$ reserve identStyle "!"
+  assign  = TmAssign <$ reserve identStyle "_:=_"
   unit =
     TmUnit
       <$ (reserve identStyle "unit" <|> (() <$ try (symbol "(" *> symbol ")")))

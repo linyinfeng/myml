@@ -178,12 +178,14 @@ infer TmDeref = do
   checkImperativeFeaturesEnabled TmDeref
   instantiate
     (ScmForall "a" KProper (ScmMono (TyArrow (TyRef (TyVar "a")) (TyVar "a"))))
-infer (TmAssign t1 t2) = do
-  checkImperativeFeaturesEnabled (TmAssign t1 t2)
-  ty1 <- infer t1
-  ty2 <- infer t2
-  unifyProper ty1 (TyRef ty2)
-  return TyUnit
+infer TmAssign = do
+  checkImperativeFeaturesEnabled TmAssign
+  instantiate
+    (ScmForall
+      "a"
+      KProper
+      (ScmMono (TyArrow (TyRef (TyVar "a")) (TyArrow (TyVar "a") TyUnit)))
+    )
 infer (TmLoc _    ) = throwError ErrStoreTypingNotImplemented
 infer (TmSeq t1 t2) = do
   _ <- infer t1

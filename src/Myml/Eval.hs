@@ -61,6 +61,10 @@ smallStep (TmApp TmDeref (TmLoc l)) =
   gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
     Nothing -> throwError ExcNoRuleApplied
     Just v  -> return v
+smallStep (TmApp (TmApp TmAssign (TmLoc l)) v) | isValue v =
+  gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
+    Nothing -> throwError ExcNoRuleApplied
+    Just _  -> TmUnit <$ modify (fmap (\s -> assign s l v))
 smallStep (TmApp TmSucc (TmNat n)) = return (TmNat (succ n))
 smallStep (TmApp TmPred (TmNat n)) =
   return (TmNat (if n == 0 then 0 else n - 1))
@@ -86,18 +90,12 @@ smallStep (TmRcdExtend t1 l t2) =
 smallStep (TmRcdAccess (TmRcd m) l) = case Map.lookup l m of
   Nothing    -> throwError ExcNoRuleApplied
   Just inner -> return inner
-smallStep (TmRcdAccess t l) = flip TmRcdAccess l <$> smallStep t
+smallStep (TmRcdAccess t l              ) = flip TmRcdAccess l <$> smallStep t
 smallStep (TmMatchExtend (TmMatch m) l c) = return (TmMatch (Map.insert l c m))
 smallStep (TmMatchExtend t l c) = (\t' -> TmMatchExtend t' l c) <$> smallStep t
-smallStep (TmAssign (TmLoc l) v) | isValue v =
-  gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
-    Nothing -> throwError ExcNoRuleApplied
-    Just _  -> TmUnit <$ modify (fmap (\s -> assign s l v))
-smallStep (TmAssign v1 t2) | isValue v1 = TmAssign v1 <$> smallStep t2
-smallStep (TmAssign t1 t2)              = flip TmAssign t2 <$> smallStep t1
-smallStep (TmSeq v1 t2) | isValue v1    = return t2
-smallStep (TmSeq t1 t2       )          = flip TmSeq t2 <$> smallStep t1
-smallStep (TmIf TmTrue  t2 _ )          = return t2
-smallStep (TmIf TmFalse _  t3)          = return t3
+smallStep (TmSeq v1 t2) | isValue v1      = return t2
+smallStep (TmSeq t1 t2       )            = flip TmSeq t2 <$> smallStep t1
+smallStep (TmIf TmTrue  t2 _ )            = return t2
+smallStep (TmIf TmFalse _  t3)            = return t3
 smallStep (TmIf t1 t2 t3) = (\t1' -> TmIf t1' t2 t3) <$> smallStep t1
-smallStep _                             = throwError ExcNoRuleApplied
+smallStep _                               = throwError ExcNoRuleApplied

@@ -40,15 +40,15 @@ substTerm' (TmRcdAccess t l) = flip TmRcdAccess l <$> substTerm' t
 substTerm' (TmMatch m      ) = TmMatch <$> sequence (Map.map substTermCase' m)
 substTerm' (TmMatchExtend t l c) =
   flip TmMatchExtend l <$> substTerm' t <*> substTermCase' c
-substTerm' (TmVariant l)    = return (TmVariant l)
-substTerm' TmRef            = return TmRef
-substTerm' TmDeref          = return TmDeref
-substTerm' (TmAssign t1 t2) = TmAssign <$> substTerm' t1 <*> substTerm' t2
-substTerm' (TmLoc n       ) = return (TmLoc n)
-substTerm' TmUnit           = return TmUnit
-substTerm' (TmSeq t1 t2)    = TmSeq <$> substTerm' t1 <*> substTerm' t2
-substTerm' TmTrue           = return TmTrue
-substTerm' TmFalse          = return TmFalse
+substTerm' (TmVariant l) = return (TmVariant l)
+substTerm' TmRef         = return TmRef
+substTerm' TmDeref       = return TmDeref
+substTerm' TmAssign      = return TmAssign
+substTerm' (TmLoc n)     = return (TmLoc n)
+substTerm' TmUnit        = return TmUnit
+substTerm' (TmSeq t1 t2) = TmSeq <$> substTerm' t1 <*> substTerm' t2
+substTerm' TmTrue        = return TmTrue
+substTerm' TmFalse       = return TmFalse
 substTerm' (TmIf t1 t2 t3) =
   TmIf <$> substTerm' t1 <*> substTerm' t2 <*> substTerm' t3
 substTerm' (TmNat n) = return (TmNat n)

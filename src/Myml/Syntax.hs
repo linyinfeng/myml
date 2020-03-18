@@ -67,7 +67,7 @@ data Term = TmAbs VarName Term
           -- Reference
           | TmRef
           | TmDeref
-          | TmAssign Term Term
+          | TmAssign
           | TmLoc Integer
           -- Sequence
           | TmUnit
@@ -138,7 +138,7 @@ instance Monad m => Serial m Term where
       \/ cons0 (TmVariant "l")
       \/ cons0 TmRef
       \/ cons0 TmDeref
-      \/ cons2 TmAssign
+      \/ cons0 TmAssign
       -- do not generate location
       \/ pure TmUnit -- no decDepth for TmUnit
       \/ cons2 TmSeq
@@ -250,6 +250,7 @@ instance Monad m => Serial m Kind where
 
 isValue :: Term -> Bool
 isValue (TmApp (TmVariant _) t) = isValue t
+isValue (TmApp TmAssign      t) = isValue t
 isValue TmApp{}                 = False
 isValue TmVar{}                 = False
 isValue TmAbs{}                 = True
@@ -262,7 +263,7 @@ isValue TmMatchExtend{}         = False
 isValue TmVariant{}             = True
 isValue TmRef                   = True
 isValue TmDeref                 = True
-isValue TmAssign{}              = False
+isValue TmAssign                = True
 isValue TmLoc{}                 = True
 isValue TmSeq{}                 = False
 isValue TmUnit                  = True
@@ -287,8 +288,8 @@ fvTerm (TmMatchExtend t1 _label c2) = fvTerm t1 `Set.union` fvCase c2
 fvTerm (TmVariant _label          ) = Set.empty
 fvTerm TmRef                        = Set.empty
 fvTerm TmDeref                      = Set.empty
-fvTerm (TmAssign t1 t2)             = fvTerm t1 `Set.union` fvTerm t2
-fvTerm (TmLoc _loc    )             = Set.empty
+fvTerm TmAssign                     = Set.empty
+fvTerm (TmLoc _loc)                 = Set.empty
 fvTerm TmUnit                       = Set.empty
 fvTerm (TmSeq t1 t2)                = fvTerm t1 `Set.union` fvTerm t2
 fvTerm TmTrue                       = Set.empty
@@ -471,20 +472,10 @@ instance PrettyPrec Term where
       )
     )
     where prec = 5
-  prettyPrec _ (TmVariant l)    = prettyVariantLabel l
-  prettyPrec _ TmRef            = pretty "ref"
-  prettyPrec _ TmDeref          = pretty "!"
-  prettyPrec n (TmAssign t1 t2) = parensPrec
-    (n > prec)
-    (hang
-      indentSpace
-      (   prettyPrec (prec + 1) t1
-      <+> pretty ":="
-      <>  softline
-      <>  prettyPrec (prec + 1) t2
-      )
-    )
-    where prec = 2
+  prettyPrec _ (TmVariant l) = prettyVariantLabel l
+  prettyPrec _ TmRef         = pretty "ref"
+  prettyPrec _ TmDeref       = pretty "!"
+  prettyPrec _ TmAssign      = pretty "_:=_"
   prettyPrec _ (TmLoc l)     = pretty "loc(" <> pretty l <> pretty ")"
   prettyPrec _ TmUnit        = pretty "unit"
   prettyPrec n (TmSeq t1 t2) = parensPrec

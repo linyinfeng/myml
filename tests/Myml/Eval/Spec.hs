@@ -128,9 +128,9 @@ unitTests = testGroup
     (pTerm "unit")
     (emptyStore `allocate'` pTerm "1")
   , testCase "bigStep assign invalid location" $ assertBigStep
-    (TmAssign (TmLoc 0) TmUnit)
+    (TmApp (TmApp TmAssign (TmLoc 0)) TmUnit)
     emptyStore
-    (TmAssign (TmLoc 0) TmUnit)
+    (TmApp (TmApp TmAssign (TmLoc 0)) TmUnit)
     emptyStore
   , testCase "bigStep unit"
     $ assertBigStep (pTerm "unit") emptyStore (pTerm "unit") emptyStore

@@ -117,8 +117,8 @@ instance Locations Term where
   locations (TmVariant _        ) = Set.empty
   locations TmRef                 = Set.empty
   locations TmDeref               = Set.empty
-  locations (TmAssign t1 t2)      = locations t1 `Set.union` locations t2
-  locations (TmLoc l       )      = Set.singleton l
+  locations TmAssign              = Set.empty
+  locations (TmLoc l)             = Set.singleton l
   locations TmUnit                = Set.empty
   locations (TmSeq t1 t2)         = locations t1 `Set.union` locations t2
   locations TmTrue                = Set.empty

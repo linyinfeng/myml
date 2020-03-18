@@ -55,6 +55,7 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
     , "*"
     , "`"
     , ":="
+    , "_:=_"
     , "!"
     , "\x3bb"
     , "\x3bc"

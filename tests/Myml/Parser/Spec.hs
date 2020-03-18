@@ -60,4 +60,18 @@ unitTests = testGroup
   , testCase "Abstraction in application 2" $ testTermParser
     "(\x3bb x . x) x"
     (TmApp (TmAbs "x" (TmVar "x")) (TmVar "x"))
+  , testCase "Assignment in abstraction" $ testTermParser
+    "\x3bb x . x := x"
+    (TmAbs "x" (TmApp (TmApp TmAssign (TmVar "x")) (TmVar "x")))
+  , testCase "Assignment in let" $ testTermParser
+    "let x = x in x := x"
+    (TmLet "x" (TmVar "x") (TmApp (TmApp TmAssign (TmVar "x")) (TmVar "x")))
+  , testCase "Application and record in assignment" $ testTermParser
+    "x x := x x; x := x.l"
+    (TmSeq
+      (TmApp (TmApp TmAssign (TmApp (TmVar "x") (TmVar "x")))
+             (TmApp (TmVar "x") (TmVar "x"))
+      )
+      (TmApp (TmApp TmAssign (TmVar "x")) (TmRcdAccess (TmVar "x") "l"))
+    )
   ]
