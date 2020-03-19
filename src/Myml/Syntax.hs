@@ -515,7 +515,7 @@ instance PrettyPrec Term where
   prettyPrec _ TmSucc        = pretty "succ"
   prettyPrec _ TmPred        = pretty "pred"
   prettyPrec _ TmIsZero      = pretty "isZero"
-  prettyPrec _ (TmChar c)    = pretty '\'' <> pretty c <> pretty '\''
+  prettyPrec _ (TmChar c)    = pretty (show c)
   prettyPrec _ TmPutChar     = pretty "putChar#"
   prettyPrec _ TmGetChar     = pretty "getChar#"
   prettyPrec _ TmCompareChar = pretty "compareChar#"
