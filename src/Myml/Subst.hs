@@ -13,10 +13,7 @@ import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set
 import           Control.Monad.Reader
 import           Control.Monad.Except
-import           Data.Maybe                     ( fromMaybe
-                                                , fromJust
-                                                )
-import           Data.List                      ( find )
+import           Data.Maybe                     ( fromMaybe )
 import           Data.Text.Prettyprint.Doc
 
 substTerm :: Map.Map VarName Term -> Term -> Term
@@ -172,10 +169,6 @@ handleTermBind x = do
         let newX = uniqueName fvS x
         in  (newX, local (`compositeTermSubst` Map.singleton x (TmVar newX)))
     )
-
-uniqueName :: Set.Set VarName -> VarName -> VarName
-uniqueName sv base = fromJust
-  (find (`Set.notMember` sv) (map (\i -> base ++ show i) [(0 :: Integer) ..]))
 
 handleTypeBind
   :: VarName

@@ -10,6 +10,8 @@ module Myml.Syntax
   , termNew
   , termSelf
   , termSeq
+  , termWildcardAbs
+  , uniqueName
   , pattern TmUnit
   , recordExtends
   , matchExtends
@@ -51,6 +53,8 @@ module Myml.Syntax
   )
 where
 
+import           Data.Maybe                     ( fromJust )
+import           Data.List                      ( find )
 import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set
 import           Text.Printf
@@ -106,7 +110,7 @@ data TermClass = TermClass {
 deriveTermClass :: TermClass -> Term
 deriveTermClass (TermClass inherits rep body) = TmAbs
   rep
-  (TmAbs "self" (TmAbs "_" (inheritsToLet inherits body)))
+  (TmAbs "self" (termWildcardAbs (inheritsToLet inherits body)))
  where
   inheritsToLet ((t, x) : ps) inner = TmLet
     x
@@ -138,7 +142,16 @@ termSelf :: Term
 termSelf = TmApp (TmVar "self") TmUnit
 
 termSeq :: Term -> Term -> Term
-termSeq t1 t2 = (TmApp (TmAbs "_" t2) t1)
+termSeq t1 t2 = TmApp (termWildcardAbs t2) t1
+
+termWildcardAbs :: Term -> Term
+termWildcardAbs t = TmAbs (uniqueName (fvTerm t) "_") t
+
+uniqueName :: Set.Set VarName -> VarName -> VarName
+uniqueName sv base = fromJust
+  (find (`Set.notMember` sv)
+        (base : map (\i -> base ++ show i) [(1 :: Integer) ..])
+  )
 
 pattern TmUnit :: Term
 pattern TmUnit = TmEmptyRcd

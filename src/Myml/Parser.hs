@@ -44,7 +44,8 @@ termOperatorTable =
     reserve identStyle "\x3bb" <|> reserve identStyle "\\"
     xs <- some (ident identStyle)
     _  <- symbol "."
-    return (\t -> foldr TmAbs t xs)
+    return
+      (\t -> foldr (\x -> if x == "_" then termWildcardAbs else TmAbs x) t xs)
   opLet = do
     reserve identStyle "let"
     x      <- ident identStyle
