@@ -100,6 +100,11 @@ parseTermAtom =
     <|> isZero
     <|> new
     <|> self
+    <|> charLit
+    <|> getCharSharp
+    <|> putCharSharp
+    <|> compareCharSharp
+    <|> stringLit
     <|> var
     <|> tupleOrParen
     )
@@ -112,19 +117,24 @@ parseTermAtom =
   extend  = reserve identStyle "extend"
     *> parens (TmMatchExtend <$> variantLabel <|> TmRcdExtend <$> recordLabel)
   access = TmRcdAccess <$> (reserve identStyle "access" *> parens recordLabel)
-  ref    = TmRef <$ reserve identStyle "ref"
-  deref  = TmDeref <$ reserve identStyle "!"
-  assign = TmAssign <$ reserve identStyle "_:=_"
-  unit   = TmUnit <$ reserve identStyle "unit"
-  true   = TmTrue <$ reserve identStyle "true"
-  false  = TmFalse <$ reserve identStyle "false"
-  zero   = TmNat 0 <$ reserve identStyle "zero"
-  nat    = TmNat <$> natural
-  suc    = TmSucc <$ reserve identStyle "succ"
-  prd    = TmPred <$ reserve identStyle "pred"
-  isZero = TmIsZero <$ reserve identStyle "isZero"
-  new    = termNew <$ reserve identStyle "new"
-  self   = termSelf <$ reserve identStyle "self"
+  ref              = TmRef <$ reserve identStyle "ref"
+  deref            = TmDeref <$ reserve identStyle "!"
+  assign           = TmAssign <$ reserve identStyle "_:=_"
+  unit             = TmUnit <$ reserve identStyle "unit"
+  true             = TmTrue <$ reserve identStyle "true"
+  false            = TmFalse <$ reserve identStyle "false"
+  zero             = TmNat 0 <$ reserve identStyle "zero"
+  nat              = TmNat <$> natural
+  suc              = TmSucc <$ reserve identStyle "succ"
+  prd              = TmPred <$ reserve identStyle "pred"
+  isZero           = TmIsZero <$ reserve identStyle "isZero"
+  new              = termNew <$ reserve identStyle "new"
+  charLit          = TmChar <$> charLiteral
+  getCharSharp     = TmGetChar <$ reserve identStyle "getChar#"
+  putCharSharp     = TmPutChar <$ reserve identStyle "putChar#"
+  compareCharSharp = TmCompareChar <$ reserve identStyle "compareChar#"
+  stringLit        = deriveString <$> stringLiteral
+  self             = termSelf <$ reserve identStyle "self"
   tupleOrParen =
     (\case
         []  -> TmUnit

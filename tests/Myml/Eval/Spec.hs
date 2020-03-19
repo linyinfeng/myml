@@ -17,7 +17,8 @@ tests = testGroup "Myml.Eval.Spec" [unitTests]
 
 assertBigStep
   :: Term -> Store (WithMark Term) -> Term -> Store (WithMark Term) -> Assertion
-assertBigStep t1 s1 t2 s2 = runState (bigStep t1) (Just s1) @?= (t2, (Just s2))
+assertBigStep t1 s1 t2 s2 =
+  runStateT (bigStep t1) (Just s1) >>= (@?= (t2, (Just s2)))
 
 assertSmallStep
   :: Term
@@ -26,7 +27,7 @@ assertSmallStep
   -> Store (WithMark Term)
   -> Assertion
 assertSmallStep t1 s1 t2 s2 =
-  runSmallStepState (smallStep t1) (Just s1) @?= (t2, (Just s2))
+  runSmallStepState (smallStep t1) (Just s1) >>= (@?= (t2, Just s2))
 
 unitTests :: TestTree
 unitTests = testGroup

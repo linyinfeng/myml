@@ -20,25 +20,25 @@ import qualified Data.Map                      as Map
 data EvalExcept = ExcNoRuleApplied
   deriving (Show, Eq)
 
-bigStep :: Term -> (State (Maybe (Store (WithMark Term)))) Term
+bigStep :: Term -> (StateT (Maybe (Store (WithMark Term))) IO) Term
 bigStep t = runExceptT (smallStep t) >>= \case
   Left  ExcNoRuleApplied -> return t
   Right t'               -> bigStep t'
 
 bigStepSafe
-  :: Term -> (State (Maybe (Store (WithMark Term)))) (Either Error Term)
+  :: Term -> (StateT (Maybe (Store (WithMark Term))) IO) (Either Error Term)
 bigStepSafe t = do
   t' <- bigStep t
   return (if isValue t' then Right t' else Left (ErrEvalStuck t'))
 
 type SmallStepState
-  = ExceptT EvalExcept (State (Maybe (Store (WithMark Term)))) Term
+  = ExceptT EvalExcept (StateT (Maybe (Store (WithMark Term))) IO) Term
 
 runSmallStepState
   :: SmallStepState
   -> Maybe (Store (WithMark Term))
-  -> (Either EvalExcept Term, Maybe (Store (WithMark Term)))
-runSmallStepState s = runState (runExceptT s)
+  -> IO (Either EvalExcept Term, Maybe (Store (WithMark Term)))
+runSmallStepState s = runStateT (runExceptT s)
 
 maybeToExcept :: (Monad m) => Maybe a -> ExceptT EvalExcept m a
 maybeToExcept m = case m of
@@ -75,6 +75,15 @@ smallStep (TmApp TmPred (TmNat n)) =
   return (TmNat (if n == 0 then 0 else n - 1))
 smallStep (TmApp TmIsZero (TmNat n)) =
   return (if n == 0 then TmTrue else TmFalse)
+smallStep (TmApp TmPutChar (TmChar c)) = liftIO (TmUnit <$ putChar c)
+smallStep (TmApp TmGetChar TmUnit) = liftIO (TmChar <$> getChar)
+smallStep (TmApp (TmApp TmCompareChar (TmChar c1)) (TmChar c2)) = return
+  (TmApp (TmVariant label) TmUnit)
+ where
+  label = case compare c1 c2 of
+    LT -> "LT"
+    EQ -> "EQ"
+    GT -> "GT"
 smallStep (TmApp v1 t2) | isValue v1 = TmApp v1 <$> smallStep t2
 smallStep (TmApp t1 t2)              = flip TmApp t2 <$> smallStep t1
 smallStep (TmLet x v1 t2) | isValue v1 =

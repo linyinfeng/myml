@@ -125,3 +125,7 @@ instance Locations Term where
   locations TmSucc            = Set.empty
   locations TmPred            = Set.empty
   locations TmIsZero          = Set.empty
+  locations (TmChar _)        = Set.empty
+  locations TmGetChar         = Set.empty
+  locations TmPutChar         = Set.empty
+  locations TmCompareChar     = Set.empty

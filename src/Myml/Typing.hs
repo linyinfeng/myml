@@ -152,7 +152,6 @@ infer (TmMatchExtend l) = instantiate
       `TyArrow` TyVar "ret"
       )
   )
-
 infer (TmVariant l) = instantiate
   (ScmForall "a" KProper $ ScmForall "r" KRow $ ScmMono
     (         TyVar "a"
@@ -188,10 +187,17 @@ infer (TmIf t1 t2 t3) = do
   unifyProper ty1 TyBool
   unifyProper ty2 ty3
   return ty2
-infer (TmNat _) = return TyNat
-infer TmSucc    = return (TyArrow TyNat TyNat)
-infer TmPred    = return (TyArrow TyNat TyNat)
-infer TmIsZero  = return (TyArrow TyNat TyBool)
+infer (TmNat _)     = return TyNat
+infer TmSucc        = return (TyArrow TyNat TyNat)
+infer TmPred        = return (TyArrow TyNat TyNat)
+infer TmIsZero      = return (TyArrow TyNat TyBool)
+infer (TmChar _)    = return TyChar
+infer TmGetChar     = return (TyArrow TyUnit TyChar)
+infer TmPutChar     = return (TyArrow TyChar TyUnit)
+infer TmCompareChar = instantiate
+  ( ScmForall "r" KRow
+  $ ScmMono (TyChar `TyArrow` TyChar `TyArrow` typeOrdering "r")
+  )
 
 instantiate :: TypeScheme -> Inference Type
 instantiate (ScmForall x KProper s) = do
@@ -232,6 +238,7 @@ instantiateType (TyMu x t   ) = do
 instantiateType (TyRef t) = TyRef <$> instantiateType t
 instantiateType TyBool    = return TyBool
 instantiateType TyNat     = return TyNat
+instantiateType TyChar    = return TyChar
 
 instantiateRow :: TypeRow -> Inference TypeRow
 instantiateRow RowEmpty   = return RowEmpty
@@ -478,12 +485,13 @@ describeProper allowMu ctx (TyRecord row) =
   TyRecord <$> describeRow allowMu ctx row
 describeProper allowMu ctx (TyVariant row) =
   TyVariant <$> describeRow allowMu ctx row
-describeProper allowMu ctx (TyRef t)  = TyRef <$> describeProper allowMu ctx t
-describeProper _       _   TyBool     = return TyBool
-describeProper _       _   TyNat      = return TyNat
+describeProper allowMu ctx (TyRef t ) = TyRef <$> describeProper allowMu ctx t
 describeProper allowMu ctx (TyMu x t) = if allowMu
   then TyMu x <$> describeProper allowMu (Set.insert x ctx) t
   else throwError (ErrCanNotHandleMuType (TyMu x t))
+describeProper _ _ TyBool = return TyBool
+describeProper _ _ TyNat  = return TyNat
+describeProper _ _ TyChar = return TyChar
 
 describePresence
   :: Bool -> Set.Set VarName -> TypePresence -> Inference TypePresence

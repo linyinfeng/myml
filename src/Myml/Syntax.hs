@@ -5,6 +5,7 @@ module Myml.Syntax
   , Term(..)
   , TermClass(..)
   , deriveTermClass
+  , deriveString
   , termZ
   , termNew
   , termSelf
@@ -15,6 +16,7 @@ module Myml.Syntax
   , matchLiteral
   , Type(..)
   , pattern TyUnit
+  , typeOrdering
   , TypeRow(..)
   , TypePresence(..)
   , PresenceWithType(..)
@@ -85,6 +87,11 @@ data Term = TmAbs VarName Term
           | TmSucc
           | TmPred
           | TmIsZero
+          -- Character
+          | TmChar Char
+          | TmPutChar
+          | TmGetChar
+          | TmCompareChar
           deriving (Eq, Show)
 
 infixl 7 `TmApp`
@@ -106,6 +113,11 @@ deriveTermClass (TermClass inherits rep body) = TmAbs
     (TmApp (TmApp (TmApp t (TmVar rep)) (TmVar "self")) TmUnit)
     (inheritsToLet ps inner)
   inheritsToLet [] inner = inner
+
+deriveString :: String -> Term
+deriveString []       = TmVariant "nil" `TmApp` TmUnit
+deriveString (c : cs) = TmVariant "cons"
+  `TmApp` recordLiteral [("head", (TmChar c)), ("tail", deriveString cs)]
 
 -- λ f . (λ x . f (λ v . x x  v)) (λ x . f (λ v . x x v))
 termZ :: Term
@@ -174,12 +186,21 @@ data Type = TyVar VarName
           -- Primitives
           | TyBool
           | TyNat
+          | TyChar
           deriving (Eq, Show, Ord)
 
 infixr 7 `TyArrow`
 
 pattern TyUnit :: Type
 pattern TyUnit = TyRecord RowEmpty
+
+typeOrdering :: VarName -> Type
+typeOrdering r = TyVariant
+  ( RowPresence "LT" (Present TyUnit)
+  $ RowPresence "EQ" (Present TyUnit)
+  $ RowPresence "GT" (Present TyUnit)
+  $ RowVar r
+  )
 
 instance Monad m => Serial m Type where
   series =
@@ -284,6 +305,11 @@ isValue TmNat{}                               = True
 isValue TmSucc                                = True
 isValue TmPred                                = True
 isValue TmIsZero                              = True
+isValue (TmChar _)                            = True
+isValue TmPutChar                             = True
+isValue TmGetChar                             = True
+isValue (TmApp TmCompareChar (TmChar _))      = True
+isValue TmCompareChar                         = True
 -- Basic
 isValue TmApp{}                               = False
 isValue TmVar{}                               = False
@@ -326,6 +352,10 @@ fvTerm (TmNat _n     )        = Set.empty
 fvTerm TmSucc                 = Set.empty
 fvTerm TmPred                 = Set.empty
 fvTerm TmIsZero               = Set.empty
+fvTerm (TmChar _)             = Set.empty
+fvTerm TmPutChar              = Set.empty
+fvTerm TmGetChar              = Set.empty
+fvTerm TmCompareChar          = Set.empty
 
 mapUnionWithKind
   :: Map.Map VarName Kind
@@ -376,6 +406,7 @@ fvType (TyMu x t     ) = fvType t >>= mapDeleteWithKind x KProper
 fvType (TyRef t      ) = fvType t
 fvType TyBool          = return Map.empty
 fvType TyNat           = return Map.empty
+fvType TyChar          = return Map.empty
 
 fvRow :: TypeRow -> Either Error (Map.Map VarName Kind)
 fvRow RowEmpty                 = return Map.empty
@@ -483,10 +514,14 @@ instance PrettyPrec Term where
       )
     )
     where prec = 0
-  prettyPrec _ (TmNat n) = pretty n
-  prettyPrec _ TmSucc    = pretty "succ"
-  prettyPrec _ TmPred    = pretty "pred"
-  prettyPrec _ TmIsZero  = pretty "isZero"
+  prettyPrec _ (TmNat n)     = pretty n
+  prettyPrec _ TmSucc        = pretty "succ"
+  prettyPrec _ TmPred        = pretty "pred"
+  prettyPrec _ TmIsZero      = pretty "isZero"
+  prettyPrec _ (TmChar c)    = pretty '\'' <> pretty c <> pretty '\''
+  prettyPrec _ TmPutChar     = pretty "putChar#"
+  prettyPrec _ TmGetChar     = pretty "getChar#"
+  prettyPrec _ TmCompareChar = pretty "charCompare#"
 
 prettyVariantLabel :: LabelName -> Doc ann
 prettyVariantLabel name = pretty '`' <> pretty name
@@ -520,6 +555,7 @@ instance PrettyPrec Type where
     where prec = 2
   prettyPrec _ TyBool = pretty "Bool"
   prettyPrec _ TyNat  = pretty "Nat"
+  prettyPrec _ TyChar = pretty "Char"
 
 prettyTypeRow
   :: String -> String -> (LabelName -> Doc ann) -> TypeRow -> Doc ann

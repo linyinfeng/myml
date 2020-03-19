@@ -39,10 +39,14 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
     , "new"
     , "self"
     , "as"
+    , "getChar#"
+    , "putChar#"
+    , "compareChar#"
     -- type
     , "Unit"
     , "Bool"
     , "Nat"
+    , "Char"
     , "Rec"
     , "Ref"
     , "Absent"
@@ -66,9 +70,11 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
     ]
   langReserved = ["import", "="]
 
+isIdentLetter :: Char -> Bool
+isIdentLetter c = not (isSpace c) && not (H.member c punctureChars)
+
 identLetter :: CharParsing m => m Char
-identLetter = satisfy isTokenChar
-  where isTokenChar c = not (isSpace c) && not (H.member c punctureChars)
+identLetter = satisfy isIdentLetter
 
 identStyle :: CharParsing m => IdentifierStyle m
 identStyle = IdentifierStyle { _styleName              = "identifer"

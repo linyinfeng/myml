@@ -47,10 +47,14 @@ substTerm' TmTrue            = return TmTrue
 substTerm' TmFalse           = return TmFalse
 substTerm' (TmIf t1 t2 t3) =
   TmIf <$> substTerm' t1 <*> substTerm' t2 <*> substTerm' t3
-substTerm' (TmNat n) = return (TmNat n)
-substTerm' TmSucc    = return TmSucc
-substTerm' TmPred    = return TmPred
-substTerm' TmIsZero  = return TmIsZero
+substTerm' (TmNat n)     = return (TmNat n)
+substTerm' TmSucc        = return TmSucc
+substTerm' TmPred        = return TmPred
+substTerm' TmIsZero      = return TmIsZero
+substTerm' (TmChar c)    = return (TmChar c)
+substTerm' TmPutChar     = return TmPutChar
+substTerm' TmGetChar     = return TmGetChar
+substTerm' TmCompareChar = return TmCompareChar
 
 compositeTermSubst
   :: Map.Map VarName Term -> Map.Map VarName Term -> Map.Map VarName Term
@@ -87,6 +91,7 @@ instance TypeSubst Type where
   substType' (TyRef t) = TyRef <$> substType' t
   substType' TyBool    = return TyBool
   substType' TyNat     = return TyNat
+  substType' TyChar    = return TyChar
 
 instance TypeSubst TypeRow where
   substType' RowEmpty   = return RowEmpty

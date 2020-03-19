@@ -1,4 +1,4 @@
-import "fix.myml" ;;
+import "../sdtlib/fix.myml" ;;
 
 Counter =
   let gen C =

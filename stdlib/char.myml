@@ -1,0 +1,10 @@
+import "fix.myml" ;;
+
+char =
+  let char' = class from _
+    { put = putChar#
+    , get = getChar#
+    , compare = compareChar#
+    , eq c1 c2 = [ `LT _ = false, `EQ _ = true, `GT _ = false ] (self.compare c1 c2)
+    }
+  in new char' unit ;;
