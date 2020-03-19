@@ -2,7 +2,6 @@
 
 module Myml.Subst
   ( substTerm
-  , substTermCase
   , TypeSubst(..)
   , compositeTypeSubst
   , compositeTermSubst
@@ -33,34 +32,25 @@ substTerm' (TmLet x t1 t2) = do
   t1'           <- substTerm' t1
   (newX, inner) <- handleTermBind x
   TmLet newX t1' <$> inner (substTerm' t2)
-substTerm' (TmRcd m) = TmRcd <$> sequence (Map.map substTerm' m)
-substTerm' (TmRcdExtend t1 l t2) =
-  flip TmRcdExtend l <$> substTerm' t1 <*> substTerm' t2
-substTerm' (TmRcdAccess t l) = flip TmRcdAccess l <$> substTerm' t
-substTerm' (TmMatch m      ) = TmMatch <$> sequence (Map.map substTermCase' m)
-substTerm' (TmMatchExtend t l c) =
-  flip TmMatchExtend l <$> substTerm' t <*> substTermCase' c
-substTerm' (TmVariant l) = return (TmVariant l)
-substTerm' TmRef         = return TmRef
-substTerm' TmDeref       = return TmDeref
-substTerm' TmAssign      = return TmAssign
-substTerm' (TmLoc n    ) = return (TmLoc n)
-substTerm' (TmSeq t1 t2) = TmSeq <$> substTerm' t1 <*> substTerm' t2
-substTerm' TmTrue        = return TmTrue
-substTerm' TmFalse       = return TmFalse
+substTerm' TmEmptyRcd        = return TmEmptyRcd
+substTerm' (TmRcdExtend l)   = return (TmRcdExtend l)
+substTerm' (TmRcdAccess l)   = return (TmRcdAccess l)
+substTerm' TmEmptyMatch      = return TmEmptyMatch
+substTerm' (TmMatchExtend l) = return (TmMatchExtend l)
+substTerm' (TmVariant     l) = return (TmVariant l)
+substTerm' TmRef             = return TmRef
+substTerm' TmDeref           = return TmDeref
+substTerm' TmAssign          = return TmAssign
+substTerm' (TmLoc n    )     = return (TmLoc n)
+substTerm' (TmSeq t1 t2)     = TmSeq <$> substTerm' t1 <*> substTerm' t2
+substTerm' TmTrue            = return TmTrue
+substTerm' TmFalse           = return TmFalse
 substTerm' (TmIf t1 t2 t3) =
   TmIf <$> substTerm' t1 <*> substTerm' t2 <*> substTerm' t3
 substTerm' (TmNat n) = return (TmNat n)
 substTerm' TmSucc    = return TmSucc
 substTerm' TmPred    = return TmPred
 substTerm' TmIsZero  = return TmIsZero
-
-substTermCase :: Map.Map VarName Term -> TermCase -> TermCase
-substTermCase s c = runReader (substTermCase' c) s
-
-substTermCase' :: TermCase -> Reader (Map.Map VarName Term) TermCase
-substTermCase' (TmCase x t) =
-  handleTermBind x >>= \(newX, inner) -> TmCase newX <$> inner (substTerm' t)
 
 compositeTermSubst
   :: Map.Map VarName Term -> Map.Map VarName Term -> Map.Map VarName Term

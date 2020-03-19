@@ -8,14 +8,11 @@ module Myml.Syntax
   , termZ
   , termNew
   , termSelf
-  , termUnit
-  , emptyRecord
-  , emptyMatch
+  , pattern TmUnit
   , recordExtends
   , matchExtends
   , recordLiteral
   , matchLiteral
-  , TermCase(..)
   , Type(..)
   , pattern TyUnit
   , TypeRow(..)
@@ -35,7 +32,6 @@ module Myml.Syntax
   , isValue
   -- free variable
   , fvTerm
-  , fvCase
   , fvType
   , fvPresence
   , fvPresenceWithType
@@ -66,19 +62,18 @@ data Term = TmAbs VarName Term
           | TmVar VarName
           | TmLet VarName Term Term
           -- Polymorphic record
-          | TmRcd (Map.Map LabelName Term)
-          | TmRcdExtend Term LabelName Term
-          | TmRcdAccess Term LabelName
+          | TmEmptyRcd
+          | TmRcdExtend LabelName
+          | TmRcdAccess LabelName
           -- Polymorphic variants
-          | TmMatch (Map.Map LabelName TermCase)
-          | TmMatchExtend Term LabelName TermCase
+          | TmEmptyMatch
+          | TmMatchExtend LabelName
           | TmVariant LabelName
           -- Reference
           | TmRef
           | TmDeref
           | TmAssign
           | TmLoc Integer
-          -- Sequence
           | TmSeq Term Term
           -- Primitives
           -- Boolean
@@ -91,6 +86,8 @@ data Term = TmAbs VarName Term
           | TmPred
           | TmIsZero
           deriving (Eq, Show)
+
+infixl 7 `TmApp`
 
 data TermClass = TermClass {
     classInherits :: [(Term, VarName)],
@@ -106,7 +103,7 @@ deriveTermClass (TermClass inherits rep body) = TmAbs
  where
   inheritsToLet ((t, x) : ps) inner = TmLet
     x
-    (TmApp (TmApp (TmApp t (TmVar rep)) (TmVar "self")) termUnit)
+    (TmApp (TmApp (TmApp t (TmVar rep)) (TmVar "self")) TmUnit)
     (inheritsToLet ps inner)
   inheritsToLet [] inner = inner
 
@@ -123,31 +120,25 @@ termZ = TmAbs "f" (TmApp half half)
 termNew :: Term
 termNew = TmAbs
   "k"
-  (TmAbs "r" (TmApp (TmApp termZ (TmApp (TmVar "k") (TmVar "r"))) termUnit))
+  (TmAbs "r" (TmApp (TmApp termZ (TmApp (TmVar "k") (TmVar "r"))) TmUnit))
 
 termSelf :: Term
-termSelf = TmApp (TmVar "self") termUnit
+termSelf = TmApp (TmVar "self") TmUnit
 
-termUnit :: Term
-termUnit = emptyRecord
-
-emptyRecord :: Term
-emptyRecord = TmRcd Map.empty
-
-emptyMatch :: Term
-emptyMatch = TmMatch Map.empty
+pattern TmUnit :: Term
+pattern TmUnit = TmEmptyRcd
 
 recordExtends :: Term -> [(LabelName, Term)] -> Term
-recordExtends = foldl (\inner (l, c) -> TmRcdExtend inner l c)
+recordExtends = foldl (\inner (l, c) -> TmApp (TmApp (TmRcdExtend l) c) inner)
 
-matchExtends :: Term -> [(LabelName, TermCase)] -> Term
-matchExtends = foldl (\inner (l, c) -> TmMatchExtend inner l c)
+matchExtends :: Term -> [(LabelName, Term)] -> Term
+matchExtends = foldl (\inner (l, c) -> TmApp (TmApp (TmMatchExtend l) c) inner)
 
 recordLiteral :: [(LabelName, Term)] -> Term
-recordLiteral = TmRcd . Map.fromList
+recordLiteral = recordExtends TmEmptyRcd
 
-matchLiteral :: [(LabelName, TermCase)] -> Term
-matchLiteral = TmMatch . Map.fromList
+matchLiteral :: [(LabelName, Term)] -> Term
+matchLiteral = matchExtends TmEmptyMatch
 
 instance Monad m => Serial m Term where
   series =
@@ -155,35 +146,24 @@ instance Monad m => Serial m Term where
       \/ cons2 TmApp
       \/ cons0 (TmVar "x")
       \/ cons2 (TmLet "x")
-      \/ pure (TmRcd Map.empty) -- Unit
-      \/ cons1 (TmRcd . Map.singleton "l")
-      \/ cons2 (\a b -> TmRcd (Map.fromList [("l1", a), ("l2", b)]))
-      \/ cons2 (\t1 t2 -> TmRcdExtend t1 "l" t2)
-      \/ cons1 (flip TmRcdAccess "l")
-      \/ cons0 (TmMatch Map.empty)
-      \/ cons1 (TmMatch . Map.singleton "l")
-      \/ cons2 (\a b -> TmMatch (Map.fromList [("l1", a), ("l2", b)]))
-      \/ cons2 (\t c -> TmMatchExtend t "l" c)
+      \/ cons0 TmEmptyRcd  -- TmUnit
+      \/ cons0 (TmRcdExtend "l")
+      \/ cons0 (TmRcdAccess "l")
+      \/ cons0 TmEmptyMatch
+      \/ cons0 (TmMatchExtend "l")
       \/ cons0 (TmVariant "l")
       \/ cons0 TmRef
       \/ cons0 TmDeref
       \/ cons0 TmAssign
       -- do not generate location
       \/ cons2 TmSeq
-      -- do not generate some primitives
-      -- \/ cons0 TmTrue
-      -- \/ cons0 TmFalse
+      \/ cons0 TmTrue
+      \/ cons0 TmFalse
       \/ cons3 TmIf
       \/ cons0 (TmNat 0)
-      -- \/ cons0 TmSucc
-      -- \/ cons0 TmPred
-      -- \/ cons0 TmIsZero
-
-data TermCase = TmCase VarName Term
-  deriving (Eq, Show)
-
-instance Monad m => Serial m TermCase where
-  series = TmCase "x" <$> series
+      \/ cons0 TmSucc
+      \/ cons0 TmPred
+      \/ cons0 TmIsZero
 
 data Type = TyVar VarName
           | TyArrow Type Type
@@ -195,6 +175,8 @@ data Type = TyVar VarName
           | TyBool
           | TyNat
           deriving (Eq, Show, Ord)
+
+infixr 7 `TyArrow`
 
 pattern TyUnit :: Type
 pattern TyUnit = TyRecord RowEmpty
@@ -278,57 +260,72 @@ instance Monad m => Serial m Kind where
   series = pure KProper \/ cons0 KPresence \/ cons0 KRow \/ cons2 KArrow
 
 isValue :: Term -> Bool
-isValue (TmApp (TmVariant _) t) = isValue t
-isValue (TmApp TmAssign      t) = isValue t
-isValue TmApp{}                 = False
-isValue TmVar{}                 = False
-isValue TmAbs{}                 = True
-isValue TmLet{}                 = False
-isValue (TmRcd m)               = Map.foldl (\a b -> a && isValue b) True m
-isValue TmRcdExtend{}           = False
-isValue TmRcdAccess{}           = False
-isValue TmMatch{}               = True
-isValue TmMatchExtend{}         = False
-isValue TmVariant{}             = True
-isValue TmRef                   = True
-isValue TmDeref                 = True
-isValue TmAssign                = True
-isValue TmLoc{}                 = True
-isValue TmSeq{}                 = False
-isValue TmTrue                  = True
-isValue TmFalse                 = True
-isValue TmIf{}                  = False
-isValue TmNat{}                 = True
-isValue TmSucc                  = True
-isValue TmPred                  = True
-isValue TmIsZero                = True
+isValue t@(TmApp (TmApp (TmRcdExtend _) _) _) = isRcdValue t
+isValue t@TmEmptyRcd                          = isRcdValue t
+isValue (TmApp (TmRcdExtend _) t)             = isValue t
+isValue (TmRcdExtend _)                       = True
+isValue (TmRcdAccess _)                       = True
+isValue t@(TmApp (TmApp (TmMatchExtend _) _) _) = isMatchValue t
+isValue t@TmEmptyMatch                        = isMatchValue t
+isValue (TmApp (TmMatchExtend _) t)           = isValue t
+isValue (TmMatchExtend _          )           = True
+isValue (TmApp (TmVariant _) t    )           = isValue t
+isValue (TmVariant _              )           = True
+isValue TmRef                                 = True
+isValue TmDeref                               = True
+isValue (TmApp TmAssign t)                    = isValue t
+isValue TmAssign                              = True
+isValue (TmLoc _)                             = True
+isValue TmSeq{}                               = False
+isValue TmTrue                                = True
+isValue TmFalse                               = True
+isValue TmIf{}                                = False
+isValue TmNat{}                               = True
+isValue TmSucc                                = True
+isValue TmPred                                = True
+isValue TmIsZero                              = True
+-- Basic
+isValue TmApp{}                               = False
+isValue TmVar{}                               = False
+isValue TmAbs{}                               = True
+isValue TmLet{}                               = False
+
+isRcdValue :: Term -> Bool
+isRcdValue TmEmptyRcd                      = True
+isRcdValue (TmApp (TmRcdExtend _label) v1) = isValue v1
+isRcdValue (TmApp (TmApp (TmRcdExtend _label) v1) v2) =
+  isValue v1 && isRcdValue v2
+isRcdValue _ = False
+
+isMatchValue :: Term -> Bool
+isMatchValue TmEmptyMatch = True
+isMatchValue (TmApp (TmApp (TmMatchExtend _label) v1) v2) =
+  isValue v1 && isMatchValue v2
+isMatchValue _ = False
 
 fvTerm :: Term -> Set.Set VarName
-fvTerm (TmVar x                   ) = Set.singleton x
-fvTerm (TmAbs x  t                ) = Set.delete x (fvTerm t)
-fvTerm (TmApp t1 t2               ) = fvTerm t1 `Set.union` fvTerm t2
-fvTerm (TmLet x t1 t2) = fvTerm t1 `Set.union` Set.delete x (fvTerm t2)
-fvTerm (TmRcd m) = Map.foldl (\a b -> a `Set.union` fvTerm b) Set.empty m
-fvTerm (TmRcdExtend t1 _label t2  ) = fvTerm t1 `Set.union` fvTerm t2
-fvTerm (TmRcdAccess t _label      ) = fvTerm t
-fvTerm (TmMatch m) = Map.foldl (\a b -> a `Set.union` fvCase b) Set.empty m
-fvTerm (TmMatchExtend t1 _label c2) = fvTerm t1 `Set.union` fvCase c2
-fvTerm (TmVariant _label          ) = Set.empty
-fvTerm TmRef                        = Set.empty
-fvTerm TmDeref                      = Set.empty
-fvTerm TmAssign                     = Set.empty
-fvTerm (TmLoc _loc )                = Set.empty
-fvTerm (TmSeq t1 t2)                = fvTerm t1 `Set.union` fvTerm t2
-fvTerm TmTrue                       = Set.empty
-fvTerm TmFalse                      = Set.empty
-fvTerm (TmIf t1 t2 t3)              = Set.unions (map fvTerm [t1, t2, t3])
-fvTerm (TmNat _n     )              = Set.empty
-fvTerm TmSucc                       = Set.empty
-fvTerm TmPred                       = Set.empty
-fvTerm TmIsZero                     = Set.empty
-
-fvCase :: TermCase -> Set.Set VarName
-fvCase (TmCase x t) = Set.delete x (fvTerm t)
+fvTerm (TmVar x      )        = Set.singleton x
+fvTerm (TmAbs x  t   )        = Set.delete x (fvTerm t)
+fvTerm (TmApp t1 t2  )        = fvTerm t1 `Set.union` fvTerm t2
+fvTerm (TmLet x t1 t2)        = fvTerm t1 `Set.union` Set.delete x (fvTerm t2)
+fvTerm TmEmptyRcd             = Set.empty
+fvTerm (TmRcdExtend _label)   = Set.empty
+fvTerm (TmRcdAccess _label)   = Set.empty
+fvTerm TmEmptyMatch           = Set.empty
+fvTerm (TmMatchExtend _label) = Set.empty
+fvTerm (TmVariant     _label) = Set.empty
+fvTerm TmRef                  = Set.empty
+fvTerm TmDeref                = Set.empty
+fvTerm TmAssign               = Set.empty
+fvTerm (TmLoc _loc )          = Set.empty
+fvTerm (TmSeq t1 t2)          = fvTerm t1 `Set.union` fvTerm t2
+fvTerm TmTrue                 = Set.empty
+fvTerm TmFalse                = Set.empty
+fvTerm (TmIf t1 t2 t3)        = Set.unions (map fvTerm [t1, t2, t3])
+fvTerm (TmNat _n     )        = Set.empty
+fvTerm TmSucc                 = Set.empty
+fvTerm TmPred                 = Set.empty
+fvTerm TmIsZero               = Set.empty
 
 mapUnionWithKind
   :: Map.Map VarName Kind
@@ -449,55 +446,12 @@ instance PrettyPrec Term where
       )
     )
     where prec = 0
-  prettyPrec _ (TmRcd fields) = group
-    (align (encloseSep open close separator fields'))
-   where
-    fields'   = map prettyPair (Map.toList fields)
-    open      = flatAlt (pretty "{ ") (pretty "{")
-    close     = flatAlt (pretty " }") (pretty "}")
-    separator = pretty ", "
-    prettyPair (l, t) = pretty l <+> pretty '=' <+> prettyPrec 0 t
-  prettyPrec n (TmRcdExtend t1 l t2) = parensPrec
-    (n > prec)
-    (hang
-      indentSpace
-      (   prettyPrec prec t1
-      <+> pretty "with"
-      <>  softline
-      <>  pretty '{'
-      <+> pretty l
-      <+> pretty '='
-      <+> prettyPrec 0 t2
-      <+> pretty '}'
-      )
-    )
-    where prec = 5
-  prettyPrec n (TmRcdAccess t1 l) = parensPrec
-    (n > prec)
-    (prettyPrec prec t1 <> pretty '.' <> pretty l)
-    where prec = 5
-  prettyPrec _ (TmMatch cases) = group
-    (align (encloseSep open close separator cases'))
-   where
-    cases'    = map prettyPair (Map.toList cases)
-    open      = flatAlt (pretty "[ ") (pretty "[")
-    close     = flatAlt (pretty " ]") (pretty "]")
-    separator = pretty ", "
-    prettyPair (l, c) = prettyVariantLabel l <+> pretty c
-  prettyPrec n (TmMatchExtend t l c) = parensPrec
-    (n > prec)
-    (hang
-      indentSpace
-      (   prettyPrec prec t
-      <+> pretty "with"
-      <>  softline
-      <>  pretty '['
-      <+> prettyVariantLabel l
-      <+> pretty c
-      <+> pretty ']'
-      )
-    )
-    where prec = 5
+  prettyPrec _ TmEmptyRcd      = pretty "{}"
+  prettyPrec _ (TmRcdExtend l) = pretty "extend" <> parens (pretty l)
+  prettyPrec _ (TmRcdAccess l) = pretty "access" <> parens (pretty l)
+  prettyPrec _ TmEmptyMatch    = pretty "[]"
+  prettyPrec _ (TmMatchExtend l) =
+    pretty "extend" <> parens (prettyVariantLabel l)
   prettyPrec _ (TmVariant l) = prettyVariantLabel l
   prettyPrec _ TmRef         = pretty "ref"
   prettyPrec _ TmDeref       = pretty "!"
@@ -536,9 +490,6 @@ instance PrettyPrec Term where
 
 prettyVariantLabel :: LabelName -> Doc ann
 prettyVariantLabel name = pretty '`' <> pretty name
-
-instance Pretty TermCase where
-  pretty (TmCase name t) = pretty name <+> pretty "->" <+> prettyPrec 0 t
 
 instance Pretty Type where
   pretty = prettyPrec 0

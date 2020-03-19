@@ -103,30 +103,25 @@ class Locations a where
     locations :: a -> Set.Set Location
 
 instance Locations Term where
-  locations (TmAbs _  t   ) = locations t
-  locations (TmApp t1 t2  ) = locations t1 `Set.union` locations t2
-  locations (TmVar _      ) = Set.empty
-  locations (TmLet _ t1 t2) = locations t1 `Set.union` locations t2
-  locations (TmRcd m) =
-    Map.foldl (\a b -> a `Set.union` locations b) Set.empty m
-  locations (TmRcdExtend t1 _ t2) = locations t1 `Set.union` locations t2
-  locations (TmRcdAccess t _    ) = locations t
-  locations (TmMatch m) =
-    Map.foldl (\a b -> a `Set.union` locations b) Set.empty m
-  locations (TmMatchExtend t _ c) = locations t `Set.union` locations c
-  locations (TmVariant _        ) = Set.empty
-  locations TmRef                 = Set.empty
-  locations TmDeref               = Set.empty
-  locations TmAssign              = Set.empty
-  locations (TmLoc l    )         = Set.singleton l
-  locations (TmSeq t1 t2)         = locations t1 `Set.union` locations t2
-  locations TmTrue                = Set.empty
-  locations TmFalse               = Set.empty
-  locations (TmIf t1 t2 t3)       = Set.unions (map locations [t1, t2, t3])
-  locations (TmNat _      )       = Set.empty
-  locations TmSucc                = Set.empty
-  locations TmPred                = Set.empty
-  locations TmIsZero              = Set.empty
-
-instance Locations TermCase where
-  locations (TmCase _ t) = locations t
+  locations (TmAbs _  t   )   = locations t
+  locations (TmApp t1 t2  )   = locations t1 `Set.union` locations t2
+  locations (TmVar _      )   = Set.empty
+  locations (TmLet _ t1 t2)   = locations t1 `Set.union` locations t2
+  locations TmEmptyRcd        = Set.empty
+  locations (TmRcdExtend _)   = Set.empty
+  locations (TmRcdAccess _)   = Set.empty
+  locations TmEmptyMatch      = Set.empty
+  locations (TmMatchExtend _) = Set.empty
+  locations (TmVariant     _) = Set.empty
+  locations TmRef             = Set.empty
+  locations TmDeref           = Set.empty
+  locations TmAssign          = Set.empty
+  locations (TmLoc l    )     = Set.singleton l
+  locations (TmSeq t1 t2)     = locations t1 `Set.union` locations t2
+  locations TmTrue            = Set.empty
+  locations TmFalse           = Set.empty
+  locations (TmIf t1 t2 t3)   = Set.unions (map locations [t1, t2, t3])
+  locations (TmNat _      )   = Set.empty
+  locations TmSucc            = Set.empty
+  locations TmPred            = Set.empty
+  locations TmIsZero          = Set.empty

@@ -22,7 +22,7 @@ scProps = testGroup
   ]
 
 propEmptySubstTerm :: Term -> Bool
-propEmptySubstTerm t = substTerm (Map.empty) t == t
+propEmptySubstTerm t = substTerm Map.empty t == t
 
 unitTests :: TestTree
 unitTests = testGroup "Unit tests" [compositeTests, substTests]
@@ -95,12 +95,12 @@ termSubstTests = testGroup
   @?=         pTerm "{ l1 = y, l2 = y }.l1"
   , testCase "Term substitution match"
   $           Map.fromList [("x", pTerm "y")]
-  `substTerm` pTerm "[ `l y -> x ]"
-  @?=         pTerm "[ `l y0 -> y ]"
+  `substTerm` pTerm "[ `l y = x ]"
+  @?=         pTerm "[ `l y0 = y ]"
   , testCase "Term substitution match extend"
   $           Map.fromList [("x", pTerm "y")]
-  `substTerm` pTerm "[ `l1 y -> x ] with [`l2 y -> x ]"
-  @?=         pTerm "[ `l1 y0 -> y ] with [`l2 y0 -> y ]"
+  `substTerm` pTerm "[ `l1 y = x ] with [`l2 y = x ]"
+  @?=         pTerm "[ `l1 y0 = y ] with [`l2 y0 = y ]"
   , testCase "Term substitution variant"
   $           Map.fromList [("x", pTerm "y")]
   `substTerm` pTerm "`l x"

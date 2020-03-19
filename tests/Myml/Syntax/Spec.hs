@@ -47,10 +47,10 @@ fvTermTests = testGroup
   $   fvTerm (pTerm "{ x = x, y = y }.x")
   @?= Set.fromList ["x", "y"]
   , testCase "fvTerm match"
-  $   fvTerm (pTerm "[`l1 x -> x y, `l2 y -> z y]")
+  $   fvTerm (pTerm "[`l1 x = x y, `l2 y = z y]")
   @?= Set.fromList ["y", "z"]
   , testCase "fvTerm match extend"
-  $   fvTerm (pTerm "[`l1 x -> x y] with [`l2 y -> z y]")
+  $   fvTerm (pTerm "[`l1 x = x y] with [`l2 y = z y]")
   @?= Set.fromList ["y", "z"]
   , testCase "fvTerm variant" $ fvTerm (pTerm "`x x") @?= Set.fromList ["x"]
   , testCase "fvTerm ref" $ fvTerm (pTerm "ref (x y)") @?= Set.fromList
@@ -86,9 +86,9 @@ fvTypeTests = testGroup
         (Map.fromList [("P", KPresenceWithType), ("X", KProper), ("R", KRow)])
   , testCase "fvType mu" $ fvType (pType "\x3bc X . (X -> T)") @?= Right
     (Map.fromList [("T", KProper)])
-  , testCase "fvType Unit" $ fvType (pType "Unit") @?= Right (Map.empty)
-  , testCase "fvType Bool" $ fvType (pType "Bool") @?= Right (Map.empty)
-  , testCase "fvType Nat" $ fvType (pType "Nat") @?= Right (Map.empty)
+  , testCase "fvType Unit" $ fvType (pType "Unit") @?= Right Map.empty
+  , testCase "fvType Bool" $ fvType (pType "Bool") @?= Right Map.empty
+  , testCase "fvType Nat" $ fvType (pType "Nat") @?= Right Map.empty
   ]
 
 isValueTests :: TestTree
@@ -109,10 +109,10 @@ isValueTests = testGroup
   $   isValue (pTerm "{ l1 = x } with { l2 = y }")
   @?= False
   , testCase "isValue record access" $ isValue (pTerm "x.x") @?= False
-  , testCase "isValue match" $ isValue (pTerm "[`l x -> x]") @?= True
+  , testCase "isValue match" $ isValue (pTerm "[`l x = x]") @?= True
   , testCase "isValue match extend "
-  $   isValue (pTerm "[`l1 x -> x] with [`l2 x -> x]")
-  @?= False
+  $   isValue (pTerm "[`l1 x = x] with [`l2 x = x]")
+  @?= True
   , testCase "isValue variant 1" $ isValue (pTerm "`l1 x") @?= False
   , testCase "isValue variant 2" $ isValue (pTerm "`l1 (\x3bb x . x)") @?= True
   , testCase "isValue ref" $ isValue (pTerm "ref unit") @?= False

@@ -13,7 +13,6 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.SmallCheck         as SC
 import           Text.Trifecta           hiding ( Parser )
-import qualified Data.Map                      as Map
 
 tests :: TestTree
 tests = testGroup "Myml.Parser.Spec" [scProps, unitTests]
@@ -73,12 +72,17 @@ unitTests = testGroup
       (TmApp (TmApp TmAssign (TmApp (TmVar "x") (TmVar "x")))
              (TmApp (TmVar "x") (TmVar "x"))
       )
-      (TmApp (TmApp TmAssign (TmVar "x")) (TmRcdAccess (TmVar "x") "l"))
+      (TmApp (TmApp TmAssign (TmVar "x")) (TmApp (TmRcdAccess "l") (TmVar "x")))
     )
-  , testCase "Tuple 0" $ testTermParser "()" termUnit
+  , testCase "Tuple 0" $ testTermParser "()" TmUnit
   , testCase "Tuple 1" $ testTermParser "(x)" (TmVar "x")
   , testCase "Tuple 3" $ testTermParser
     "(x, y, z)"
-    (TmRcd (Map.fromList [("1", TmVar "x"), ("2", TmVar "y"), ("3", TmVar "z")])
+    (       TmRcdExtend "3"
+    `TmApp` TmVar "z"
+    `TmApp` (       TmRcdExtend "2"
+            `TmApp` TmVar "y"
+            `TmApp` (TmRcdExtend "1" `TmApp` TmVar "x" `TmApp` TmEmptyRcd)
+            )
     )
   ]

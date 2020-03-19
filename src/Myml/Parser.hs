@@ -54,7 +54,7 @@ termOperatorTable =
     reserve identStyle "in"
     return (TmLet x (foldr TmAbs t params))
   opApp       = return TmApp
-  opRcdAccess = flip TmRcdAccess <$> (symbol "." *> ident identStyle)
+  opRcdAccess = TmApp . TmRcdAccess <$> (symbol "." *> ident identStyle)
   opRcdExtend = do
     try $ reserve identStyle "with" <* symbol "{"
     pairs <- recordPair `sepBy` symbol ","
@@ -85,6 +85,8 @@ parseTermAtom =
   (   rcd
     <|> match
     <|> variant
+    <|> extend
+    <|> access
     <|> ref
     <|> deref
     <|> assign
@@ -107,41 +109,45 @@ parseTermAtom =
   rcd     = recordLiteral <$> braces (recordPair `sepBy` symbol ",")
   match   = matchLiteral <$> brackets (matchPair `sepBy` symbol ",")
   variant = TmVariant <$> variantLabel
-  ref     = TmRef <$ reserve identStyle "ref"
-  deref   = TmDeref <$ reserve identStyle "!"
-  assign  = TmAssign <$ reserve identStyle "_:=_"
-  unit    = termUnit <$ reserve identStyle "unit"
-  true    = TmTrue <$ reserve identStyle "true"
-  false   = TmFalse <$ reserve identStyle "false"
-  zero    = TmNat 0 <$ reserve identStyle "zero"
-  nat     = TmNat <$> natural
-  suc     = TmSucc <$ reserve identStyle "succ"
-  prd     = TmPred <$ reserve identStyle "pred"
-  isZero  = TmIsZero <$ reserve identStyle "isZero"
-  new     = termNew <$ reserve identStyle "new"
-  self    = termSelf <$ reserve identStyle "self"
+  extend  = reserve identStyle "extend"
+    *> parens (TmMatchExtend <$> variantLabel <|> TmRcdExtend <$> recordLabel)
+  access = TmRcdAccess <$> (reserve identStyle "access" *> parens recordLabel)
+  ref    = TmRef <$ reserve identStyle "ref"
+  deref  = TmDeref <$ reserve identStyle "!"
+  assign = TmAssign <$ reserve identStyle "_:=_"
+  unit   = TmUnit <$ reserve identStyle "unit"
+  true   = TmTrue <$ reserve identStyle "true"
+  false  = TmFalse <$ reserve identStyle "false"
+  zero   = TmNat 0 <$ reserve identStyle "zero"
+  nat    = TmNat <$> natural
+  suc    = TmSucc <$ reserve identStyle "succ"
+  prd    = TmPred <$ reserve identStyle "pred"
+  isZero = TmIsZero <$ reserve identStyle "isZero"
+  new    = termNew <$ reserve identStyle "new"
+  self   = termSelf <$ reserve identStyle "self"
   tupleOrParen =
     (\case
-        []  -> termUnit
+        []  -> TmUnit
         [t] -> t
         l   -> recordLiteral (zip (map show [1 :: Integer ..]) l)
       )
       <$> parens (parseTerm `sepBy` symbol ",")
 
 recordPair :: Parser (LabelName, Term)
-recordPair = do
-  l      <- ident identStyle
+recordPair = (,) <$> recordLabel <*> equalPair
+
+matchPair :: Parser (LabelName, Term)
+matchPair = (,) <$> variantLabel <*> equalPair
+
+equalPair :: Parser Term
+equalPair = do
   params <- many (ident identStyle)
   reserve identStyle "="
   t <- parseTerm
-  return (l, foldr TmAbs t params)
+  return (foldr TmAbs t params)
 
-matchPair :: Parser (LabelName, TermCase)
-matchPair = (,) <$> variantLabel <*> matchCase
-
-matchCase :: Parser TermCase
-matchCase =
-  TmCase <$> ident identStyle <* reserve identStyle "->" <*> parseTerm
+recordLabel :: Parser LabelName
+recordLabel = ident identStyle
 
 variantLabel :: Parser LabelName
 variantLabel = try (char '`' *> ident identStyle)

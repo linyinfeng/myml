@@ -20,6 +20,8 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
     [ "let"
     , "in"
     , "with"
+    , "extend"
+    , "access"
     , "ref"
     , "unit"
     , "true"
@@ -37,6 +39,7 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
     , "new"
     , "self"
     , "as"
+    -- type
     , "Unit"
     , "Bool"
     , "Nat"

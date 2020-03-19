@@ -109,65 +109,54 @@ infer (TmLet x t1 t2) = do
   ty1 <- infer t1
   s   <- generalize t1 ty1
   local (Map.insert x s) (infer t2)
-infer (TmRcd m) = do
-  ps <- sequence (Map.map genPresence m)
-  return (TyRecord (foldr (uncurry RowPresence) RowEmpty (Map.toList ps)))
- where
-  genPresence t = PresenceVarWithType <$> newVar innerVarPrefix <*> infer t
-infer (TmRcdExtend t1 l t2) = do
-  ty1 <- infer t1
-  ty2 <- infer t2
-  p1  <- PresenceVar <$> newVar innerVarPrefix
-  r   <- RowVar <$> newVar innerVarPrefix
-  unifyProper ty1 (TyRecord (RowPresence l p1 r))
-  p2 <- newVar innerVarPrefix
-  return (TyRecord (RowPresence l (PresenceVarWithType p2 ty2) r))
-infer (TmRcdAccess t l) = do
-  ty <- infer t
-  x  <- TyVar <$> newVar innerVarPrefix
-  r  <- RowVar <$> newVar innerVarPrefix
-  unifyProper ty (TyRecord (RowPresence l (Present x) r))
-  return x
-infer (TmMatch m) = do
-  m'  <- sequence (Map.map genSingle m)
-  res <- TyVar <$> newVar innerVarPrefix
-  sequence_ (Map.map (unifyProper res . snd) m')
-  return
-    (TyArrow
-      (TyVariant
-        (foldr (\(l, (p, _)) -> RowPresence l p) RowEmpty (Map.toList m'))
+infer TmEmptyRcd      = return (TyRecord RowEmpty)
+infer (TmRcdExtend l) = instantiate
+  ( ScmForall "a"  KProper
+  $ ScmForall "p"  KPresence
+  $ ScmForall "r"  KRow
+  $ ScmForall "pt" KPresenceWithType
+  $ ScmMono
+      (         TyVar "a"
+      `TyArrow` TyRecord (RowPresence l (PresenceVar "p") (RowVar "r"))
+      `TyArrow` TyRecord
+                  (RowPresence l
+                               (PresenceVarWithType "pt" (TyVar "a"))
+                               (RowVar "r")
+                  )
       )
-      res
+  )
+infer (TmRcdAccess l) = instantiate
+  (ScmForall "a" KProper $ ScmForall "r" KRow $ ScmMono
+    (         TyRecord (RowPresence l (Present (TyVar "a")) (RowVar "r"))
+    `TyArrow` TyVar "a"
     )
- where
-  genSingle (TmCase x t) = do
-    nv <- TyVar <$> newVar innerVarPrefix
-    ty <- local (Map.insert x (ScmMono nv)) (infer t)
-    p  <- newVar innerVarPrefix
-    return (PresenceVarWithType p nv, ty)
-infer (TmMatchExtend t1 l (TmCase x t2)) = do
-  ty1 <- infer t1
-  tyX <- TyVar <$> newVar innerVarPrefix
-  ty2 <- local (Map.insert x (ScmMono tyX)) (infer t2)
-  p1  <- PresenceVar <$> newVar innerVarPrefix
-  r   <- RowVar <$> newVar innerVarPrefix
-  unifyProper ty1 (TyArrow (TyVariant (RowPresence l p1 r)) ty2)
-  p2 <- newVar innerVarPrefix
-  return
-    (TyArrow (TyVariant (RowPresence l (PresenceVarWithType p2 tyX) r)) ty2)
-infer (TmVariant l) = instantiate
-  (ScmForall
-    "a"
-    KProper
-    (ScmForall
-      "r"
-      KRow
-      (ScmMono
-        (TyArrow
-          (TyVar "a")
-          (TyVariant (RowPresence l (Present (TyVar "a")) (RowVar "r")))
-        )
+  )
+infer TmEmptyMatch = instantiate
+  (ScmForall "a" KProper $ ScmMono (TyVariant RowEmpty `TyArrow` TyVar "a"))
+infer (TmMatchExtend l) = instantiate
+  ( ScmForall "a"   KProper
+  $ ScmForall "p"   KPresence
+  $ ScmForall "ret" KProper
+  $ ScmForall "row" KRow
+  $ ScmForall "pt"  KPresenceWithType
+  $ ScmMono
+      (         (TyVar "a" `TyArrow` TyVar "ret")
+      `TyArrow` (TyVariant (RowPresence l (PresenceVar "p") (RowVar "row"))
+                `TyArrow` TyVar "ret"
+                )
+      `TyArrow` TyVariant
+                  (RowPresence l
+                               (PresenceVarWithType "pt" (TyVar "a"))
+                               (RowVar "row")
+                  )
+      `TyArrow` TyVar "ret"
       )
+  )
+
+infer (TmVariant l) = instantiate
+  (ScmForall "a" KProper $ ScmForall "r" KRow $ ScmMono
+    (         TyVar "a"
+    `TyArrow` TyVariant (RowPresence l (Present (TyVar "a")) (RowVar "r"))
     )
   )
 infer TmRef = do

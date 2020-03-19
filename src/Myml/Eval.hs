@@ -48,10 +48,15 @@ maybeToExcept m = case m of
 smallStep :: Term -> SmallStepState
 smallStep (TmApp (TmAbs x t1) v2) | isValue v2 =
   return (substTerm (Map.singleton x v2) t1)
-smallStep (TmApp (TmMatch m) (TmApp (TmVariant l) v2)) | isValue v2 =
-  case Map.lookup l m of
-    Nothing            -> throwError ExcNoRuleApplied
-    Just (TmCase x t1) -> return (substTerm (Map.singleton x v2) t1)
+smallStep (TmApp (TmApp (TmApp (TmMatchExtend l1) c) match') (TmApp (TmVariant l2) v2))
+  | isValue c && isValue match' && isValue v2
+  = if l1 == l2
+    then return (TmApp c v2)
+    else return (TmApp match' (TmApp (TmVariant l2) v2))
+smallStep (TmApp (TmRcdAccess l2) (TmApp (TmApp (TmRcdExtend l1) v) rcd'))
+  | isValue v = if l1 == l2
+    then return v
+    else return (TmApp (TmRcdAccess l2) rcd')
 smallStep (TmApp TmRef v) | isValue v = do
   s <- get >>= maybeToExcept
   let (l, s') = allocate s v
@@ -64,7 +69,7 @@ smallStep (TmApp TmDeref (TmLoc l)) =
 smallStep (TmApp (TmApp TmAssign (TmLoc l)) v) | isValue v =
   gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
     Nothing -> throwError ExcNoRuleApplied
-    Just _  -> termUnit <$ modify (fmap (\s -> assign s l v))
+    Just _  -> TmUnit <$ modify (fmap (\s -> assign s l v))
 smallStep (TmApp TmSucc (TmNat n)) = return (TmNat (succ n))
 smallStep (TmApp TmPred (TmNat n)) =
   return (TmNat (if n == 0 then 0 else n - 1))
@@ -74,28 +79,10 @@ smallStep (TmApp v1 t2) | isValue v1 = TmApp v1 <$> smallStep t2
 smallStep (TmApp t1 t2)              = flip TmApp t2 <$> smallStep t1
 smallStep (TmLet x v1 t2) | isValue v1 =
   return (substTerm (Map.singleton x v1) t2)
-smallStep (TmLet x t1 t2) = (\t1' -> TmLet x t1' t2) <$> smallStep t1
-smallStep (TmRcd m      ) = if Map.null notValue
-  then throwError ExcNoRuleApplied
-  else
-    let (minLabel, minTerm) = Map.findMin notValue
-    in  (\minTerm' -> TmRcd (Map.insert minLabel minTerm' m))
-          <$> smallStep minTerm
-  where notValue = Map.filter (not . isValue) m
-smallStep (TmRcdExtend v1@(TmRcd m) l v2) | isValue v1 && isValue v2 =
-  return (TmRcd (Map.insert l v2 m))
-smallStep (TmRcdExtend v1 l t2) | isValue v1 = TmRcdExtend v1 l <$> smallStep t2
-smallStep (TmRcdExtend t1 l t2) =
-  (\t1' -> TmRcdExtend t1' l t2) <$> smallStep t1
-smallStep (TmRcdAccess (TmRcd m) l) = case Map.lookup l m of
-  Nothing    -> throwError ExcNoRuleApplied
-  Just inner -> return inner
-smallStep (TmRcdAccess t l              ) = flip TmRcdAccess l <$> smallStep t
-smallStep (TmMatchExtend (TmMatch m) l c) = return (TmMatch (Map.insert l c m))
-smallStep (TmMatchExtend t l c) = (\t' -> TmMatchExtend t' l c) <$> smallStep t
-smallStep (TmSeq v1 t2) | isValue v1      = return t2
-smallStep (TmSeq t1 t2       )            = flip TmSeq t2 <$> smallStep t1
-smallStep (TmIf TmTrue  t2 _ )            = return t2
-smallStep (TmIf TmFalse _  t3)            = return t3
-smallStep (TmIf t1 t2 t3) = (\t1' -> TmIf t1' t2 t3) <$> smallStep t1
-smallStep _                               = throwError ExcNoRuleApplied
+smallStep (TmLet x t1 t2)            = (\t1' -> TmLet x t1' t2) <$> smallStep t1
+smallStep (TmSeq v1 t2) | isValue v1 = return t2
+smallStep (TmSeq t1 t2       )       = flip TmSeq t2 <$> smallStep t1
+smallStep (TmIf TmTrue  t2 _ )       = return t2
+smallStep (TmIf TmFalse _  t3)       = return t3
+smallStep (TmIf t1      t2 t3)       = (\t1' -> TmIf t1' t2 t3) <$> smallStep t1
+smallStep _                          = throwError ExcNoRuleApplied
