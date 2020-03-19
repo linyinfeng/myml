@@ -1,14 +1,9 @@
 import "fix.myml" ;;
+import "function.myml" ;;
 
-put = putChar# ;;
-get = getChar# ;;
-compare = compareChar# ;;
+charCompare = compareChar# ;;
 
-eq c1 c2 = [ `LT _ = false, `EQ _ = true, `GT _ = false ] (compare c1 c2) ;;
-
-char =
-  { put = put
-  , get = get
-  , compare = compare
-  , eq = eq
-  } ;;
+charEq c1 c2 = apply (charCompare c1 c2)
+  [ `LT _ = false
+  , `EQ _ = true
+  , `GT _ = false ] ;;

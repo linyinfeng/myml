@@ -1,37 +1,28 @@
 import "fix.myml" ;;
 
-nil = `nil unit ;;
+listNil = `nil unit ;;
 
-cons x xs = `cons { head = x, tail = xs } ;;
+listCons x xs = `cons { head = x, tail = xs } ;;
 
-singleton x = cons x nil ;;
+listSingleton x = listCons x listNil ;;
 
-length =
+listLength =
   let gen len =
     [ `nil _ = 0
     , `cons l = succ (len l.tail) ]
   in
     fix gen ;;
 
-++ =
+list++ =
   let gen ++ =
     [ `nil _ = \ ys . ys
-    , `cons l = \ ys . cons l.head (++ l.tail ys) ]
+    , `cons l = \ ys . listCons l.head (++ l.tail ys) ]
   in
     fix gen ;;
 
-map f =
+listMap f =
   let gen m =
-    [ `nil _ = nil
-    , `cons l = cons (f l.head) (m l.tail) ]
+    [ `nil _ = listNil
+    , `cons l = listCons (f l.head) (m l.tail) ]
   in
     fix gen ;;
-
-list =
-  { nil = nil
-  , cons = cons
-  , singleton = singleton
-  , length = length
-  , ++ = ++
-  , map = map
-  } ;;
