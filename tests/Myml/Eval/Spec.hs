@@ -38,9 +38,7 @@ unitTests = testGroup
     (pTerm "(\x3bb x . x)")
     emptyStore
   , testCase "smallStep application order 1" $ assertSmallStep
-    (pTerm
-      "(succ zero) (succ zero)"
-    )
+    (pTerm "(succ zero) (succ zero)")
     emptyStore
     (Right (pTerm "1 (succ zero)"))
     emptyStore
