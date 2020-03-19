@@ -5,6 +5,7 @@ import "apply.myml" ;;
 string =
   let string' = class from _
     { put s = map char.put s; unit
+    , putLine s = self.put s; char.put '\n'
     , getLine =
         let getLine' gl _ =
           let c = char.get unit in
