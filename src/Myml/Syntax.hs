@@ -518,7 +518,7 @@ instance PrettyPrec Term where
   prettyPrec _ (TmChar c)    = pretty '\'' <> pretty c <> pretty '\''
   prettyPrec _ TmPutChar     = pretty "putChar#"
   prettyPrec _ TmGetChar     = pretty "getChar#"
-  prettyPrec _ TmCompareChar = pretty "charCompare#"
+  prettyPrec _ TmCompareChar = pretty "compareChar#"
 
 prettyVariantLabel :: LabelName -> Doc ann
 prettyVariantLabel name = pretty '`' <> pretty name

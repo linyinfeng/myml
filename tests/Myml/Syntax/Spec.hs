@@ -87,7 +87,6 @@ fvTypeTests = testGroup
   , testCase "fvType mu" $ fvType (pType "\x3bc X . (X -> T)") @?= Right
     (Map.fromList [("T", KProper)])
   , testCase "fvType Unit" $ fvType (pType "Unit") @?= Right Map.empty
-  , testCase "fvType Bool" $ fvType (pType "Bool") @?= Right Map.empty
   , testCase "fvType Nat" $ fvType (pType "Nat") @?= Right Map.empty
   ]
 

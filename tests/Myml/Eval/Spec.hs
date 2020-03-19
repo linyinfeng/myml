@@ -39,15 +39,15 @@ unitTests = testGroup
     emptyStore
   , testCase "smallStep application order 1" $ assertSmallStep
     (pTerm
-      "(if true then zero else (succ zero)) (if false then zero else (succ zero))"
+      "(succ zero) (succ zero)"
     )
     emptyStore
-    (Right (pTerm "zero (if false then zero else (succ zero))"))
+    (Right (pTerm "1 (succ zero)"))
     emptyStore
   , testCase "smallStep application order 2" $ assertSmallStep
-    (pTerm "zero (if false then zero else (succ zero))")
+    (pTerm "zero (succ zero)")
     emptyStore
-    (Right (pTerm "zero (succ zero)"))
+    (Right (pTerm "0 1"))
     emptyStore
   , testCase "smallStep diverge" $ assertSmallStep
     (pTerm "(\x3bb x . x x) (\x3bb x . x x)")

@@ -72,7 +72,7 @@ termSubstTests = testGroup
   , testCase "Term substitution abstraction 3"
   $           Map.fromList [("x", pTerm "y")]
   `substTerm` pTerm "\x3bb y . x"
-  @?=         pTerm "\x3bb y0 . y"
+  @?=         pTerm "\x3bb y1 . y"
   , testCase "Term substitution application"
   $           Map.fromList [("x", pTerm "y"), ("y", pTerm "z")]
   `substTerm` pTerm "x y"
@@ -80,7 +80,7 @@ termSubstTests = testGroup
   , testCase "Term substitution let"
   $           Map.fromList [("x", pTerm "y")]
   `substTerm` pTerm "let y = x in x"
-  @?=         pTerm "let y0 = y in y"
+  @?=         pTerm "let y1 = y in y"
   , testCase "Term substitution record"
   $           Map.fromList [("x", pTerm "y")]
   `substTerm` pTerm "{ l1 = x, l2 = x }"
@@ -96,11 +96,11 @@ termSubstTests = testGroup
   , testCase "Term substitution match"
   $           Map.fromList [("x", pTerm "y")]
   `substTerm` pTerm "[ `l y = x ]"
-  @?=         pTerm "[ `l y0 = y ]"
+  @?=         pTerm "[ `l y1 = y ]"
   , testCase "Term substitution match extend"
   $           Map.fromList [("x", pTerm "y")]
   `substTerm` pTerm "[ `l1 y = x ] with [`l2 y = x ]"
-  @?=         pTerm "[ `l1 y0 = y ] with [`l2 y0 = y ]"
+  @?=         pTerm "[ `l1 y1 = y ] with [`l2 y1 = y ]"
   , testCase "Term substitution variant"
   $           Map.fromList [("x", pTerm "y")]
   `substTerm` pTerm "`l x"
@@ -176,7 +176,7 @@ typeSubstTests = testGroup
   , testCase "Type substitution proper mu"
   $           Map.fromList [("Y", TySubProper (pType "X"))]
   `substType` pType "\x3bc X . X -> Y"
-  @?=         Right (pType "\x3bc X0 . X0 -> X")
+  @?=         Right (pType "\x3bc X1 . X1 -> X")
   , testCase "Type substitution proper reference"
   $           Map.fromList [("X", TySubProper (pType "Y"))]
   `substType` pType "Ref X"
