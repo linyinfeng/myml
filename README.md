@@ -9,7 +9,7 @@ Based on Hindley-Milner type system, with
 * Equi-recursive types
 * Extensible records and extensible variants based on row polymorphism
 * Reference(Optional)
-* Class as syntactic sugar
+* Class as derived form
 
 ## Build and Run
 
