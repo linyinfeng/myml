@@ -66,7 +66,7 @@ termOperatorTable =
     _     <- symbol "]"
     return (`matchExtends` pairs)
   opAssign = (\a b -> TmApp (TmApp TmAssign a) b) <$ reserve identStyle ":="
-  opSeq    = TmSeq <$ try (symbol ";" <* notFollowedBy (char ';'))
+  opSeq    = termSeq <$ try (symbol ";" <* notFollowedBy (char ';'))
   opClass  = do
     reserve identStyle "class"
     rep      <- reserve identStyle "from" *> ident identStyle

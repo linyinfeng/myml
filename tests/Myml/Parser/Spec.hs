@@ -67,10 +67,13 @@ unitTests = testGroup
     "let x = x in x := x"
     (TmLet "x" (TmVar "x") (TmApp (TmApp TmAssign (TmVar "x")) (TmVar "x")))
   , testCase "Application and record in assignment" $ testTermParser
-    "x x := x x; x := x.l"
-    (TmSeq
-      (TmApp (TmApp TmAssign (TmApp (TmVar "x") (TmVar "x")))
-             (TmApp (TmVar "x") (TmVar "x"))
+    "x := x.l; x x := x x"
+    (TmApp
+      (TmAbs
+        "_"
+        (TmApp (TmApp TmAssign (TmApp (TmVar "x") (TmVar "x")))
+               (TmApp (TmVar "x") (TmVar "x"))
+        )
       )
       (TmApp (TmApp TmAssign (TmVar "x")) (TmApp (TmRcdAccess "l") (TmVar "x")))
     )

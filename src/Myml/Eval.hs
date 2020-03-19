@@ -88,10 +88,8 @@ smallStep (TmApp v1 t2) | isValue v1 = TmApp v1 <$> smallStep t2
 smallStep (TmApp t1 t2)              = flip TmApp t2 <$> smallStep t1
 smallStep (TmLet x v1 t2) | isValue v1 =
   return (substTerm (Map.singleton x v1) t2)
-smallStep (TmLet x t1 t2)            = (\t1' -> TmLet x t1' t2) <$> smallStep t1
-smallStep (TmSeq v1 t2) | isValue v1 = return t2
-smallStep (TmSeq t1 t2       )       = flip TmSeq t2 <$> smallStep t1
-smallStep (TmIf TmTrue  t2 _ )       = return t2
-smallStep (TmIf TmFalse _  t3)       = return t3
-smallStep (TmIf t1      t2 t3)       = (\t1' -> TmIf t1' t2 t3) <$> smallStep t1
-smallStep _                          = throwError ExcNoRuleApplied
+smallStep (TmLet x       t1 t2) = (\t1' -> TmLet x t1' t2) <$> smallStep t1
+smallStep (TmIf  TmTrue  t2 _ ) = return t2
+smallStep (TmIf  TmFalse _  t3) = return t3
+smallStep (TmIf  t1      t2 t3) = (\t1' -> TmIf t1' t2 t3) <$> smallStep t1
+smallStep _                     = throwError ExcNoRuleApplied

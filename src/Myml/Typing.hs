@@ -174,10 +174,7 @@ infer TmAssign = do
       KProper
       (ScmMono (TyArrow (TyRef (TyVar "a")) (TyArrow (TyVar "a") TyUnit)))
     )
-infer (TmLoc _    ) = throwError ErrStoreTypingNotImplemented
-infer (TmSeq t1 t2) = do
-  _ <- infer t1
-  infer t2
+infer (TmLoc _)       = throwError ErrStoreTypingNotImplemented
 infer TmTrue          = return TyBool
 infer TmFalse         = return TyBool
 infer (TmIf t1 t2 t3) = do

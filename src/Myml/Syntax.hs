@@ -9,6 +9,7 @@ module Myml.Syntax
   , termZ
   , termNew
   , termSelf
+  , termSeq
   , pattern TmUnit
   , recordExtends
   , matchExtends
@@ -76,7 +77,6 @@ data Term = TmAbs VarName Term
           | TmDeref
           | TmAssign
           | TmLoc Integer
-          | TmSeq Term Term
           -- Primitives
           -- Boolean
           | TmTrue
@@ -137,6 +137,9 @@ termNew = TmAbs
 termSelf :: Term
 termSelf = TmApp (TmVar "self") TmUnit
 
+termSeq :: Term -> Term -> Term
+termSeq t1 t2 = (TmApp (TmAbs "_" t2) t1)
+
 pattern TmUnit :: Term
 pattern TmUnit = TmEmptyRcd
 
@@ -168,7 +171,6 @@ instance Monad m => Serial m Term where
       \/ cons0 TmDeref
       \/ cons0 TmAssign
       -- do not generate location
-      \/ cons2 TmSeq
       \/ cons0 TmTrue
       \/ cons0 TmFalse
       \/ cons3 TmIf
@@ -297,7 +299,6 @@ isValue TmDeref                               = True
 isValue (TmApp TmAssign t)                    = isValue t
 isValue TmAssign                              = True
 isValue (TmLoc _)                             = True
-isValue TmSeq{}                               = False
 isValue TmTrue                                = True
 isValue TmFalse                               = True
 isValue TmIf{}                                = False
@@ -343,8 +344,7 @@ fvTerm (TmVariant     _label) = Set.empty
 fvTerm TmRef                  = Set.empty
 fvTerm TmDeref                = Set.empty
 fvTerm TmAssign               = Set.empty
-fvTerm (TmLoc _loc )          = Set.empty
-fvTerm (TmSeq t1 t2)          = fvTerm t1 `Set.union` fvTerm t2
+fvTerm (TmLoc _loc)           = Set.empty
 fvTerm TmTrue                 = Set.empty
 fvTerm TmFalse                = Set.empty
 fvTerm (TmIf t1 t2 t3)        = Set.unions (map fvTerm [t1, t2, t3])
@@ -483,19 +483,11 @@ instance PrettyPrec Term where
   prettyPrec _ TmEmptyMatch    = pretty "[]"
   prettyPrec _ (TmMatchExtend l) =
     pretty "extend" <> parens (prettyVariantLabel l)
-  prettyPrec _ (TmVariant l) = prettyVariantLabel l
-  prettyPrec _ TmRef         = pretty "ref"
-  prettyPrec _ TmDeref       = pretty "!"
-  prettyPrec _ TmAssign      = pretty "_:=_"
-  prettyPrec _ (TmLoc l    ) = pretty "loc(" <> pretty l <> pretty ")"
-  prettyPrec n (TmSeq t1 t2) = parensPrec
-    (n > prec)
-    (  align (prettyPrec (prec + 1) t1)
-    <> pretty ";"
-    <> softline
-    <> prettyPrec prec t2
-    )
-    where prec = 1
+  prettyPrec _ (TmVariant l)   = prettyVariantLabel l
+  prettyPrec _ TmRef           = pretty "ref"
+  prettyPrec _ TmDeref         = pretty "!"
+  prettyPrec _ TmAssign        = pretty "_:=_"
+  prettyPrec _ (TmLoc l)       = pretty "loc(" <> pretty l <> pretty ")"
   prettyPrec _ TmTrue          = pretty "true"
   prettyPrec _ TmFalse         = pretty "false"
   prettyPrec n (TmIf t1 t2 t3) = parensPrec

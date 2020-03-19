@@ -122,7 +122,7 @@ unitTests = testGroup
                                              (pTerm "unit")
                                              (emptyStore `allocate'` TmUnit)
   , testCase "bigStep deref invalid location" $ assertBigStep
-    (TmSeq (TmApp TmRef TmUnit) (TmLoc 1))
+    (TmApp (TmAbs "_" (TmLoc 1)) (TmApp TmRef TmUnit))
     emptyStore
     (TmLoc 1)
     (emptyStore `allocate'` TmUnit)
