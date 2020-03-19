@@ -13,6 +13,9 @@ module Myml.Syntax
   , termWildcardAbs
   , uniqueName
   , pattern TmUnit
+  , termTrue
+  , termFalse
+  , termIf
   , recordExtends
   , matchExtends
   , recordLiteral
@@ -20,6 +23,7 @@ module Myml.Syntax
   , Type(..)
   , pattern TyUnit
   , typeOrdering
+  , typeBool
   , TypeRow(..)
   , TypePresence(..)
   , PresenceWithType(..)
@@ -82,10 +86,6 @@ data Term = TmAbs VarName Term
           | TmAssign
           | TmLoc Integer
           -- Primitives
-          -- Boolean
-          | TmTrue
-          | TmFalse
-          | TmIf Term Term Term
           -- Nat
           | TmNat Integer
           | TmSucc
@@ -156,6 +156,17 @@ uniqueName sv base = fromJust
 pattern TmUnit :: Term
 pattern TmUnit = TmEmptyRcd
 
+termTrue :: Term
+termTrue = TmApp (TmVariant "true") TmUnit
+
+termFalse :: Term
+termFalse = TmApp (TmVariant "false") TmUnit
+
+termIf :: Term -> Term -> Term -> Term
+termIf t1 t2 t3 = TmApp
+  (matchLiteral [("true", termWildcardAbs t2), ("false", termWildcardAbs t3)])
+  t1
+
 recordExtends :: Term -> [(LabelName, Term)] -> Term
 recordExtends = foldl (\inner (l, c) -> TmApp (TmApp (TmRcdExtend l) c) inner)
 
@@ -184,13 +195,14 @@ instance Monad m => Serial m Term where
       \/ cons0 TmDeref
       \/ cons0 TmAssign
       -- do not generate location
-      \/ cons0 TmTrue
-      \/ cons0 TmFalse
-      \/ cons3 TmIf
       \/ cons0 (TmNat 0)
       \/ cons0 TmSucc
       \/ cons0 TmPred
       \/ cons0 TmIsZero
+      \/ cons1 TmChar
+      \/ cons0 TmPutChar
+      \/ cons0 TmGetChar
+      \/ cons0 TmCompareChar
 
 data Type = TyVar VarName
           | TyArrow Type Type
@@ -199,7 +211,6 @@ data Type = TyVar VarName
           | TyMu VarName Type
           | TyRef Type
           -- Primitives
-          | TyBool
           | TyNat
           | TyChar
           deriving (Eq, Show, Ord)
@@ -217,6 +228,13 @@ typeOrdering r = TyVariant
   $ RowVar r
   )
 
+typeBool :: VarName -> Type
+typeBool r = TyVariant
+  ( RowPresence "true"  (Present TyUnit)
+  $ RowPresence "false" (Present TyUnit)
+  $ RowVar r
+  )
+
 instance Monad m => Serial m Type where
   series =
     cons0 (TyVar "X")
@@ -225,7 +243,6 @@ instance Monad m => Serial m Type where
       \/ cons1 TyVariant
       \/ cons1 (TyMu "X")
       \/ cons1 TyRef
-      \/ cons0 TyBool
       \/ cons0 TyNat
 
 data TypeRow = RowEmpty
@@ -312,9 +329,6 @@ isValue TmDeref                               = True
 isValue (TmApp TmAssign t)                    = isValue t
 isValue TmAssign                              = True
 isValue (TmLoc _)                             = True
-isValue TmTrue                                = True
-isValue TmFalse                               = True
-isValue TmIf{}                                = False
 isValue TmNat{}                               = True
 isValue TmSucc                                = True
 isValue TmPred                                = True
@@ -358,10 +372,7 @@ fvTerm TmRef                  = Set.empty
 fvTerm TmDeref                = Set.empty
 fvTerm TmAssign               = Set.empty
 fvTerm (TmLoc _loc)           = Set.empty
-fvTerm TmTrue                 = Set.empty
-fvTerm TmFalse                = Set.empty
-fvTerm (TmIf t1 t2 t3)        = Set.unions (map fvTerm [t1, t2, t3])
-fvTerm (TmNat _n     )        = Set.empty
+fvTerm (TmNat _n  )           = Set.empty
 fvTerm TmSucc                 = Set.empty
 fvTerm TmPred                 = Set.empty
 fvTerm TmIsZero               = Set.empty
@@ -417,7 +428,6 @@ fvType (TyRecord  row) = fvRow row
 fvType (TyVariant row) = fvRow row
 fvType (TyMu x t     ) = fvType t >>= mapDeleteWithKind x KProper
 fvType (TyRef t      ) = fvType t
-fvType TyBool          = return Map.empty
 fvType TyNat           = return Map.empty
 fvType TyChar          = return Map.empty
 
@@ -496,29 +506,11 @@ instance PrettyPrec Term where
   prettyPrec _ TmEmptyMatch    = pretty "[]"
   prettyPrec _ (TmMatchExtend l) =
     pretty "extend" <> parens (prettyVariantLabel l)
-  prettyPrec _ (TmVariant l)   = prettyVariantLabel l
-  prettyPrec _ TmRef           = pretty "ref"
-  prettyPrec _ TmDeref         = pretty "!"
-  prettyPrec _ TmAssign        = pretty "_:=_"
-  prettyPrec _ (TmLoc l)       = pretty "loc(" <> pretty l <> pretty ")"
-  prettyPrec _ TmTrue          = pretty "true"
-  prettyPrec _ TmFalse         = pretty "false"
-  prettyPrec n (TmIf t1 t2 t3) = parensPrec
-    (n > prec)
-    (align
-      (group
-        (   pretty "if"
-        <+> prettyPrec 0 t1
-        <>  line
-        <>  pretty "then"
-        <+> prettyPrec 0 t2
-        <>  line
-        <>  pretty "else"
-        <+> prettyPrec prec t3
-        )
-      )
-    )
-    where prec = 0
+  prettyPrec _ (TmVariant l) = prettyVariantLabel l
+  prettyPrec _ TmRef         = pretty "ref"
+  prettyPrec _ TmDeref       = pretty "!"
+  prettyPrec _ TmAssign      = pretty "_:=_"
+  prettyPrec _ (TmLoc l)     = pretty "loc(" <> pretty l <> pretty ")"
   prettyPrec _ (TmNat n)     = pretty n
   prettyPrec _ TmSucc        = pretty "succ"
   prettyPrec _ TmPred        = pretty "pred"
@@ -558,7 +550,6 @@ instance PrettyPrec Type where
   prettyPrec n (TyRef t) = parensPrec (n > prec)
                                       (pretty "Ref" <+> prettyPrec prec t)
     where prec = 2
-  prettyPrec _ TyBool = pretty "Bool"
   prettyPrec _ TyNat  = pretty "Nat"
   prettyPrec _ TyChar = pretty "Char"
 

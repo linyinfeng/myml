@@ -44,7 +44,6 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
     , "compareChar#"
     -- type
     , "Unit"
-    , "Bool"
     , "Nat"
     , "Char"
     , "Rec"

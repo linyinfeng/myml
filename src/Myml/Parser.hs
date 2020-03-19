@@ -39,21 +39,17 @@ termOperatorTable =
     reserve identStyle "then"
     t2 <- parseTerm
     reserve identStyle "else"
-    return (TmIf t1 t2)
+    return (termIf t1 t2)
   opAbs = do
     reserve identStyle "\x3bb" <|> reserve identStyle "\\"
-    xs <- some (ident identStyle)
-    _  <- symbol "."
-    return
-      (\t -> foldr (\x -> if x == "_" then termWildcardAbs else TmAbs x) t xs)
+    xs <- some (ident identStyle) <* symbol "."
+    return (paramsToAbs xs)
   opLet = do
     reserve identStyle "let"
-    x      <- ident identStyle
-    params <- many (ident identStyle)
-    reserve identStyle "="
-    t <- parseTerm
+    x  <- ident identStyle
+    t1 <- equalPair
     reserve identStyle "in"
-    return (TmLet x (foldr TmAbs t params))
+    return (TmLet x t1)
   opApp       = return TmApp
   opRcdAccess = TmApp . TmRcdAccess <$> (symbol "." *> ident identStyle)
   opRcdExtend = do
@@ -122,8 +118,8 @@ parseTermAtom =
   deref            = TmDeref <$ reserve identStyle "!"
   assign           = TmAssign <$ reserve identStyle "_:=_"
   unit             = TmUnit <$ reserve identStyle "unit"
-  true             = TmTrue <$ reserve identStyle "true"
-  false            = TmFalse <$ reserve identStyle "false"
+  true             = termTrue <$ reserve identStyle "true"
+  false            = termFalse <$ reserve identStyle "false"
   zero             = TmNat 0 <$ reserve identStyle "zero"
   nat              = TmNat <$> natural
   suc              = TmSucc <$ reserve identStyle "succ"
@@ -144,6 +140,10 @@ parseTermAtom =
       )
       <$> parens (parseTerm `sepBy` symbol ",")
 
+paramsToAbs :: [VarName] -> Term -> Term
+paramsToAbs xs t =
+  foldr (\x -> if x == "_" then termWildcardAbs else TmAbs x) t xs
+
 recordPair :: Parser (LabelName, Term)
 recordPair = (,) <$> recordLabel <*> equalPair
 
@@ -154,8 +154,7 @@ equalPair :: Parser Term
 equalPair = do
   params <- many (ident identStyle)
   reserve identStyle "="
-  t <- parseTerm
-  return (foldr TmAbs t params)
+  paramsToAbs params <$> parseTerm
 
 recordLabel :: Parser LabelName
 recordLabel = ident identStyle
@@ -184,8 +183,7 @@ typeOperatorTable =
 
 parseTypeAtom :: Parser Type
 parseTypeAtom =
-  (var <|> rcd <|> variant <|> unit <|> bool <|> nat <|> parens parseType)
-    <?> "typeAtom"
+  (var <|> rcd <|> variant <|> unit <|> nat <|> parens parseType) <?> "typeAtom"
  where
   var = TyVar <$> ident identStyle
   rcd =
@@ -193,7 +191,6 @@ parseTypeAtom =
   variant =
     TyVariant <$> (symbol "[" *> parseTypeRow variantLabel <* symbol "]")
   unit = TyUnit <$ reserve identStyle "Unit"
-  bool = TyBool <$ reserve identStyle "Bool"
   nat  = TyNat <$ reserve identStyle "Nat"
 
 parseScheme :: Parser TypeScheme

@@ -174,20 +174,12 @@ infer TmAssign = do
       KProper
       (ScmMono (TyArrow (TyRef (TyVar "a")) (TyArrow (TyVar "a") TyUnit)))
     )
-infer (TmLoc _)       = throwError ErrStoreTypingNotImplemented
-infer TmTrue          = return TyBool
-infer TmFalse         = return TyBool
-infer (TmIf t1 t2 t3) = do
-  ty1 <- infer t1
-  ty2 <- infer t2
-  ty3 <- infer t3
-  unifyProper ty1 TyBool
-  unifyProper ty2 ty3
-  return ty2
-infer (TmNat _)     = return TyNat
-infer TmSucc        = return (TyArrow TyNat TyNat)
-infer TmPred        = return (TyArrow TyNat TyNat)
-infer TmIsZero      = return (TyArrow TyNat TyBool)
+infer (TmLoc _) = throwError ErrStoreTypingNotImplemented
+infer (TmNat _) = return TyNat
+infer TmSucc    = return (TyArrow TyNat TyNat)
+infer TmPred    = return (TyArrow TyNat TyNat)
+infer TmIsZero =
+  instantiate (ScmForall "r" KRow $ ScmMono (TyArrow TyNat (typeBool "r")))
 infer (TmChar _)    = return TyChar
 infer TmGetChar     = return (TyArrow TyUnit TyChar)
 infer TmPutChar     = return (TyArrow TyChar TyUnit)
@@ -233,7 +225,6 @@ instantiateType (TyMu x t   ) = do
   unifyProper (TyVar x) t'
   return (TyVar x)
 instantiateType (TyRef t) = TyRef <$> instantiateType t
-instantiateType TyBool    = return TyBool
 instantiateType TyNat     = return TyNat
 instantiateType TyChar    = return TyChar
 
@@ -373,7 +364,6 @@ unifyProper' (TyArrow t11 t12) (TyArrow t21 t22) =
 unifyProper' (TyRecord  r1) (TyRecord  r2) = unifyRow r1 r2
 unifyProper' (TyVariant r1) (TyVariant r2) = unifyRow r1 r2
 unifyProper' (TyRef     t1) (TyRef     t2) = unifyProper t1 t2
-unifyProper' TyBool         TyBool         = return ()
 unifyProper' TyNat          TyNat          = return ()
 unifyProper' t1 t2 =
   throwError (ErrUnifyNoRuleApplied (TySubProper t1) (TySubProper t2))
@@ -486,7 +476,6 @@ describeProper allowMu ctx (TyRef t ) = TyRef <$> describeProper allowMu ctx t
 describeProper allowMu ctx (TyMu x t) = if allowMu
   then TyMu x <$> describeProper allowMu (Set.insert x ctx) t
   else throwError (ErrCanNotHandleMuType (TyMu x t))
-describeProper _ _ TyBool = return TyBool
 describeProper _ _ TyNat  = return TyNat
 describeProper _ _ TyChar = return TyChar
 

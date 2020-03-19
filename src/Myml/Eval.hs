@@ -74,7 +74,7 @@ smallStep (TmApp TmSucc (TmNat n)) = return (TmNat (succ n))
 smallStep (TmApp TmPred (TmNat n)) =
   return (TmNat (if n == 0 then 0 else n - 1))
 smallStep (TmApp TmIsZero (TmNat n)) =
-  return (if n == 0 then TmTrue else TmFalse)
+  return (if n == 0 then termTrue else termFalse)
 smallStep (TmApp TmPutChar (TmChar c)) = liftIO (TmUnit <$ putChar c)
 smallStep (TmApp TmGetChar TmUnit) = liftIO (TmChar <$> getChar)
 smallStep (TmApp (TmApp TmCompareChar (TmChar c1)) (TmChar c2)) = return
@@ -88,8 +88,5 @@ smallStep (TmApp v1 t2) | isValue v1 = TmApp v1 <$> smallStep t2
 smallStep (TmApp t1 t2)              = flip TmApp t2 <$> smallStep t1
 smallStep (TmLet x v1 t2) | isValue v1 =
   return (substTerm (Map.singleton x v1) t2)
-smallStep (TmLet x       t1 t2) = (\t1' -> TmLet x t1' t2) <$> smallStep t1
-smallStep (TmIf  TmTrue  t2 _ ) = return t2
-smallStep (TmIf  TmFalse _  t3) = return t3
-smallStep (TmIf  t1      t2 t3) = (\t1' -> TmIf t1' t2 t3) <$> smallStep t1
-smallStep _                     = throwError ExcNoRuleApplied
+smallStep (TmLet x t1 t2) = (\t1' -> TmLet x t1' t2) <$> smallStep t1
+smallStep _               = throwError ExcNoRuleApplied
