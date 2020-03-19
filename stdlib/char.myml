@@ -1,10 +1,14 @@
 import "fix.myml" ;;
 
+put = putChar# ;;
+get = getChar# ;;
+compare = compareChar# ;;
+
+eq c1 c2 = [ `LT _ = false, `EQ _ = true, `GT _ = false ] (compare c1 c2) ;;
+
 char =
-  let char' = class from _
-    { put = putChar#
-    , get = getChar#
-    , compare = compareChar#
-    , eq c1 c2 = [ `LT _ = false, `EQ _ = true, `GT _ = false ] (self.compare c1 c2)
-    }
-  in new char' unit ;;
+  { put = put
+  , get = get
+  , compare = compare
+  , eq = eq
+  } ;;

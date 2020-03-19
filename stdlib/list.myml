@@ -1,7 +1,9 @@
 import "fix.myml" ;;
 
 nil = `nil unit ;;
+
 cons x xs = `cons { head = x, tail = xs } ;;
+
 singleton x = cons x nil ;;
 
 length =
@@ -24,3 +26,12 @@ map f =
     , `cons l = cons (f l.head) (m l.tail) ]
   in
     fix gen ;;
+
+list =
+  { nil = nil
+  , cons = cons
+  , singleton = singleton
+  , length = length
+  , ++ = ++
+  , map = map
+  } ;;

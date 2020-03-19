@@ -2,26 +2,35 @@ import "char.myml" ;;
 import "list.myml" ;;
 import "function.myml" ;;
 
+put s = map char.put s; unit ;;
+
+putLine s = put s; char.put '\n' ;;
+
+getLine =
+  let getLine' gl _ =
+    let c = char.get unit in
+      if char.eq c '\n'
+      then nil
+      else cons c (gl unit)
+  in fix getLine' ;;
+
+compare =
+  let gen cmp s1 s2 =
+    apply s1
+      [ `cons l1 = apply s2
+          [ `cons l2 = apply (char.compare l1.head l2.head)
+              [ `GT _ = `GT unit
+              , `LT _ = `LT unit
+              , `EQ _ = cmp l1.tail l2.tail ]
+          , `nil _   = `GT unit ]
+      , `nil _ = apply s2
+          [ `cons _ = `LT unit
+          , `nil  _ = `EQ unit ]]
+  in fix gen ;;
+
 string =
-  let string' = class from _
-    { put s = map char.put s; unit
-    , putLine s = self.put s; char.put '\n'
-    , getLine =
-        let getLine' gl _ =
-          let c = char.get unit in
-          if char.eq c '\n'
-          then nil
-          else cons c (gl unit) in
-        fix getLine'
-    , compare s1 s2 = apply s1
-        [ `cons l1 = apply s2
-            [ `cons l2 = apply (char.compare l1.head l2.head)
-                [ `GT _ = `GT unit
-                , `LT _ = `LT unit
-                , `EQ _ = self.compare l1.tail l2.tail ]
-            , `nil _   = `GT unit ]
-        , `nil _ = apply s2
-            [ `cons _ = `LT unit
-            , `nil  _ = `EQ unit ]]
-    } in
-  new string' unit ;;
+  { put = put
+  , putLine = putLine
+  , getLine = getLine
+  , compare = compare
+  }  ;;
