@@ -101,14 +101,15 @@ mymliEnvForFile :: Monad m => FilePath -> Mymli m MymliEnv
 mymliEnvForFile path = do
   env <- get
   let opt = envOption env
-  return MymliEnv { envOption        = opt
-                  , envStore         = emptyEnvStore opt
-                  , envTermBindings  = Map.empty
-                  , envValueBindings = Map.empty
-                  , envTypeBindings  = Map.empty
-                  , envInferState    = envInferState env
-                  , envSearchPath    = takeDirectory path : envSearchPath env
-                  }
+  return MymliEnv
+    { envOption        = opt
+    , envStore         = (\s -> s { storeData = Map.empty }) <$> envStore env
+    , envTermBindings  = Map.empty
+    , envValueBindings = Map.empty
+    , envTypeBindings  = Map.empty
+    , envInferState    = envInferState env
+    , envSearchPath    = takeDirectory path : envSearchPath env
+    }
 
 mymliMergeFileEnv :: Monad m => MymliEnv -> Mymli m ()
 mymliMergeFileEnv file = do
