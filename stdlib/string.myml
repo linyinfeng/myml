@@ -1,6 +1,6 @@
 import "char.myml" ;;
 import "list.myml" ;;
-import "apply.myml" ;;
+import "function.myml" ;;
 
 string =
   let string' = class from _

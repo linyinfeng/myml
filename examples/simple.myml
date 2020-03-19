@@ -1,5 +1,0 @@
-id x = x ;;
-
-const x y = x ;;
-
-∘ f1 f2 x = f1 (f2 x) ;;

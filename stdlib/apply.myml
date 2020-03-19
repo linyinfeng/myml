@@ -1,1 +1,0 @@
-apply a f = f a ;;

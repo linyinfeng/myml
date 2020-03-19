@@ -1,0 +1,7 @@
+id x = x ;;
+
+const x _ = x ;;
+
+apply a f = f a ;;
+
+∘ f g x = f (g x) ;;
