@@ -65,7 +65,7 @@ unitTests = testGroup
     (pTerm "{ l1 = false, l2 = false }")
     emptyStore
   , testCase "bigStep record extend" $ assertBigStep
-    (pTerm "{ l1 = ref unit } with { l2 = ref 1 }")
+    (pTerm "{ l1 = ref unit } extend { l2 = ref 1 }")
     emptyStore
     (       TmRcdExtend "l2"
     `TmApp` TmLoc 0
@@ -73,22 +73,22 @@ unitTests = testGroup
     )
     (emptyStore `allocate'` TmNat 1 `allocate'` TmUnit)
   , testCase "bigStep record access 1" $ assertBigStep
-    (pTerm "{ l1 = ref unit } with { l2 = unit }.l1")
+    (pTerm "{ l1 = ref unit } extend { l2 = unit }.l1")
     emptyStore
     (TmLoc 0)
     (emptyStore `allocate'` TmUnit)
   , testCase "bigStep record access 2" $ assertBigStep
-    (pTerm "{ l1 = unit } with { l2 = unit }.l2")
+    (pTerm "{ l1 = unit } extend { l2 = unit }.l2")
     emptyStore
     (pTerm "unit")
     emptyStore
   , testCase "bigStep record access 3" $ assertBigStep
-    (pTerm "{ l1 = unit } with { l2 = unit }.l3")
+    (pTerm "{ l1 = unit } extend { l2 = unit }.l3")
     emptyStore
     (pTerm "{ }.l3")
     emptyStore
   , testCase "bigStep match extend" $ assertBigStep
-    (pTerm "[ `l1 x = x ] with [ `l2 y = y ]  with [ `l3 z = z ]")
+    (pTerm "[ `l1 x = x ] extend [ `l2 y = y ]  extend [ `l3 z = z ]")
     emptyStore
     (pTerm "[ `l1 x = x, `l2 y = y, `l3 z = z ]")
     emptyStore

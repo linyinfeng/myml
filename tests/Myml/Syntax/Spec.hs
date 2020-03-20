@@ -41,7 +41,7 @@ fvTermTests = testGroup
   $   fvTerm (pTerm "{ x = x, y = y }")
   @?= Set.fromList ["x", "y"]
   , testCase "fvTerm record extend"
-  $   fvTerm (pTerm "{ x = x, y = y } with { z = z }")
+  $   fvTerm (pTerm "{ x = x, y = y } extend { z = z }")
   @?= Set.fromList ["x", "y", "z"]
   , testCase "fvTerm record access"
   $   fvTerm (pTerm "{ x = x, y = y }.x")
@@ -50,7 +50,7 @@ fvTermTests = testGroup
   $   fvTerm (pTerm "[`l1 x = x y, `l2 y = z y]")
   @?= Set.fromList ["y", "z"]
   , testCase "fvTerm match extend"
-  $   fvTerm (pTerm "[`l1 x = x y] with [`l2 y = z y]")
+  $   fvTerm (pTerm "[`l1 x = x y] extend [`l2 y = z y]")
   @?= Set.fromList ["y", "z"]
   , testCase "fvTerm variant" $ fvTerm (pTerm "`x x") @?= Set.fromList ["x"]
   , testCase "fvTerm ref" $ fvTerm (pTerm "ref (x y)") @?= Set.fromList
@@ -110,7 +110,7 @@ isValueTests = testGroup
   , testCase "isValue record access" $ isValue (pTerm "x.x") @?= False
   , testCase "isValue match" $ isValue (pTerm "[`l x = x]") @?= True
   , testCase "isValue match extend "
-  $   isValue (pTerm "[`l1 x = x] with [`l2 x = x]")
+  $   isValue (pTerm "[`l1 x = x] extend [`l2 x = x]")
   @?= True
   , testCase "isValue variant 1" $ isValue (pTerm "`l1 x") @?= False
   , testCase "isValue variant 2" $ isValue (pTerm "`l1 (\x3bb x . x)") @?= True
