@@ -9,10 +9,8 @@ ioPutString s = listMap ioPutChar s; unit ;;
 
 ioPutStringLine s = ioPutString s; ioPutChar '\n' ;;
 
-ioGetLine =
-  let getLine' gl _ =
-    let c = ioGetChar unit in
-      if charEq c '\n'
-      then listNil
-      else listCons c (gl unit)
-  in fix getLine' ;;
+ioGetLine = fix (λ getLine _ .
+  let c = ioGetChar unit in
+    if charEq c '\n'
+    then listNil
+    else listCons c (getLine unit)) ;;

@@ -2,19 +2,17 @@ import "char.myml" ;;
 import "list.myml" ;;
 import "function.myml" ;;
 
-stringCompare =
-  let gen cmp s1 s2 =
-    apply s1
-      [ `cons l1 = apply s2
-          [ `cons l2 = apply (charCompare l1.head l2.head)
-              [ `GT _ = `GT unit
-              , `LT _ = `LT unit
-              , `EQ _ = cmp l1.tail l2.tail ]
-          , `nil _   = `GT unit ]
-      , `nil _ = apply s2
-          [ `cons _ = `LT unit
-          , `nil  _ = `EQ unit ]]
-  in fix gen ;;
+stringCompare = fix (λ cmp s1 s2 .
+  apply s1
+    [ `cons l1 = apply s2
+        [ `cons l2 = apply (charCompare l1.head l2.head)
+            [ `GT _ = `GT unit
+            , `LT _ = `LT unit
+            , `EQ _ = cmp l1.tail l2.tail ]
+        , `nil _   = `GT unit ]
+    , `nil _ = apply s2
+        [ `cons _ = `LT unit
+        , `nil  _ = `EQ unit ]]) ;;
 
 stringEq s1 s2 = apply (stringCompare s1 s2)
   [ `LT _ = false

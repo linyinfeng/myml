@@ -41,6 +41,7 @@ substTerm' TmRef             = return TmRef
 substTerm' TmDeref           = return TmDeref
 substTerm' TmAssign          = return TmAssign
 substTerm' (TmLoc n)         = return (TmLoc n)
+substTerm' TmNew             = return TmNew
 substTerm' (TmNat n)         = return (TmNat n)
 substTerm' TmSucc            = return TmSucc
 substTerm' TmPred            = return TmPred

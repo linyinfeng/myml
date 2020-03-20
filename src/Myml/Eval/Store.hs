@@ -119,6 +119,7 @@ instance Locations Term where
   locations TmDeref           = Set.empty
   locations TmAssign          = Set.empty
   locations (TmLoc l)         = Set.singleton l
+  locations TmNew             = Set.empty
   locations (TmNat _)         = Set.empty
   locations TmSucc            = Set.empty
   locations TmPred            = Set.empty

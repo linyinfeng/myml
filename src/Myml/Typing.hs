@@ -207,6 +207,12 @@ infer TmAssign = do
       (ScmMono (TyArrow (TyRef (TyVar "a")) (TyArrow (TyVar "a") TyUnit)))
     )
 infer (TmLoc _) = throwError ErrStoreTypingNotImplemented
+infer TmNew     = do
+  checkImperativeFeaturesEnabled TmAssign
+  instantiate
+    (ScmForall "a" KProper $ ScmMono
+      ((TyRef (TyVar "a") `TyArrow` (TyVar "a")) `TyArrow` (TyVar "a"))
+    )
 infer (TmNat _) = return TyNat
 infer TmSucc    = return (TyArrow TyNat TyNat)
 infer TmPred    = return (TyArrow TyNat TyNat)

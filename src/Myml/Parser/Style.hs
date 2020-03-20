@@ -34,7 +34,6 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
     , "pred"
     , "isZero"
     , "class"
-    , "from"
     , "inherit"
     , "new"
     , "self"

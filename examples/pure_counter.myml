@@ -1,10 +1,9 @@
-import "../sdtlib/fix.myml" ;;
+import "../stdlib/fix.myml" ;;
 
 Counter =
-  let gen C =
+  let gen C r =
     class
-      from r
       { get _ = r.x
-      , inc _ = new C (r with { x = succ r.x }) }
+      , inc _ = new (C (r update { x = succ r.x })) }
   in
     fix gen ;;

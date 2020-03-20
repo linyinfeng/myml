@@ -1,49 +1,43 @@
-Counter =
+Counter r =
   class
-    from r
     { get _ = ! r.x
     , inc _ = r.x := succ (! r.x) } ;;
-BackupCounter =
+BackupCounter r =
   class
-    from r
-    inherit Counter as super
+    inherit Counter r as super
     super extend
       { backup _ =  r.b := ! r.x
       , restore _ = r.x := ! r.b } ;;
-ResetCounter =
+ResetCounter r =
   class
-    from r
-    inherit Counter as super
+    inherit Counter r as super
     super extend
       { reset _ = r.x := 0 } ;;
-MixinCounter =
+MixinCounter r =
   class
-    from r
-    inherit Counter as super
-    inherit BackupCounter as superBackup
-    inherit ResetCounter as superReset
+    inherit Counter r as super
+    inherit BackupCounter r as superBackup
+    inherit ResetCounter r as superReset
     super extend
       { backup = superBackup.backup
       , restore = superBackup.restore
       , reset = superReset.reset } ;;
-Inc2Counter =
+Inc2Counter r =
   class
-    from r
-    inherit Counter as super
+    inherit Counter r as super
     super extend
       { inc2 _ = self.inc (); self.inc () } ;;
-Inc2EvenCounter =
+Inc2EvenCounter r =
   class
-    from r
-    inherit Inc2Counter as super
+    inherit Inc2Counter r as super
     super update
       { inc _ = super.inc (); super.inc ()
       , inc2 = super.inc2 } ;;
 
 rep = { x = ref 0, b = ref 0 } ;;
-counter = new Counter rep ;;
-backupCounter = new BackupCounter rep ;;
-resetCounter = new ResetCounter rep ;;
+counter = new (Counter rep) ;;
+backupCounter = new (BackupCounter rep) ;;
+resetCounter = new (ResetCounter rep) ;;
 
 incAndGet = λ c . c.inc (); c.get () ;;
 incAndGetCounter = incAndGet counter ;;

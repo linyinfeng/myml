@@ -6,23 +6,14 @@ listCons x xs = `cons { head = x, tail = xs } ;;
 
 listSingleton x = listCons x listNil ;;
 
-listLength =
-  let gen len =
-    [ `nil _ = 0
-    , `cons l = succ (len l.tail) ]
-  in
-    fix gen ;;
+listLength = fix (λ len .
+  [ `nil _ = 0
+  , `cons l = succ (len l.tail) ]) ;;
 
-list++ =
-  let gen ++ =
-    [ `nil _ = \ ys . ys
-    , `cons l = \ ys . listCons l.head (++ l.tail ys) ]
-  in
-    fix gen ;;
+list++ = fix (λ ++ .
+  [ `nil _ = \ ys . ys
+  , `cons l = \ ys . listCons l.head (++ l.tail ys) ] ;;
 
-listMap f =
-  let gen m =
-    [ `nil _ = listNil
-    , `cons l = listCons (f l.head) (m l.tail) ]
-  in
-    fix gen ;;
+listMap f = fix (λ map .
+  [ `nil _ = listNil
+  , `cons l = listCons (f l.head) (map l.tail) ] ;;

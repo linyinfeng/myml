@@ -79,16 +79,15 @@ termOperatorTable =
   opSeq    = termSeq <$ try (symbol ";" <* notFollowedBy (char ';'))
   opClass  = do
     reserve identStyle "class"
-    rep      <- reserve identStyle "from" *> ident identStyle
     inherits <- many
       (do
         reserve identStyle "inherit"
-        t <- parseTermAtom
+        t <- parseTerm
         reserve identStyle "as"
         x <- ident identStyle
         return (t, x)
       )
-    return (deriveTermClass . TermClass inherits rep)
+    return (deriveTermClass . TermClass inherits)
 
 parseTermAtom :: Parser Term
 parseTermAtom =
@@ -148,7 +147,7 @@ parseTermAtom =
   suc              = TmSucc <$ reserve identStyle "succ"
   prd              = TmPred <$ reserve identStyle "pred"
   isZero           = TmIsZero <$ reserve identStyle "isZero"
-  new              = termNew <$ reserve identStyle "new"
+  new              = TmNew <$ reserve identStyle "new"
   charLit          = TmChar <$> charLiteral
   getCharSharp     = TmGetChar <$ reserve identStyle "getChar#"
   putCharSharp     = TmPutChar <$ reserve identStyle "putChar#"

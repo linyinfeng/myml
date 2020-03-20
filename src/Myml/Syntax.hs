@@ -6,8 +6,6 @@ module Myml.Syntax
   , TermClass(..)
   , deriveTermClass
   , deriveString
-  , termZ
-  , termNew
   , termSelf
   , termSeq
   , termWildcardAbs
@@ -86,6 +84,7 @@ data Term = TmAbs VarName Term
           | TmDeref
           | TmAssign
           | TmLoc Integer
+          | TmNew
           -- Primitives
           -- Nat
           | TmNat Integer
@@ -103,44 +102,26 @@ infixl 7 `TmApp`
 
 data TermClass = TermClass {
     classInherits :: [(Term, VarName)],
-    classRep :: VarName,
     classBody :: Term
   }
   deriving (Eq, Show)
 
 deriveTermClass :: TermClass -> Term
-deriveTermClass (TermClass inherits rep body) = TmAbs
-  rep
-  (TmAbs "self" (termWildcardAbs (inheritsToLet inherits body)))
+deriveTermClass (TermClass inherits body) = TmAbs
+  "self"
+  (inheritsToLet inherits body)
  where
-  inheritsToLet ((t, x) : ps) inner = TmLet
-    x
-    (TmApp (TmApp (TmApp t (TmVar rep)) (TmVar "self")) TmUnit)
-    (inheritsToLet ps inner)
+  inheritsToLet ((t, x) : ps) inner =
+    TmLet x (TmApp t (TmVar "self")) (inheritsToLet ps inner)
   inheritsToLet [] inner = inner
 
 deriveString :: String -> Term
 deriveString []       = TmVariant "nil" `TmApp` TmUnit
 deriveString (c : cs) = TmVariant "cons"
-  `TmApp` recordLiteral [("head", (TmChar c)), ("tail", deriveString cs)]
-
--- λ f . (λ x . f (λ v . x x  v)) (λ x . f (λ v . x x v))
-termZ :: Term
-termZ = TmAbs "f" (TmApp half half)
- where
-  half = TmAbs
-    "x"
-    (TmApp (TmVar "f")
-           (TmAbs "v" (TmApp (TmApp (TmVar "x") (TmVar "x")) (TmVar "v")))
-    )
-
-termNew :: Term
-termNew = TmAbs
-  "k"
-  (TmAbs "r" (TmApp (TmApp termZ (TmApp (TmVar "k") (TmVar "r"))) TmUnit))
+  `TmApp` recordLiteral [("head", TmChar c), ("tail", deriveString cs)]
 
 termSelf :: Term
-termSelf = TmApp (TmVar "self") TmUnit
+termSelf = TmApp TmDeref (TmVar "self")
 
 termSeq :: Term -> Term -> Term
 termSeq t1 t2 = TmApp (termWildcardAbs t2) t1
@@ -331,6 +312,7 @@ isValue TmDeref                               = True
 isValue (TmApp TmAssign t)                    = isValue t
 isValue TmAssign                              = True
 isValue (TmLoc _)                             = True
+isValue TmNew                                 = True
 isValue TmNat{}                               = True
 isValue TmSucc                                = True
 isValue TmPred                                = True
@@ -376,7 +358,8 @@ fvTerm TmRef                  = Set.empty
 fvTerm TmDeref                = Set.empty
 fvTerm TmAssign               = Set.empty
 fvTerm (TmLoc _loc)           = Set.empty
-fvTerm (TmNat _n  )           = Set.empty
+fvTerm TmNew                  = Set.empty
+fvTerm (TmNat _n)             = Set.empty
 fvTerm TmSucc                 = Set.empty
 fvTerm TmPred                 = Set.empty
 fvTerm TmIsZero               = Set.empty
@@ -518,6 +501,7 @@ instance PrettyPrec Term where
   prettyPrec _ TmDeref       = pretty "!"
   prettyPrec _ TmAssign      = pretty "_:=_"
   prettyPrec _ (TmLoc l)     = pretty "loc(" <> pretty l <> pretty ")"
+  prettyPrec _ TmNew         = pretty "new"
   prettyPrec _ (TmNat n)     = pretty n
   prettyPrec _ TmSucc        = pretty "succ"
   prettyPrec _ TmPred        = pretty "pred"
