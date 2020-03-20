@@ -55,33 +55,29 @@ g = λ eq . λ n . λ m .
 natEq = z g ;;
 
 r = { } ;;
-rExtended = r with { l = id } ;;
+rExtended = r extend { l = id } ;;
 
-Counter =
+Counter r =
   class
-    from r
     { get _ = ! r.x
     , inc _ = r.x := succ (! r.x) } ;;
-BackupCounter =
+BackupCounter r =
   class
-    from r
-    inherit Counter as super
+    inherit Counter r as super
     let b = ref (! r.x) in
-      super with
+      super extend
         { backup _ =  b := ! r.x
         , restore _ = r.x := ! b } ;;
-EvenCounter =
+EvenCounter r =
   class
-    from r
-    inherit Counter as super
-    super with
+    inherit Counter r as super
+    super update
       { inc _ = super.inc (); super.inc () } ;;
-EvenBackupCounter =
+EvenBackupCounter r =
   class
-    from r
-    inherit EvenCounter as super
-    inherit BackupCounter as superBackup
-    super with
+    inherit EvenCounter r as super
+    inherit BackupCounter r as superBackup
+    super extend
       { backup = superBackup.backup
       , restore = superBackup.restore } ;;
 c = new EvenBackupCounter { x = ref 0 } ;;
