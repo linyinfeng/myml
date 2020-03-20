@@ -31,9 +31,11 @@ substTerm' (TmLet x t1 t2) = do
   TmLet newX t1' <$> inner (substTerm' t2)
 substTerm' TmEmptyRcd        = return TmEmptyRcd
 substTerm' (TmRcdExtend l)   = return (TmRcdExtend l)
+substTerm' (TmRcdUpdate l)   = return (TmRcdUpdate l)
 substTerm' (TmRcdAccess l)   = return (TmRcdAccess l)
 substTerm' TmEmptyMatch      = return TmEmptyMatch
 substTerm' (TmMatchExtend l) = return (TmMatchExtend l)
+substTerm' (TmMatchUpdate l) = return (TmMatchUpdate l)
 substTerm' (TmVariant     l) = return (TmVariant l)
 substTerm' TmRef             = return TmRef
 substTerm' TmDeref           = return TmDeref

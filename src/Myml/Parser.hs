@@ -53,15 +53,28 @@ termOperatorTable =
   opApp       = return TmApp
   opRcdAccess = TmApp . TmRcdAccess <$> (symbol "." *> ident identStyle)
   opRcdExtend = do
-    try $ reserve identStyle "with" <* symbol "{"
+    ext <-
+      try
+      $  (TmRcdExtend <$ reserve identStyle "extend" <|> TmRcdUpdate <$ reserve
+           identStyle
+           "update"
+         )
+      <* symbol "{"
     pairs <- recordPair `sepBy` symbol ","
     _     <- symbol "}"
-    return (`recordExtends` pairs)
+    return (flip (labaledApps ext) pairs)
   opMatchExtend = do
-    try $ reserve identStyle "with" <* symbol "["
+    ext <-
+      try
+      $  (   TmMatchExtend
+         <$  reserve identStyle "extend"
+         <|> TmMatchUpdate
+         <$  reserve identStyle "update"
+         )
+      <* symbol "["
     pairs <- matchPair `sepBy` symbol ","
     _     <- symbol "]"
-    return (`matchExtends` pairs)
+    return (flip (labaledApps ext) pairs)
   opAssign = (\a b -> TmApp (TmApp TmAssign a) b) <$ reserve identStyle ":="
   opSeq    = termSeq <$ try (symbol ";" <* notFollowedBy (char ';'))
   opClass  = do
@@ -82,7 +95,7 @@ parseTermAtom =
   (   rcd
     <|> match
     <|> variant
-    <|> extend
+    <|> rcdAndMatchOps
     <|> access
     <|> ref
     <|> deref
@@ -107,12 +120,22 @@ parseTermAtom =
     )
     <?> "termAtom"
  where
-  var     = TmVar <$> ident identStyle
-  rcd     = recordLiteral <$> braces (recordPair `sepBy` symbol ",")
-  match   = matchLiteral <$> brackets (matchPair `sepBy` symbol ",")
-  variant = TmVariant <$> variantLabel
-  extend  = reserve identStyle "extend"
-    *> parens (TmMatchExtend <$> variantLabel <|> TmRcdExtend <$> recordLabel)
+  var            = TmVar <$> ident identStyle
+  rcd            = recordLiteral <$> braces (recordPair `sepBy` symbol ",")
+  match          = matchLiteral <$> brackets (matchPair `sepBy` symbol ",")
+  variant        = TmVariant <$> variantLabel
+  rcdAndMatchOps = try matchOps <|> try rcdOps
+  matchOps       = do
+    op <-
+      TmMatchExtend <$ reserve identStyle "extend" <|> TmMatchUpdate <$ reserve
+        identStyle
+        "update"
+    op <$> parens variantLabel
+  rcdOps = do
+    op <- TmRcdExtend <$ reserve identStyle "extend" <|> TmRcdUpdate <$ reserve
+      identStyle
+      "update"
+    op <$> parens recordLabel
   access = TmRcdAccess <$> (reserve identStyle "access" *> parens recordLabel)
   ref              = TmRef <$ reserve identStyle "ref"
   deref            = TmDeref <$ reserve identStyle "!"

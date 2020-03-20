@@ -109,9 +109,11 @@ instance Locations Term where
   locations (TmLet _ t1 t2)   = locations t1 `Set.union` locations t2
   locations TmEmptyRcd        = Set.empty
   locations (TmRcdExtend _)   = Set.empty
+  locations (TmRcdUpdate _)   = Set.empty
   locations (TmRcdAccess _)   = Set.empty
   locations TmEmptyMatch      = Set.empty
   locations (TmMatchExtend _) = Set.empty
+  locations (TmMatchUpdate _) = Set.empty
   locations (TmVariant     _) = Set.empty
   locations TmRef             = Set.empty
   locations TmDeref           = Set.empty

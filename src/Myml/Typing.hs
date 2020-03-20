@@ -38,8 +38,6 @@ import           Data.Text.Prettyprint.Doc
 import qualified Data.Map                      as Map
 import qualified Data.Set                      as Set
 
-
-
 newtype NewVar = NewVar (Map.Map VarName Integer)
   deriving Show
 
@@ -125,6 +123,20 @@ infer (TmRcdExtend l) = instantiate
                   )
       )
   )
+infer (TmRcdUpdate l) = instantiate
+  ( ScmForall "a"  KProper
+  $ ScmForall "r"  KRow
+  $ ScmForall "pt" KPresenceWithType
+  $ ScmMono
+      (         TyVar "a"
+      `TyArrow` TyRecord (RowPresence l (Present (TyVar "a")) (RowVar "r"))
+      `TyArrow` TyRecord
+                  (RowPresence l
+                               (PresenceVarWithType "pt" (TyVar "a"))
+                               (RowVar "r")
+                  )
+      )
+  )
 infer (TmRcdAccess l) = instantiate
   (ScmForall "a" KProper $ ScmForall "r" KRow $ ScmMono
     (         TyRecord (RowPresence l (Present (TyVar "a")) (RowVar "r"))
@@ -142,6 +154,26 @@ infer (TmMatchExtend l) = instantiate
   $ ScmMono
       (         (TyVar "a" `TyArrow` TyVar "ret")
       `TyArrow` (TyVariant (RowPresence l (PresenceVar "p") (RowVar "row"))
+                `TyArrow` TyVar "ret"
+                )
+      `TyArrow` TyVariant
+                  (RowPresence l
+                               (PresenceVarWithType "pt" (TyVar "a"))
+                               (RowVar "row")
+                  )
+      `TyArrow` TyVar "ret"
+      )
+  )
+infer (TmMatchUpdate l) = instantiate
+  ( ScmForall "a"   KProper
+  $ ScmForall "b"   KProper
+  $ ScmForall "ret" KProper
+  $ ScmForall "row" KRow
+  $ ScmForall "pt"  KPresenceWithType
+  $ ScmMono
+      (         (TyVar "a" `TyArrow` TyVar "ret")
+      `TyArrow` (         TyVariant
+                    (RowPresence l (Present (TyVar "b")) (RowVar "row"))
                 `TyArrow` TyVar "ret"
                 )
       `TyArrow` TyVariant

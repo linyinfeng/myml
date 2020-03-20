@@ -19,8 +19,8 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
   coreReserved =
     [ "let"
     , "in"
-    , "with"
     , "extend"
+    , "update"
     , "access"
     , "ref"
     , "unit"

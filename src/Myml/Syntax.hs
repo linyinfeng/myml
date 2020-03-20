@@ -16,8 +16,7 @@ module Myml.Syntax
   , termTrue
   , termFalse
   , termIf
-  , recordExtends
-  , matchExtends
+  , labaledApps
   , recordLiteral
   , matchLiteral
   , Type(..)
@@ -75,10 +74,12 @@ data Term = TmAbs VarName Term
           -- Polymorphic record
           | TmEmptyRcd
           | TmRcdExtend LabelName
+          | TmRcdUpdate LabelName
           | TmRcdAccess LabelName
           -- Polymorphic variants
           | TmEmptyMatch
           | TmMatchExtend LabelName
+          | TmMatchUpdate LabelName
           | TmVariant LabelName
           -- Reference
           | TmRef
@@ -167,17 +168,14 @@ termIf t1 t2 t3 = TmApp
   (matchLiteral [("true", termWildcardAbs t2), ("false", termWildcardAbs t3)])
   t1
 
-recordExtends :: Term -> [(LabelName, Term)] -> Term
-recordExtends = foldl (\inner (l, c) -> TmApp (TmApp (TmRcdExtend l) c) inner)
-
-matchExtends :: Term -> [(LabelName, Term)] -> Term
-matchExtends = foldl (\inner (l, c) -> TmApp (TmApp (TmMatchExtend l) c) inner)
+labaledApps :: (LabelName -> Term) -> Term -> [(LabelName, Term)] -> Term
+labaledApps ext = foldl (\inner (l, c) -> TmApp (TmApp (ext l) c) inner)
 
 recordLiteral :: [(LabelName, Term)] -> Term
-recordLiteral = recordExtends TmEmptyRcd
+recordLiteral = labaledApps TmRcdExtend TmEmptyRcd
 
 matchLiteral :: [(LabelName, Term)] -> Term
-matchLiteral = matchExtends TmEmptyMatch
+matchLiteral = labaledApps TmMatchExtend TmEmptyMatch
 
 instance Monad m => Serial m Term where
   series =
@@ -317,11 +315,15 @@ isValue t@(TmApp (TmApp (TmRcdExtend _) _) _) = isRcdValue t
 isValue t@TmEmptyRcd                          = isRcdValue t
 isValue (TmApp (TmRcdExtend _) t)             = isValue t
 isValue (TmRcdExtend _)                       = True
+isValue (TmApp (TmRcdUpdate _) t)             = isValue t
+isValue (TmRcdUpdate _)                       = True
 isValue (TmRcdAccess _)                       = True
 isValue t@(TmApp (TmApp (TmMatchExtend _) _) _) = isMatchValue t
 isValue t@TmEmptyMatch                        = isMatchValue t
 isValue (TmApp (TmMatchExtend _) t)           = isValue t
 isValue (TmMatchExtend _          )           = True
+isValue (TmApp (TmMatchUpdate _) t)           = isValue t
+isValue (TmMatchUpdate _          )           = True
 isValue (TmApp (TmVariant _) t    )           = isValue t
 isValue (TmVariant _              )           = True
 isValue TmRef                                 = True
@@ -364,9 +366,11 @@ fvTerm (TmApp t1 t2  )        = fvTerm t1 `Set.union` fvTerm t2
 fvTerm (TmLet x t1 t2)        = fvTerm t1 `Set.union` Set.delete x (fvTerm t2)
 fvTerm TmEmptyRcd             = Set.empty
 fvTerm (TmRcdExtend _label)   = Set.empty
+fvTerm (TmRcdUpdate _label)   = Set.empty
 fvTerm (TmRcdAccess _label)   = Set.empty
 fvTerm TmEmptyMatch           = Set.empty
 fvTerm (TmMatchExtend _label) = Set.empty
+fvTerm (TmMatchUpdate _label) = Set.empty
 fvTerm (TmVariant     _label) = Set.empty
 fvTerm TmRef                  = Set.empty
 fvTerm TmDeref                = Set.empty
@@ -502,10 +506,13 @@ instance PrettyPrec Term where
     where prec = 0
   prettyPrec _ TmEmptyRcd      = pretty "{}"
   prettyPrec _ (TmRcdExtend l) = pretty "extend" <> parens (pretty l)
+  prettyPrec _ (TmRcdUpdate l) = pretty "update" <> parens (pretty l)
   prettyPrec _ (TmRcdAccess l) = pretty "access" <> parens (pretty l)
   prettyPrec _ TmEmptyMatch    = pretty "[]"
   prettyPrec _ (TmMatchExtend l) =
     pretty "extend" <> parens (prettyVariantLabel l)
+  prettyPrec _ (TmMatchUpdate l) =
+    pretty "update" <> parens (prettyVariantLabel l)
   prettyPrec _ (TmVariant l) = prettyVariantLabel l
   prettyPrec _ TmRef         = pretty "ref"
   prettyPrec _ TmDeref       = pretty "!"
