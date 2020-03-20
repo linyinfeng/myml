@@ -42,41 +42,61 @@
 | \quad & \code{t\ t} & \text{application} \\
 | \quad & \code{x} & \text{variable} \\
 | \quad & \code{let\ x = t\ in\ t} & \text{let-in} \\
-| \quad & \{\ {\code{l}_i = \code{t}_i}^{i \in 1\dots n}\ \} & \text{record} \\
-| \quad & \code{t\ with\ \{\ l = t\ \}} & \text{record extend} \\
-| \quad & \code{t.l} & \text{record access} \\
-| \quad & [ {\code{\ \backtick l}_i\ \code{x}_i \rightarrow \code{t}_i}^{i \in 1\dots n} \ ] & \text{match} \\
-| \quad & \code{t\ with\ [\ \backtick l\ x \rightarrow t\ ]} & \text{match extend} \\
+| \quad & \code{\{\ \}} & \text{empty record} \\
+| \quad & \code{extend(l)} & \text{record extend} \\
+| \quad & \code{update(l)} & \text{record update} \\
+| \quad & \code{access(l)} & \text{record access} \\
+| \quad & \code{[\ ]} & \text{empty match} \\
+| \quad & \code{extend(\backtick l)} & \text{match extend} \\
+| \quad & \code{update(\backtick l)} & \text{match update} \\
 | \quad & \code{\backtick l} & \text{variant creation} \\
 | \quad & \code{ref} & \text{reference} \\
 | \quad & \code{!} & \text{dereference} \\
-| \quad & \code{t \coloneqq t} & \text{assignment} \\
+| \quad & \code{\coloneqq} & \text{assignment} \\
 | \quad & \code{l} & \text{location} \\
-| \quad & \code{unit} & \text{unit} \\
-| \quad & \code{true} & \text{true} \\
-| \quad & \code{false} & \text{false} \\
-| \quad & \code{if\ t\ then\ t\ else\ t} & \text{if-then-else} \\
-| \quad & \code{0} \mid \code{1} \mid \dots & \text{natural number} \\
-| \quad & \code{succ} & \text{successor} \\
-| \quad & \code{pred} & \text{predecessor} \\
-| \quad & \code{isZero} & \text{zero test} \\
+| \quad & \code{new} & \text{new}
 \end{align*}
 
 \subsection{Derived Form}
+
+Working in progress.
 
 \subsection{Value}
 
 \begin{align*}
 \code{v} \Coloneqq \quad & & \text{value} \\
 & \code{\lambda x.\ t} & \text{abstraction} \\
-| \quad & \{\ {\code{l}_i = \code{v}_i}^{i \in 1\dots n}\ \} & \text{record} \\
-| \quad & [ {\code{\ \backtick l}_i\ \code{x}_i \rightarrow \code{t}_i}^{i \in 1\dots n} \ ] & \text{match} \\
+| \quad & \code{rv} & \text{record value} \\
+| \quad & \code{mv} & \text{match value} \\
 | \quad & \code{\backtick l\ v} & \text{variant} \\
+| \quad & \code{extend(l)} & \text{record extend 1} \\
+| \quad & \code{extend(l)\ v} & \text{record extend 2} \\
+| \quad & \code{update(l)} & \text{record update 1} \\
+| \quad & \code{update(l)\ v} & \text{record update 2} \\
+| \quad & \code{access(l)} & \text{record access} \\
+| \quad & \code{extend(\backtick l)} & \text{match extend 1} \\
+| \quad & \code{extend(\backtick l)\ v} & \text{match extend 2} \\
+| \quad & \code{update(\backtick l)} & \text{match update 1} \\
+| \quad & \code{update(\backtick l)\ v} & \text{match update 2} \\
+| \quad & \code{\backtick l} & \text{variant creation} \\
+| \quad & \code{ref} & \text{reference} \\
+| \quad & \code{!} & \text{dereference} \\
+| \quad & \code{\coloneqq} & \text{assignment 1} \\
+| \quad & \code{\coloneqq\ v} & \text{assignment 2} \\
 | \quad & \code{l} & \text{location} \\
-| \quad & \code{unit} & \text{unit} \\
-| \quad & \code{true} & \text{true} \\
-| \quad & \code{false} & \text{false} \\
-| \quad & \code{0} \mid \code{1} \mid \dots & \text{natural number}
+| \quad & \code{new} & \text{new}
+\end{align*}
+
+\begin{align*}
+\code{rv} \Coloneqq \quad & & \text{record value} \\
+& \code{\{\}} & \text{empty record} \\
+| \quad & \code{extend(l)\ v\ rv} & \text{record extend}
+\end{align*}
+
+\begin{align*}
+\code{mv} \Coloneqq \quad & & \text{match value} \\
+& \code{[\ ]} & \text{empty match} \\
+| \quad & \code{extend(\backtick l)\ v\ mv} & \text{match extend}
 \end{align*}
 
 \subsection{Type}
@@ -88,10 +108,7 @@
 & \code{\{\ R\ \}} & \text{record} \\
 & \code{[\ R\ ]} & \text{variant} \\
 & \code{\mu X.\ MT} & \text{recursive} \\
-& \code{Ref\ MT} & \text{reference} \\
-& \code{Unit} & \text{unit} \\
-& \code{Bool} & \text{boolean} \\
-& \code{Nat} & \text{natural number}
+& \code{Ref\ MT} & \text{reference}
 \end{align*}
 
 \begin{align*}
@@ -113,7 +130,7 @@
 \begin{align*}
 \code{PT} \Coloneqq\quad & & \text{polymorphic type} \\
 & \code{MT} & \text{monomorphic type} \\
-& \code{\forall\ X.\ PT} & \text{universal qualified}
+& \code{\forall\ X :: K.\ PT} & \text{universal qualified}
 \end{align*}
 
 \subsection{Kind}
@@ -135,115 +152,90 @@ Evaluation of \theLang{} is defined in small step operational semantic. The rela
 \inferrule
 {}
 {(\lambda\ \code{x}.\ \code{t}_{12})\ \code{v}_2\mid\mu \longrightarrow [\code{x}\mapsto\code{v}_2]\code{t}_{12} \mid\mu}
-\ruleTag{E-AppAbs} \\
+\ruleTag{E-AppAbs}
+\\
 \inferrule
 {\code{t}_1\mid\mu \longrightarrow \code{t}'_1\mid\mu'}
 {\code{t}_1\ \code{t}_2\mid\mu \longrightarrow \code{t}'_1\ \code{t}_2\mid\mu'}
-\ruleTag{E-App1} \\
+\ruleTag{E-App1}
+\\
 \inferrule
 {\code{t}_2\mid\mu \longrightarrow \code{t}'_2\mid\mu'}
 {\code{v}_1\ \code{t}_2\mid\mu \longrightarrow \code{v}_1\ \code{t}'_2\mid\mu'}
-\ruleTag{E-App2} \\
+\ruleTag{E-App2}
+\\
 \inferrule
 {}
 {\code{let}\ \code{x} = \code{v}_1\ \code{in}\ \code{t}_2\mid\mu \longrightarrow [\code{x}\mapsto\code{v}_1]\code{t}_2\mid\mu}
-\ruleTag{E-LetV} \\
+\ruleTag{E-LetV}
+\\
 \inferrule
 {\code{t}_1\mid\mu \longrightarrow \code{t}'_1\mid\mu'}
 {\code{let}\ \code{x} = \code{t}_1\ \code{in}\ \code{t}_2\mid\mu \longrightarrow \code{let}\ \code{x} = \code{t}'_1\ \code{in}\ \code{t}_2\mid\mu'}
-\ruleTag{E-Let} \\
-\inferrule
-{\code{t}_j\mid\mu \longrightarrow \code{t}'_j\mid\mu'}
-{\{\ {\code{l}_i=\code{v}_i}^{i\in 1\dots j-1}, \code{l}_j=\code{t}_j, {\code{l}_k=\code{t}_k}^{k\in j+1\dots n}\ \}\mid\mu \\\\
-\longrightarrow \{\ {\code{l}_i=\code{v}_i}^{i\in 1\dots j-1}, \code{l}_j=\code{t}'_j, {\code{l}_k=\code{t}_k}^{k\in j+1\dots n}\ \}\mid\mu'}
-\ruleTag{E-Rcd} \\
+\ruleTag{E-Let}
+\\
 \inferrule
 {}
-{\{\ {\code{l}_i=\code{v}_i}^{i\in 1\dots n}\ \}.\code{l}_j\mid\mu \longrightarrow \code{v}_j\mid\mu}
-\ruleTag{E-ProjRcd} \\
-\inferrule
-{\code{t}_1\mid\mu \longrightarrow \code{t}'_1\mid\mu'}
-{\code{t}_1.\code{l}\mid\mu \longrightarrow \code{t}'_1.\code{l}\mid\mu'}
-\ruleTag{E-Proj} \\
+{(\code{extend}(\backtick \code{l}_1)\ \code{v}_1\ \code{mv}_1)\ (\backtick \code{l}_2\ \code{v}_2)\mid\mu\longrightarrow
+\code{mv}_1\ (\backtick \code{l}_2\ \code{v}_2)\mid\mu}
+\ruleTag{E-Match1}
+\\
 \inferrule
 {}
-{\{\ {\code{l}_i=\code{v}_i}^{i\in 1\dots n}\ \}\ \code{with}\ \{\ \code{l}=\code{v}\ \}\mid\mu \\\\
-\longrightarrow \{\ {\code{l}_i=\code{v}_i}^{i\in 1\dots n}, \code{l}=\code{v}\ \}\mid\mu}
-\ruleTag{E-RcdExtV1} \\
+{(\code{extend}(\backtick \code{l})\ \code{v}_1\ \code{mv}_1)\ (\backtick \code{l}\ \code{v}_2)\mid\mu\longrightarrow
+\code{v}_1\ \code{v}_2\mid\mu}
+\ruleTag{E-Match2}
+\\
 \inferrule
 {}
-{\{\ {\code{l}_i=\code{v}_i}^{i\in 1\dots j-1}, \code{l}_j=\code{v}_j, {\code{l}_k=\code{v}_j}^{k\in j+1\dots n}\ \}\ \code{with}\ \{\ \code{l}_j=\code{v}'_j\ \}\mid\mu \\\\
-\longrightarrow \{\ {\code{l}_i=\code{v}_i}^{i\in 1\dots j-1}, \code{l}_j=\code{v}'_j, {\code{l}_k=\code{v}_j}^{k\in j+1\dots n}\ \}\mid\mu}
-\ruleTag{E-RcdExtV2} \\
-\inferrule
-{\code{t}_1\mid\mu \longrightarrow \code{t}'_1\mid\mu'}
-{\code{t}_1\ \code{with}\ \{\ \code{l}=\code{t}_2\ \}\mid\mu
-\longrightarrow \code{t}'_1\ \code{with}\ \{\ \code{l}=\code{t}_2\ \}\mid\mu'}
-\ruleTag{E-RcdExt1} \\
-\inferrule
-{\code{t}_2\mid\mu \longrightarrow \code{t}'_2\mid\mu'}
-{\code{v}_1\ \code{with}\ \{\ \code{l}=\code{t}_2\ \}\mid\mu
-\longrightarrow \code{v}_1\ \code{with}\ \{\ \code{l}=\code{t}'_2\ \}\mid\mu'}
-\ruleTag{E-RcdExt2} \\
+{\code{update}(\backtick \code{l}_1)\ \code{v}_1\ (\code{extend}(\backtick \code{l}_2)\ \code{v}_2\ \code{mv}_2)\mid\mu\longrightarrow \\\\
+\code{extend}(\backtick \code{l}_2)\ \code{v}_2\ (\code{update}(\backtick \code{l}_1)\ \code{v}_1\ \code{mv}_2)\mid\mu}
+\ruleTag{E-MatUpdate1}
+\\
 \inferrule
 {}
-{[\ {{\backtick \code{l}}_i\ \code{x}_i\rightarrow\code{t}_i}^{i\in 1\dots n}\ ]\ \code{with}\ [\ \backtick\code{l}\ \code{x} \rightarrow \code{t}\ ]\mid\mu \\\\
-\longrightarrow [\ {{\backtick \code{l}}_i\ \code{x}_i\rightarrow\code{t}_i}^{i\in 1\dots n}, \backtick\code{l}\ \code{x} \rightarrow \code{t}\ ]\mid\mu}
-\ruleTag{E-MatExt1} \\
+{\code{update}(\backtick \code{l})\ \code{v}_1\ (\code{extend}(\backtick \code{l})\ \code{v}_2\ \code{mv}_2)\mid\mu\longrightarrow
+(\code{extend}(\backtick \code{l})\ \code{v}_1\ \code{mv}_2)\mid\mu}
+\ruleTag{E-MatUpdate2}
+\\
 \inferrule
 {}
-{[\ {{\backtick \code{l}}_i\ \code{x}_i\rightarrow\code{t}_i}^{i\in 1\dots j-1}, {\backtick \code{l}}_j\ \code{x}_j\rightarrow\code{t}_j, {{\backtick \code{l}}_k\ \code{x}_k\rightarrow\code{t}_k}^{k\in j+1\dots n}\ ]\ \code{with}\ [\ {\backtick \code{l}}_j\ \code{x}_j\rightarrow\code{t}'_j\ ]\mid\mu \\\\
-\longrightarrow [\ {{\backtick \code{l}}_i\ \code{x}_i\rightarrow\code{t}_i}^{i\in 1\dots j-1}, {\backtick \code{l}}_j\ \code{x}_j\rightarrow\code{t}'_j, {{\backtick \code{l}}_k\ \code{x}_k\rightarrow\code{t}_k}^{k\in j+1\dots n}\ ]\mid\mu}
-\ruleTag{E-MatExt2} \\
+{\code{access}(\code{l}_1)\ (\code{extend}(\code{l}_2)\ \code{v}_2\ \code{mv}_2)\mid\mu\longrightarrow
+\code{access}(\code{l}_1)\ \code{mv}_2\mid\mu}
+\ruleTag{E-RcdAccess1}
+\\
 \inferrule
-{\code{t}\mid\mu\longrightarrow\code{t}'\mid\mu'}
-{\backtick\code{l}\ \code{t}\mid\mu
-\longrightarrow\backtick\code{l}\ \code{t}'\mid\mu'}
-\ruleTag{E-Variant} \\
+{}
+{\code{access}(\code{l})\ (\code{extend}(\code{l})\ \code{v}_2\ \code{mv}_2)\mid\mu\longrightarrow
+\code{v}_2\mid\mu}
+\ruleTag{E-RcdAccess2}
+\\
+\inferrule
+{}
+{\code{update}(\code{l}_1)\ \code{v}_1\ (\code{extend}(\code{l}_2)\ \code{v}_2\ \code{mv}_2)\mid\mu\longrightarrow \\\\
+\code{extend}(\code{l}_2)\ \code{v}_2\ (\code{update}(\code{l}_1)\ \code{v}_1\ \code{mv}_2)\mid\mu}
+\ruleTag{E-RcdUpdate1}
+\\
+\inferrule
+{}
+{\code{update}(\code{l})\ \code{v}_1\ (\code{extend}(\code{l})\ \code{v}_2\ \code{mv}_2)\mid\mu\longrightarrow
+(\code{extend}(\code{l})\ \code{v}_1\ \code{mv}_2)\mid\mu}
+\ruleTag{E-RcdUpdate2}
+\\
 \inferrule
 {\code{l}\notin\domain(\mu)}
 {\code{ref}\ \code{v}\mid\mu\longrightarrow\code{l}\mid(\mu, \code{l}\mapsto\code{v})}
-\ruleTag{E-RefV} \\
-\inferrule
-{\code{t}\mid\mu\longrightarrow\code{t}'\mid\mu'}
-{\code{ref}\ \code{t}\mid\mu\longrightarrow\code{ref}\ \code{t}'\mid\mu'}
-\ruleTag{E-Ref} \\
-\inferrule
-{\code{t}\mid\mu\longrightarrow\code{t}'\mid\mu'}
-{\code{!}\ \code{t}\mid\mu\longrightarrow\code{!}\ \code{t}'\mid\mu'}
-\ruleTag{E-Deref} \\
+\ruleTag{E-Ref}
+\\
 \inferrule
 {\mu(\code{l}) = \code{v}}
 {\code{!}\ \code{l}\mid\mu\longrightarrow v\mid\mu}
-\ruleTag{E-DerefLoc} \\
+\ruleTag{E-Deref}
+\\
 \inferrule
 {\code{l}\in\domain(\mu)}
 {\code{l}\coloneqq\code{v}\mid\mu\longrightarrow \code{unit}\mid[\code{l}\mapsto\code{v}]\mu}
-\ruleTag{E-Assign} \\
-\inferrule
-{\code{t}_1\mid\mu\longrightarrow\code{t}'_1\mid\mu'}
-{\code{t}_1\coloneqq\code{t}_2\mid\mu\longrightarrow \code{t}'_1\coloneqq\code{t}_2\mid\mu'}
-\ruleTag{E-Assign1} \\
-\inferrule
-{\code{t}_2\mid\mu\longrightarrow\code{t}'_2\mid\mu'}
-{\code{t}_1\coloneqq\code{t}_2\mid\mu\longrightarrow \code{t}_1\coloneqq\code{t}'_2\mid\mu'}
-\ruleTag{E-Assign2} \\
-\inferrule
-{\code{t}_1\mid\mu\longrightarrow\code{t}'_1\mid\mu'}
-{\code{if}\ \code{t}_1\ \code{then}\ \code{t}_2\ \code{else}\ \code{t}_3\mid\mu\longrightarrow \code{if}\ \code{t}'_1\ \code{then}\ \code{t}_2\ \code{else}\ \code{t}_3\mid\mu'}
-\ruleTag{E-If} \\
-\inferrule
-{}
-{\code{if}\ \code{true}\ \code{then}\ \code{t}_2\ \code{else}\ \code{t}_3\mid\mu\longrightarrow \code{t}_2\mid\mu}
-\ruleTag{E-IfTrue} \\
-\inferrule
-{}
-{\code{if}\ \code{false}\ \code{then}\ \code{t}_2\ \code{else}\ \code{t}_3\mid\mu\longrightarrow \code{t}_3\mid\mu}
-\ruleTag{E-IfFalse} \\
-\inferrule
-{\code{t}\mid\mu\longrightarrow\code{t}'\mid\mu'}
-{\code{succ}\ \code{t}\mid\mu\longrightarrow \code{succ}\ \code{t}'\mid\mu'}
-\ruleTag{E-Succ}
+\ruleTag{E-Assign}
 \end{gather}
 
 \subsection{Substitution}
