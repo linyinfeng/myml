@@ -652,7 +652,7 @@ Working in progress.
 \inferrule
 {}
 {\typingRelation{\Gamma}{E}{\{\ \}}{\{\ \cdot\ \}}{E}}
-\ruleTag{T-EmtpyRcd}
+\ruleTag{T-EmptyRcd}
 \\
 \inferrule
 {\code{P}, \code{R}, \code{PT}, \code{MT} = \newVariables}
@@ -673,12 +673,12 @@ Working in progress.
 {\typingRelation{\Gamma}{E}{\code{access(l)}}
  {\{\ \code{l}:\code{Present}\ \code{MT}, \code{R}\ \}\rightarrow\code{MT}}
  {E}}
-\ruleTag{T-RcdUpdate}
+\ruleTag{T-RcdAccess}
 \\
 \inferrule
 {\code{MT} = \newVariable}
 {\typingRelation{\Gamma}{E}{[\ ]}{[\ \cdot\ ]\rightarrow\code{MT}}{E}}
-\ruleTag{T-EmtpyRcd}
+\ruleTag{T-EmptyMatch}
 \\
 \inferrule
 {\code{MT}_1, \code{MT}_2, \code{R}, \code{P}, \code{PT} = \newVariables \\\\
