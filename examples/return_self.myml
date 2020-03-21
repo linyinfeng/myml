@@ -1,0 +1,20 @@
+import "../stdlib/io.myml" ;;
+
+ReturnSelf =
+  class
+    { returnSelf _ = self } ;;
+
+returnSelf = new ReturnSelf ;;
+
+Child =
+  class
+    inherit ReturnSelf as super
+    super extend
+      { hello _ = ioPutStringLine "Hello!" } ;;
+
+child = new Child ;;
+
+storeSelfAndReturnedSelf obj =
+  let r = ref obj in
+  let obj = obj.returnSelf () in
+  r := obj; r ;;

@@ -13,6 +13,4 @@ newtype MymliOptions = MymliOptions
 
 mymliOptions :: Parser MymliOptions
 mymliOptions = MymliOptions <$> switch
-  (long "pure" <> short 'p' <> help
-    "Whether to disable imperative features"
-  )
+  (long "pure" <> short 'p' <> help "Whether to disable imperative features")

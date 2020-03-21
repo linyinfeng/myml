@@ -12,8 +12,8 @@ listLength = fix (λ len .
 
 list++ = fix (λ ++ .
   [ `nil _ = \ ys . ys
-  , `cons l = \ ys . listCons l.head (++ l.tail ys) ] ;;
+  , `cons l = \ ys . listCons l.head (++ l.tail ys) ]) ;;
 
 listMap f = fix (λ map .
   [ `nil _ = listNil
-  , `cons l = listCons (f l.head) (map l.tail) ] ;;
+  , `cons l = listCons (f l.head) (map l.tail) ]) ;;

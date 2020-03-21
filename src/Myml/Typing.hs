@@ -210,8 +210,8 @@ infer (TmLoc _) = throwError ErrStoreTypingNotImplemented
 infer TmNew     = do
   checkImperativeFeaturesEnabled TmAssign
   instantiate
-    (ScmForall "a" KProper $ ScmMono
-      ((TyRef (TyVar "a") `TyArrow` (TyVar "a")) `TyArrow` (TyVar "a"))
+    ( ScmForall "a" KProper
+    $ ScmMono ((TyRef (TyVar "a") `TyArrow` TyVar "a") `TyArrow` TyVar "a")
     )
 infer (TmNat _) = return TyNat
 infer TmSucc    = return (TyArrow TyNat TyNat)
@@ -288,16 +288,14 @@ generalize t ty = do
   tyDesc <- describeProper False Set.empty ty
   tFv    <- liftEither (fvType tyDesc)
   env    <- ask
-  envFv  <-
-    (Map.foldl
-      (\a b -> bind2AndLift
-        mapUnionWithKind
-        a
-        (describeScheme True Set.empty b >>= liftEither . fvScheme)
-      )
-      (return Map.empty)
-      env
+  envFv  <- Map.foldl
+    (\a b -> bind2AndLift
+      mapUnionWithKind
+      a
+      (describeScheme True Set.empty b >>= liftEither . fvScheme)
     )
+    (return Map.empty)
+    env
   -- check kind conflicts
   _          <- liftEither (mapUnionWithKind tFv envFv)
   imperative <- gets imperativeFeaturesEnabled
@@ -315,33 +313,49 @@ generalize t ty = do
     liftEither (f a b)
 
 dangerousVariable :: Type -> Either Error (Map.Map VarName Kind)
-dangerousVariable = fvType -- traditional value restriction
--- dangerousVariable (TyVar _) = Set.empty
--- dangerousVariable (TyArrow t1 t2) =
---   freeVariable t1 `Set.union` dangerousVariable t2
--- dangerousVariable (TyRecord  r) = dangerousVariableRecordRow r
--- dangerousVariable (TyVariant r) = freeVariable r
--- dangerousVariable (TyMu x t) =
---   let dt = dangerousVariable t
---   in  if x `Set.member` dt
---         then freeVariable t -- x included in dangerous variables
---         else dt
--- dangerousVariable (TyRef t) = freeVariable t
--- dangerousVariable TyBool    = Set.empty
--- dangerousVariable TyNat     = Set.empty
+-- dangerousVariable = fvType -- traditional value restriction
+dangerousVariable (TyVar _      ) = return Map.empty
+dangerousVariable (TyArrow t1 t2) = do
+  d1 <- fvType t1
+  d2 <- dangerousVariable t2
+  mapUnionWithKind d1 d2
+dangerousVariable (TyRecord  r) = dangerousVariableRecordRow r
+dangerousVariable (TyVariant r) = dangerousVariableVariantRow r
+dangerousVariable (TyMu x t   ) = do
+  dt <- dangerousVariable t
+  case Map.lookup x dt of
+    Nothing      -> return dt
+    Just KProper -> fvType t -- x included in dangerous variables
+    Just k       -> Left (ErrVarKindConflict x KProper k)
+dangerousVariable t = fvType t
 
--- dangerousVariableRecordRow :: TypeRow -> Set.Set VarName
--- dangerousVariableRecordRow (TyRow f cof) =
---   Map.foldl (\a b -> a `Set.union` dangerousVariableRecordPresence b)
---             Set.empty
---             f
---     `Set.union` freeVariable cof
+dangerousVariableRecordRow :: TypeRow -> Either Error (Map.Map VarName Kind)
+dangerousVariableRecordRow (RowPresence _label p r) = do
+  dp <- dangerousVariableRecordPresence p
+  dr <- dangerousVariableRecordRow r
+  mapUnionWithKind dp dr
+dangerousVariableRecordRow r = fvRow r
 
--- dangerousVariableRecordPresence :: TypePresence -> Set.Set VarName
--- dangerousVariableRecordPresence Absent                    = Set.empty
--- dangerousVariableRecordPresence (Present     t          ) = dangerousVariable t
--- dangerousVariableRecordPresence (PresenceVar x          ) = Set.singleton x
--- dangerousVariableRecordPresence (PresenceVarWithType _ t) = dangerousVariable t
+dangerousVariableRecordPresence
+  :: TypePresence -> Either Error (Map.Map VarName Kind)
+dangerousVariableRecordPresence (Present t              ) = dangerousVariable t
+-- mark generalization of PresenceVarWithType safe
+dangerousVariableRecordPresence (PresenceVarWithType _ t) = dangerousVariable t
+dangerousVariableRecordPresence p                         = fvPresence p
+
+dangerousVariableVariantRow :: TypeRow -> Either Error (Map.Map VarName Kind)
+dangerousVariableVariantRow (RowPresence _label p r) = do
+  dp <- dangerousVariableVariantPresence p
+  dr <- dangerousVariableVariantRow r
+  mapUnionWithKind dp dr
+dangerousVariableVariantRow r = fvRow r
+
+dangerousVariableVariantPresence
+  :: TypePresence -> Either Error (Map.Map VarName Kind)
+dangerousVariableVariantPresence (Present t) = dangerousVariable t
+dangerousVariableVariantPresence (PresenceVarWithType x t) =
+  dangerousVariable t >>= mapUnionWithKind (Map.singleton x KPresenceWithType)
+dangerousVariableVariantPresence p = fvPresence p
 
 kindPrefixes :: Set.Set VarName
 kindPrefixes = Set.fromList ["\x03b1", "\x03c6", "\x03c8", "\x03c1"]

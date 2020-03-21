@@ -40,12 +40,10 @@ emptyMymlEnv opt = MymliEnv { envOption        = opt
                             }
 
 emptyEnvStore :: MymliOptions -> Maybe (Store (WithMark Term))
-emptyEnvStore opt =
-  if optPure opt then Nothing else Just emptyStore
+emptyEnvStore opt = if optPure opt then Nothing else Just emptyStore
 
 emptyInferenceState :: MymliOptions -> InferenceState
-emptyInferenceState opt =
-  InferenceState (NewVar Map.empty) (not (optPure opt))
+emptyInferenceState opt = InferenceState (NewVar Map.empty) (not (optPure opt))
 
 type Mymli m = (StateT MymliEnv m)
 
