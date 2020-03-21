@@ -417,7 +417,6 @@ unifyProper' (TyArrow t11 t12) (TyArrow t21 t22) =
 unifyProper' (TyRecord  r1) (TyRecord  r2) = unifyRow r1 r2
 unifyProper' (TyVariant r1) (TyVariant r2) = unifyRow r1 r2
 unifyProper' (TyRef     t1) (TyRef     t2) = unifyProper t1 t2
-unifyProper' TyNat          TyNat          = return ()
 unifyProper' t1 t2 =
   throwError (ErrUnifyNoRuleApplied (TySubProper t1) (TySubProper t2))
 
@@ -443,16 +442,17 @@ unifyPresence :: TypePresence -> TypePresence -> Inference ()
 unifyPresence p1 p2 = do
   p1' <- classDesc (TySubPresence p1) >>= ensurePresence
   p2' <- classDesc (TySubPresence p2) >>= ensurePresence
-  unifyPresence' p1' p2'
+  if p1' == p2'
+    then return ()
+    else case (p1', p2') of
+      (PresenceVar x1, _) ->
+        equate (TySubPresence (PresenceVar x1)) (TySubPresence p2')
+      (_, PresenceVar x2) ->
+        equate (TySubPresence (PresenceVar x2)) (TySubPresence p1')
+      _ -> unifyPresence' p1' p2'
 
 unifyPresence' :: TypePresence -> TypePresence -> Inference ()
-unifyPresence' Absent       Absent                          = return ()
-unifyPresence' (Present t1) (Present t2)                    = unifyProper t1 t2
-unifyPresence' (PresenceVar x1) (PresenceVar x2) | x1 == x2 = return ()
-unifyPresence' (PresenceVar x1) p2 =
-  equate (TySubPresence (PresenceVar x1)) (TySubPresence p2)
-unifyPresence' p1 (PresenceVar x2) =
-  equate (TySubPresence (PresenceVar x2)) (TySubPresence p1)
+unifyPresence' (Present t1) (Present t2) = unifyProper t1 t2
 unifyPresence' (PresenceVarWithType x1 _) Absent =
   unifyPresenceWithType (PresenceWithTypeVar x1) PresenceWithTypeAbsent
 unifyPresence' (PresenceVarWithType x1 t1) (Present t2) =
@@ -463,8 +463,8 @@ unifyPresence' (PresenceVarWithType x1 t1) (PresenceVarWithType x2 t2) =
     >> unifyProper t1 t2
 unifyPresence' Absent (PresenceVarWithType x2 _) =
   unifyPresenceWithType (PresenceWithTypeVar x2) PresenceWithTypeAbsent
-unifyPresence' (Present t1) (PresenceVarWithType x1 t2) =
-  unifyPresenceWithType (PresenceWithTypeVar x1) PresenceWithTypePresent
+unifyPresence' (Present t1) (PresenceVarWithType x2 t2) =
+  unifyPresenceWithType (PresenceWithTypeVar x2) PresenceWithTypePresent
     >> unifyProper t1 t2
 unifyPresence' p1 p2 =
   throwError (ErrUnifyNoRuleApplied (TySubPresence p1) (TySubPresence p2))
@@ -473,23 +473,19 @@ unifyRow :: TypeRow -> TypeRow -> Inference ()
 unifyRow r1 r2 = do
   r1' <- classDesc (TySubRow r1) >>= ensureRow
   r2' <- classDesc (TySubRow r2) >>= ensureRow
-  unifyRow' r1' r2'
+  if r1' == r2'
+    then return ()
+    else case (r1', r2') of
+      (RowVar x1, _        ) -> equate (TySubRow (RowVar x1)) (TySubRow r2')
+      (_        , RowVar x2) -> equate (TySubRow (RowVar x2)) (TySubRow r1')
+      _                      -> unifyRow' r1' r2'
 
 unifyRow' :: TypeRow -> TypeRow -> Inference ()
-unifyRow' RowEmpty RowEmpty              = return ()
-unifyRow' RowEmpty x@(RowVar _         ) = unifyRow' x RowEmpty
-unifyRow' RowEmpty r@(RowPresence _ _ _) = unifyRow' r RowEmpty
-unifyRow' (RowVar x) RowEmpty =
-  equate (TySubRow (RowVar x)) (TySubRow RowEmpty)
-unifyRow' (RowVar x1) (RowVar x2)
-  | x1 == x2  = return ()
-  | otherwise = equate (TySubRow (RowVar x1)) (TySubRow (RowVar x2))
-unifyRow' (RowVar x) r@(RowPresence _ _ _) =
-  equate (TySubRow (RowVar x)) (TySubRow r)
+unifyRow' RowEmpty (RowPresence _l p r) =
+  unifyPresence p Absent >> unifyRow r RowEmpty
 unifyRow' (RowPresence _l p r) RowEmpty =
   unifyPresence p Absent >> unifyRow r RowEmpty
-unifyRow' r@(RowPresence _  _  _ ) x@(RowVar _            ) = unifyRow' x r
-unifyRow' (  RowPresence l1 p1 r1) (  RowPresence l2 p2 r2) = if l1 == l2
+unifyRow' (RowPresence l1 p1 r1) (RowPresence l2 p2 r2) = if l1 == l2
   then unifyPresence p1 p2 >> unifyRow r1 r2
   else do
     r3 <- newVar innerVarPrefix
