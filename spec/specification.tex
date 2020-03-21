@@ -15,6 +15,7 @@
 \DeclareMathOperator{\domain}{dom}
 \DeclareMathOperator{\union}{union}
 \DeclareMathOperator{\find}{find}
+\DeclareMathOperator{\describeContextScheme}{descCtxScm}
 \DeclareMathOperator{\describeScheme}{descScm}
 \DeclareMathOperator{\describeType}{descType}
 \DeclareMathOperator{\describeRow}{descRow}
@@ -24,8 +25,12 @@
 \DeclareMathOperator{\instantiateType}{instType}
 \DeclareMathOperator{\instantiateRow}{instRow}
 \DeclareMathOperator{\instantiatePresence}{instPre}
+\DeclareMathOperator{\generalizeValue}{genVal}
+\DeclareMathOperator{\generalize}{gen}
 \DeclareMathOperator{\freeVariable}{fv}
-\DeclareMathOperator{\mostGeneralUnifier}{mgu}
+\DeclareMathOperator{\freeVariableWithKind}{fvKind}
+\DeclareMathOperator{\dangerousVariable}{dv}
+\DeclareMathOperator{\unify}{unify}
 \newcommand{\newVariable}{newvar}
 \newcommand{\entails}{\vdash}
 \newcommand{\typingRelation}[4]{#1 \entails #2 \;:\; #3 ,\; #4}
@@ -160,6 +165,14 @@ Working in progress.
 & \code{K \Rightarrow K} & \text{arrow}
 \end{align*}
 
+\subsection{Typing Context}
+
+\begin{align*}
+\Gamma \Coloneqq \quad & & \text{typing context} \\
+& \code{\emptyset} & \text{empty} \\
+& \code{\Gamma, \code{x}:\code{PT}} & \text{binding}
+\end{align*}
+
 \section{Evaluation}
 
 Evaluation of \theLang{} is defined in small step operational semantic. The relation \(\code{t}\mid\mu \longrightarrow \code{t}\mid\mu\) is the smallest relation satisfying all instances of the following rules.
@@ -285,8 +298,8 @@ operation \(\describeType(E, V, \code{T})\) to convert a monomorphic type \(\cod
 
 \begin{gather}
 \inferrule
-{\describeScheme(E, V \cup \{\code{X}\}, \code{PT}) = E', \code{PT}'}
-{\describeScheme(E, V, \forall \code{X} :: \code{K} . \code{PT}) = E', \forall \code{X} :: \code{K} . \code{PT}'}
+{\describeScheme(E, V \cup \{\code{X}\}, \code{PT}) = \code{PT}'}
+{\describeScheme(E, V, \forall\ \code{X} :: \code{K} .\ \code{PT}) = \forall\ \code{X} :: \code{K} .\ \code{PT}'}
 \ruleTag{DescScm-PT}
 \\
 \inferrule
@@ -298,162 +311,162 @@ operation \(\describeType(E, V, \code{T})\) to convert a monomorphic type \(\cod
 \begin{gather}
 \inferrule
 {\code{X} \in V}
-{\describeType(E, V, \code{X}) = E, \code{X}}
+{\describeType(E, V, \code{X}) = \code{X}}
 \ruleTag{DescType-Var1}
 \\
 \inferrule
 {\code{X} \not\in V \and
  \find(E, \code{X}) = \code{X}}
-{\describeType(E, V, \code{X}) = E, \code{X}}
+{\describeType(E, V, \code{X}) = \code{X}}
 \ruleTag{DescType-Var2}
 \\
 \inferrule
 {\code{X} \not\in V \and
  \find(E, \code{X}) = \code{MT} \and
  \code{MT} \not= \code{X} \\\\
- \describeType(E, V \cup \{\code{X}\}, \code{MT}) = E', \code{MT}' \and
+ \describeType(E, V \cup \{\code{X}\}, \code{MT}) = \code{MT}' \and
  \code{X} \not\in \freeVariable(\code{MT}')}
-{\describeType(E, V, \code{X}) = E', \code{MT}'}
+{\describeType(E, V, \code{X}) = \code{MT}'}
 \ruleTag{DescType-Var3}
 \\
 \inferrule
 {\code{X} \not\in V \and
  \find(E, \code{X}) = \code{MT} \and
  \code{MT} \not= \code{X} \\\\
- \describeType(E, V \cup \{\code{X}\}, \code{MT}) = E', \code{MT}' \and
+ \describeType(E, V \cup \{\code{X}\}, \code{MT}) = \code{MT}' \and
  \code{X} \in \freeVariable(\code{MT}')}
-{\describeType(E, V, \code{X}) = E', \mu\code{X}.\code{MT}'}
+{\describeType(E, V, \code{X}) = \mu\code{X}.\code{MT}'}
 \ruleTag{DescType-VarRec}
 \\
 \inferrule
-{\describeType(E, V, \code{MT}_1) = E', \code{MT}'_1 \\\\
- \describeType(E', V, \code{MT}_2) = E'', \code{MT}'_2}
-{\describeType(E, V, \code{MT}_1\rightarrow\code{MT}_2) = E'', \code{MT}'_1\rightarrow\code{MT}'_2}
+{\describeType(E, V, \code{MT}_1) = \code{MT}'_1 \\\\
+ \describeType(E, V, \code{MT}_2) = \code{MT}'_2}
+{\describeType(E, V, \code{MT}_1\rightarrow\code{MT}_2) = \code{MT}'_1\rightarrow\code{MT}'_2}
 \ruleTag{DescType-Arr}
 \\
 \inferrule
-{\describeRow(E, V, \code{R}) = E', \code{R}'}
-{\describeType(E, V, \{\ \code{R}\ \}) = E', \{\ \code{R}'\ \}}
+{\describeRow(E, V, \code{R}) = \code{R}'}
+{\describeType(E, V, \{\ \code{R}\ \}) = \{\ \code{R}'\ \}}
 \ruleTag{DescType-Rcd}
 \\
 \inferrule
-{\describeRow(E, V, \code{R}) = E', \code{R}'}
-{\describeType(E, V, [\ \code{R}\ ]) = E', [\ \code{R}'\ ]}
+{\describeRow(E, V, \code{R}) = \code{R}'}
+{\describeType(E, V, [\ \code{R}\ ]) = [\ \code{R}'\ ]}
 \ruleTag{DescType-Variant}
 \\
 \inferrule
-{\describeType(E, V, \code{MT}) = E', \code{MT}'}
-{\describeType(E, V, \code{Ref}\ \code{MT}) = E', \code{Ref}\ \code{MT}'}
+{\describeType(E, V, \code{MT}) = \code{MT}'}
+{\describeType(E, V, \code{Ref}\ \code{MT}) = \code{Ref}\ \code{MT}'}
 \ruleTag{DescType-Ref}
 \\
 \inferrule
-{\describeType(E, V \cup \{\code{X}\}, \code{MT}) = E', \code{MT}'}
-{\describeType(E, V, \mu\code{X}.\code{MT}) = E', \mu\code{X}.\code{MT}'}
+{\describeType(E, V \cup \{\code{X}\}, \code{MT}) = \code{MT}'}
+{\describeType(E, V, \mu\code{X}.\code{MT}) = \mu\code{X}.\code{MT}'}
 \ruleTag{DescType-Rec}
 \end{gather}
 
 \begin{gather}
 \inferrule
 {}
-{\describeRow(E, V, \cdot) = E, \cdot}
+{\describeRow(E, V, \cdot) = \cdot}
 \ruleTag{DescRow-Empty}
 \\
 \inferrule
 {\code{X} \in V}
-{\describeRow(E, V, \code{X}) = E, \code{X}}
+{\describeRow(E, V, \code{X}) = \code{X}}
 \ruleTag{DescRow-Var1}
 \\
 \inferrule
 {\code{X} \not\in V \and
  \find(E, \code{X}) = \code{X}}
-{\describeRow(E, V, \code{X}) = E, \code{X}}
+{\describeRow(E, V, \code{X}) = \code{X}}
 \ruleTag{DescRow-Var2}
 \\
 \inferrule
 {\code{X} \not\in V \and
  \find(E, \code{X}) = \code{R} \and
  \code{R} \not= \code{X} \\\\
- \describeRow(E, V \cup \{\code{X}\}, \code{R}) = E', \code{R}' \and
+ \describeRow(E, V \cup \{\code{X}\}, \code{R}) = \code{R}' \and
  \code{X} \not\in \freeVariable(\code{R}')}
-{\describeRow(E, V, \code{X}) = E, \code{R}'}
+{\describeRow(E, V, \code{X}) = \code{R}'}
 \ruleTag{DescRow-Var3}
 \\
 \inferrule
 {\code{X} \not\in V \and
  \find(E, \code{X}) = \code{R} \and
  \code{R} \not= \code{X} \\\\
- \describeRow(E, V \cup \{\code{X}\}, \code{R}) = E', \code{R}' \and
+ \describeRow(E, V \cup \{\code{X}\}, \code{R}) = \code{R}' \and
  \code{X} \in \freeVariable(\code{R}')}
-{\describeRow(E, V, \code{X}) = E, \mu\code{X}.\code{R}'}
+{\describeRow(E, V, \code{X}) = \mu\code{X}.\code{R}'}
 \ruleTag{DescRow-VarRec}
 \\
 \inferrule
-{\describePresence(E, V, \code{P}) = E', \code{P}' \and
- \describeRow(E', \code{R}) = E'', \code{R}'}
-{\describeRow(E, V, (\code{l}:\code{P},\code{R})) = E'', (\code{l}:\code{P}',\code{R}')}
+{\describePresence(E, V, \code{P}) = \code{P}' \and
+ \describeRow(E, \code{R}) = \code{R}'}
+{\describeRow(E, V, (\code{l}:\code{P},\code{R})) = \code{l}:\code{P}',\code{R}'}
 \ruleTag{DescRow-Pre}
 \\
 \inferrule
-{\describeRow(E, V \cup \{\code{X}\}, \code{R}) = E', \code{R}'}
-{\describeRow(E, V, \mu\code{X}.\code{R}) = E', \mu\code{X}.\code{R}'}
+{\describeRow(E, V \cup \{\code{X}\}, \code{R}) = \code{R}'}
+{\describeRow(E, V, \mu\code{X}.\code{R}) = \mu\code{X}.\code{R}'}
 \ruleTag{DescRow-Rec}
 \end{gather}
 
 \begin{gather}
 \inferrule
 {}
-{\describePresence(E, V, \code{Absent}) = E, \code{Absent}}
+{\describePresence(E, V, \code{Absent}) = \code{Absent}}
 \ruleTag{DescPre-Abs}
 \\
 \inferrule
-{\describeType(E, V, \code{MT}) = E', \code{MT}'}
-{\describePresence(E, V, \code{Present}\ \code{MT}) = E', \code{Present}\ \code{MT}'}
+{\describeType(E, V, \code{MT}) = \code{MT}'}
+{\describePresence(E, V, \code{Present}\ \code{MT}) = \code{Present}\ \code{MT}'}
 \ruleTag{DescPre-Pre}
 \\
 \inferrule
 {\find(E, \code{X}) = \code{X}}
-{\describePresence(E, V, \code{X}) = E, \code{X}}
+{\describePresence(E, V, \code{X}) = \code{X}}
 \ruleTag{DescPre-Var1}
 \\
 \inferrule
 {\find(E, \code{X}) = \code{P} \and
  \code{MT} \not= \code{X} \and
- \describePresence(E, V, \code{P}) = E', \code{P}'}
-{\describePresence(E, V, \code{X}) = E', \code{P}'}
+ \describePresence(E, V, \code{P}) = \code{P}'}
+{\describePresence(E, V, \code{X}) = \code{P}'}
 \ruleTag{DescPre-Var2}
 \\
 \inferrule
-{\describePresenceWithType(E, V, \code{X}) = E', \code{X} \\\\
- \describeType(E', V, \code{MT}) = E'', \code{MT}'}
-{\describePresence(E, V, \code{X}\ \code{MT}) = E'', \code{X}\ \code{MT}')}
+{\describePresenceWithType(E, V, \code{X}) = \code{X} \\\\
+ \describeType(E, V, \code{MT}) = \code{MT}'}
+{\describePresence(E, V, \code{X}\ \code{MT}) = \code{X}\ \code{MT}')}
 \ruleTag{DescPre-PTVar1}
 \\
 \inferrule
-{\describePresenceWithType(E, V, \code{X}) = E', \code{PTAbsent}}
-{\describePresence(E, V, \code{X}\ \code{MT}) = E, \code{Absent}}
+{\describePresenceWithType(E, V, \code{X}) = \code{PTAbsent}}
+{\describePresence(E, V, \code{X}\ \code{MT}) = \code{Absent}}
 \ruleTag{DescPre-PTVar2}
 \\
 \inferrule
-{\describePresenceWithType(E, V, \code{X}) = E', \code{PTPresent} \\\\
- \describeType(E', V, \code{MT}) = E'', \code{MT}'}
-{\describePresence(E, V, \code{X}\ \code{MT}) = E'', \code{Present}\ \code{MT}'}
+{\describePresenceWithType(E, V, \code{X}) = \code{PTPresent} \\\\
+ \describeType(E, V, \code{MT}) = \code{MT}'}
+{\describePresence(E, V, \code{X}\ \code{MT}) = \code{Present}\ \code{MT}'}
 \ruleTag{DescPre-PTVar3}
 \end{gather}
 
 \begin{gather}
 \inferrule
 {}
-{\describePresenceWithType(E, V, \code{PTAbsent}) = E, \code{PTAbsent}}
+{\describePresenceWithType(E, V, \code{PTAbsent}) = \code{PTAbsent}}
 \ruleTag{DescPT-Abs}
 \\
 \inferrule
 {}
-{\describePresenceWithType(E, V, \code{PTPREsent}) = E, \code{PTPREsent}}
+{\describePresenceWithType(E, V, \code{PTPREsent}) = \code{PTPREsent}}
 \ruleTag{DescPT-Pre}
 \\
 \inferrule
 {\find(E, \code{X}) = \code{X}}
-{\describePresenceWithType(E, V, \code{X}) = E, \code{X}}
+{\describePresenceWithType(E, V, \code{X}) = \code{X}}
 \ruleTag{DescPT-Var1}
 \\
 \inferrule
@@ -461,6 +474,18 @@ operation \(\describeType(E, V, \code{T})\) to convert a monomorphic type \(\cod
  \code{PT} \not= \code{X}}
 {\describePresenceWithType(E, V, \code{X}) = \describePresenceWithType(E, V, \code{PT})}
 \ruleTag{DescPT-Var2}
+\end{gather}
+
+\begin{gather}
+\inferrule
+{}
+{\describeContextScheme(E, V, \code{\emptyset}) = \code{\emptyset}}
+\ruleTag{DescCtxScm-Empty}
+\\
+\inferrule
+{}
+{\describeContextScheme(E, V, (\code{x}:\code{PT}, \Gamma)) = \code{x}:\describeScheme(E, V, \code{PT}), \Gamma}
+\ruleTag{DescCtxScm-Bind}
 \end{gather}
 
 \subsection{Instantiation}
@@ -559,13 +584,27 @@ Instantiation first replace every qualified type variable with fresh variables, 
 
 \subsection{Generalization}
 
-Working in progress.
+\begin{equation}
+\begin{split}
+\generalizeValue(\Gamma, E, \code{MT}) & = \forall\ \overline{\freeVariable(\code{MT}') \setminus \freeVariable(\Gamma')}.\ \code{MT}' \\
+\Gamma' & = \describeContextScheme(\Gamma) \\
+\code{MT}' & = \describeType(E, \{\}, \code{MT})
+\end{split}
+\ruleTag{Gen-Value}
+\end{equation}
 
-% \begin{gather}
-% \bar{\Gamma}(\code{MT}) = \forall\ \hat{\code{X}}.\ \code{MT}
-% \qquad \hat{\code{X}} = \freeVariable(\code{MT}) \setminus \freeVariable(\Gamma)
-% \ruleTag{Gen}
-% \end{gather}
+\begin{equation}
+\begin{split}
+\generalizeValue(\Gamma, E, \code{MT}) & = \forall\ \overline{\freeVariable(\code{MT}') \setminus \freeVariable(\Gamma') \setminus \dangerousVariable(\code{MT}')}.\ \code{MT}' \\
+\Gamma' & = \describeContextScheme(\Gamma) \\
+\code{MT}' & = \describeType(E, \{\}, \code{MT})
+\end{split}
+\ruleTag{Gen-NonValue}
+\end{equation}
+
+\subsubsection{Dangerous Variable}
+
+Working in progress.
 
 \subsection{Typing Relation}
 
@@ -654,7 +693,7 @@ Working in progress.
 % \ruleTag{T-Assign}
 % \end{gather}
 
-\subsection{Most General Unifier}
+\subsection{Unify}
 
 Working in progress.
 
