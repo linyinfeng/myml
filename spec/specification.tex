@@ -731,16 +731,18 @@ Working in progress.
 & \quad \text{then}\ \union(E, \code{X}, \code{MT}_2) \\
 & \text{else}\ \text{if}\ \code{MT}_2 = \code{X} \\
 & \quad \text{then}\ \union(E, \code{X}, \code{MT}_1) \\
-& \text{else}\ \text{if}\ \code{MT}_1 = \code{MT}_{11}\rightarrow\code{MT}_{12}\ \text{and}\ \code{MT}_2 = \code{MT}_{21}\rightarrow\code{MT}_{22} \\
-& \quad \text{then}\ \text{let}\ E' = \unify(E, \code{MT}_{11}, \code{MT}_{21})\ \text{in}\ \unify(E, \code{MT}_{12}, \code{MT}_{22}) \\
-& \text{else}\ \text{if}\ \code{MT}_1 = \{\ \code{R}_1\ \}\ \text{and}\ \code{MT}_2 = \{\ \code{R}_2\ \} \\
-& \quad \text{then}\ \unifyRow(E, \code{R}_1, \code{R}_2) \\
-& \text{else}\ \text{if}\ \code{MT}_1 = [\ \code{R}_1\ ]\ \text{and}\ \code{MT}_2 = [\ \code{R}_2\ ] \\
-& \quad \text{then}\ \unifyRow(E, \code{R}_1, \code{R}_2) \\
-& \text{else}\ \text{if}\ \code{MT}_1 = \code{Ref}\ \code{MT}'_1\ \text{and}\ \code{MT}_2 = \code{Ref}\ \code{MT}'_2 \\
-& \quad\text{then}\ \unify(E, \code{MT}'_1, \code{MT}'_2) \\
 & \text{else} \\
-& \quad \text{fail}
+& \quad \text{let}\ E' = \union(E, \code{MT}_1, \code{MT}_2)\ \text{in} \\
+& \quad \text{if}\ \code{MT}_1 = \code{MT}_{11}\rightarrow\code{MT}_{12}\ \text{and}\ \code{MT}_2 = \code{MT}_{21}\rightarrow\code{MT}_{22} \\
+& \quad \quad \text{then}\ \text{let}\ E'' = \unify(E', \code{MT}_{11}, \code{MT}_{21})\ \text{in}\ \unify(E'', \code{MT}_{12}, \code{MT}_{22}) \\
+& \quad \text{else}\ \text{if}\ \code{MT}_1 = \{\ \code{R}_1\ \}\ \text{and}\ \code{MT}_2 = \{\ \code{R}_2\ \} \\
+& \quad \quad \text{then}\ \unifyRow(E', \code{R}_1, \code{R}_2) \\
+& \quad \text{else}\ \text{if}\ \code{MT}_1 = [\ \code{R}_1\ ]\ \text{and}\ \code{MT}_2 = [\ \code{R}_2\ ] \\
+& \quad \quad \text{then}\ \unifyRow(E', \code{R}_1, \code{R}_2) \\
+& \quad \text{else}\ \text{if}\ \code{MT}_1 = \code{Ref}\ \code{MT}'_1\ \text{and}\ \code{MT}_2 = \code{Ref}\ \code{MT}'_2 \\
+& \quad \quad\text{then}\ \unify(E', \code{MT}'_1, \code{MT}'_2) \\
+& \quad \text{else} \\
+& \quad \quad \text{fail}
 \end{align*}
 
 \chapter{\theLang{} the Language}
