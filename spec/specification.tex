@@ -13,7 +13,17 @@
 \newcommand{\backtick}{{}^{\backprime}}
 \newcommand{\ruleTag}[1]{\label{#1}\tag{\textsc{#1}}}
 \DeclareMathOperator{\domain}{dom}
+\DeclareMathOperator{\union}{union}
+\DeclareMathOperator{\find}{find}
+\DeclareMathOperator{\describeScheme}{descScm}
+\DeclareMathOperator{\describeType}{descType}
+\DeclareMathOperator{\describeRow}{descRow}
+\DeclareMathOperator{\describePresence}{descPre}
+\DeclareMathOperator{\describePresenceWithType}{descPT}
 \DeclareMathOperator{\instantiate}{inst}
+\DeclareMathOperator{\instantiateType}{instType}
+\DeclareMathOperator{\instantiateRow}{instRow}
+\DeclareMathOperator{\instantiatePresence}{instPre}
 \DeclareMathOperator{\freeVariable}{fv}
 \DeclareMathOperator{\mostGeneralUnifier}{mgu}
 \newcommand{\newVariable}{newvar}
@@ -128,6 +138,13 @@ Working in progress.
 \end{align*}
 
 \begin{align*}
+\code{PT} \Coloneqq \quad & & \text{presence with type} \\
+& \code{PTAbsent} & \text{absent} \\
+& \code{PTPresent} & \text{present} \\
+& \code{X} & \text{variable}
+\end{align*}
+
+\begin{align*}
 \code{PT} \Coloneqq\quad & & \text{polymorphic type} \\
 & \code{MT} & \text{monomorphic type} \\
 & \code{\forall\ X :: K.\ PT} & \text{universal qualified}
@@ -238,19 +255,306 @@ Evaluation of \theLang{} is defined in small step operational semantic. The rela
 \ruleTag{E-Assign}
 \end{gather}
 
-\subsection{Substitution}
+\section{Substitution}
 
 Working in progress.
 
 \section{Typing}
 
-\subsection{Instantiation}
+\subsection{Equivalence Relation}
+
+Maintain an equivalence relation \(E\) with Union-Find algorithm.
+
+Every equivalence class has a descriptor, which is an element in the equivalence class.
+
+The operation \(\find(E, e) = e'\) return the descriptor of the element \(e\) in the equivalence relation \(E\).
+
+The operation \(\union(E, a, b) = E'\) equate the equivalence class of element \(a\) and \(b\), make the descriptor of the equivalence class of element \(b\) as the descriptor of the unioned equivalence class. Return the new equivalence relation \(E'\).
+
+The element \(a\) in operation \(\union(E, a, b)\) can only be a variable in type.
+
+\subsection{Type Description from Equivalence Relation}
+
+Equivalence relation of type, row and presence forms tree representations of monomorphic type.
+
+operation \(\describeType(E, V, \code{T})\) to convert a monomorphic type \(\code{T}\) into a complete type by continuous replacing variables with its descriptor in equivalence relation \(E\).\(V\) is a set of variable, variable in the set will not be converted.
+
+\(\describeRow(E, V, \code{R})\), \(\describePresence(E, V, \code{P})\), \(\describePresenceWithType(E, V, \code{PT})\) do the same thing as \(\describeType\) for other kind of types.
+
+\(\describeScheme(E, V, \code{PT})\) only convert non qualified variables.
 
 \begin{gather}
-\instantiate(\code{MT}) = \code{MT}
-\ruleTag{Inst-MT} \\
-\instantiate(\code{\forall\ X.\ PT}) = [\code{X}\mapsto\newVariable](\instantiate(\code{PT}))
+\inferrule
+{\describeScheme(E, V \cup \{\code{X}\}, \code{PT}) = E', \code{PT}'}
+{\describeScheme(E, V, \forall \code{X} :: \code{K} . \code{PT}) = E', \forall \code{X} :: \code{K} . \code{PT}'}
+\ruleTag{DescScm-PT}
+\\
+\inferrule
+{}
+{\describeScheme(E, V, \code{MT}) = \describeType(E, V, \code{MT})}
+\ruleTag{DescScm-MT}
+\end{gather}
+
+\begin{gather}
+\inferrule
+{\code{X} \in V}
+{\describeType(E, V, \code{X}) = E, \code{X}}
+\ruleTag{DescType-Var1}
+\\
+\inferrule
+{\code{X} \not\in V \and
+ \find(E, \code{X}) = \code{X}}
+{\describeType(E, V, \code{X}) = E, \code{X}}
+\ruleTag{DescType-Var2}
+\\
+\inferrule
+{\code{X} \not\in V \and
+ \find(E, \code{X}) = \code{MT} \and
+ \code{MT} \not= \code{X} \\\\
+ \describeType(E, V \cup \{\code{X}\}, \code{MT}) = E', \code{MT}' \and
+ \code{X} \not\in \freeVariable(\code{MT}')}
+{\describeType(E, V, \code{X}) = E', \code{MT}'}
+\ruleTag{DescType-Var3}
+\\
+\inferrule
+{\code{X} \not\in V \and
+ \find(E, \code{X}) = \code{MT} \and
+ \code{MT} \not= \code{X} \\\\
+ \describeType(E, V \cup \{\code{X}\}, \code{MT}) = E', \code{MT}' \and
+ \code{X} \in \freeVariable(\code{MT}')}
+{\describeType(E, V, \code{X}) = E', \mu\code{X}.\code{MT}'}
+\ruleTag{DescType-VarRec}
+\\
+\inferrule
+{\describeType(E, V, \code{MT}_1) = E', \code{MT}'_1 \\\\
+ \describeType(E', V, \code{MT}_2) = E'', \code{MT}'_2}
+{\describeType(E, V, \code{MT}_1\rightarrow\code{MT}_2) = E'', \code{MT}'_1\rightarrow\code{MT}'_2}
+\ruleTag{DescType-Arr}
+\\
+\inferrule
+{\describeRow(E, V, \code{R}) = E', \code{R}'}
+{\describeType(E, V, \{\ \code{R}\ \}) = E', \{\ \code{R}'\ \}}
+\ruleTag{DescType-Rcd}
+\\
+\inferrule
+{\describeRow(E, V, \code{R}) = E', \code{R}'}
+{\describeType(E, V, [\ \code{R}\ ]) = E', [\ \code{R}'\ ]}
+\ruleTag{DescType-Variant}
+\\
+\inferrule
+{\describeType(E, V, \code{MT}) = E', \code{MT}'}
+{\describeType(E, V, \code{Ref}\ \code{MT}) = E', \code{Ref}\ \code{MT}'}
+\ruleTag{DescType-Ref}
+\\
+\inferrule
+{\describeType(E, V \cup \{\code{X}\}, \code{MT}) = E', \code{MT}'}
+{\describeType(E, V, \mu\code{X}.\code{MT}) = E', \mu\code{X}.\code{MT}'}
+\ruleTag{DescType-Rec}
+\end{gather}
+
+\begin{gather}
+\inferrule
+{}
+{\describeRow(E, V, \cdot) = E, \cdot}
+\ruleTag{DescRow-Empty}
+\\
+\inferrule
+{\code{X} \in V}
+{\describeRow(E, V, \code{X}) = E, \code{X}}
+\ruleTag{DescRow-Var1}
+\\
+\inferrule
+{\code{X} \not\in V \and
+ \find(E, \code{X}) = \code{X}}
+{\describeRow(E, V, \code{X}) = E, \code{X}}
+\ruleTag{DescRow-Var2}
+\\
+\inferrule
+{\code{X} \not\in V \and
+ \find(E, \code{X}) = \code{R} \and
+ \code{R} \not= \code{X} \\\\
+ \describeRow(E, V \cup \{\code{X}\}, \code{R}) = E', \code{R}' \and
+ \code{X} \not\in \freeVariable(\code{R}')}
+{\describeRow(E, V, \code{X}) = E, \code{R}'}
+\ruleTag{DescRow-Var3}
+\\
+\inferrule
+{\code{X} \not\in V \and
+ \find(E, \code{X}) = \code{R} \and
+ \code{R} \not= \code{X} \\\\
+ \describeRow(E, V \cup \{\code{X}\}, \code{R}) = E', \code{R}' \and
+ \code{X} \in \freeVariable(\code{R}')}
+{\describeRow(E, V, \code{X}) = E, \mu\code{X}.\code{R}'}
+\ruleTag{DescRow-VarRec}
+\\
+\inferrule
+{\describePresence(E, V, \code{P}) = E', \code{P}' \and
+ \describeRow(E', \code{R}) = E'', \code{R}'}
+{\describeRow(E, V, (\code{l}:\code{P},\code{R})) = E'', (\code{l}:\code{P}',\code{R}')}
+\ruleTag{DescRow-Pre}
+\\
+\inferrule
+{\describeRow(E, V \cup \{\code{X}\}, \code{R}) = E', \code{R}'}
+{\describeRow(E, V, \mu\code{X}.\code{R}) = E', \mu\code{X}.\code{R}'}
+\ruleTag{DescRow-Rec}
+\end{gather}
+
+\begin{gather}
+\inferrule
+{}
+{\describePresence(E, V, \code{Absent}) = E, \code{Absent}}
+\ruleTag{DescPre-Abs}
+\\
+\inferrule
+{\describeType(E, V, \code{MT}) = E', \code{MT}'}
+{\describePresence(E, V, \code{Present}\ \code{MT}) = E', \code{Present}\ \code{MT}'}
+\ruleTag{DescPre-Pre}
+\\
+\inferrule
+{\find(E, \code{X}) = \code{X}}
+{\describePresence(E, V, \code{X}) = E, \code{X}}
+\ruleTag{DescPre-Var1}
+\\
+\inferrule
+{\find(E, \code{X}) = \code{P} \and
+ \code{MT} \not= \code{X} \and
+ \describePresence(E, V, \code{P}) = E', \code{P}'}
+{\describePresence(E, V, \code{X}) = E', \code{P}'}
+\ruleTag{DescPre-Var2}
+\\
+\inferrule
+{\describePresenceWithType(E, V, \code{X}) = E', \code{X} \\\\
+ \describeType(E', V, \code{MT}) = E'', \code{MT}'}
+{\describePresence(E, V, \code{X}\ \code{MT}) = E'', \code{X}\ \code{MT}')}
+\ruleTag{DescPre-PTVar1}
+\\
+\inferrule
+{\describePresenceWithType(E, V, \code{X}) = E', \code{PTAbsent}}
+{\describePresence(E, V, \code{X}\ \code{MT}) = E, \code{Absent}}
+\ruleTag{DescPre-PTVar2}
+\\
+\inferrule
+{\describePresenceWithType(E, V, \code{X}) = E', \code{PTPresent} \\\\
+ \describeType(E', V, \code{MT}) = E'', \code{MT}'}
+{\describePresence(E, V, \code{X}\ \code{MT}) = E'', \code{Present}\ \code{MT}'}
+\ruleTag{DescPre-PTVar3}
+\end{gather}
+
+\begin{gather}
+\inferrule
+{}
+{\describePresenceWithType(E, V, \code{PTAbsent}) = E, \code{PTAbsent}}
+\ruleTag{DescPT-Abs}
+\\
+\inferrule
+{}
+{\describePresenceWithType(E, V, \code{PTPREsent}) = E, \code{PTPREsent}}
+\ruleTag{DescPT-Pre}
+\\
+\inferrule
+{\find(E, \code{X}) = \code{X}}
+{\describePresenceWithType(E, V, \code{X}) = E, \code{X}}
+\ruleTag{DescPT-Var1}
+\\
+\inferrule
+{\find(E, \code{X}) = \code{PT} \and
+ \code{PT} \not= \code{X}}
+{\describePresenceWithType(E, V, \code{X}) = \describePresenceWithType(E, V, \code{PT})}
+\ruleTag{DescPT-Var2}
+\end{gather}
+
+\subsection{Instantiation}
+
+Instantiation first replace every qualified type variable with fresh variables, then encode the type as a tree in equivalence relation.
+
+\begin{gather}
+\inferrule
+{\instantiate(E, \code{PT}) = E', \code{PT'}}
+{\instantiate(E, \code{\forall\ X.\ PT}) = E' , [\code{X}\mapsto\newVariable]\code{PT'}}
 \ruleTag{Inst-PT}
+\\
+\instantiate(E, \code{MT}) = \instantiateType(E, \code{MT})
+\ruleTag{Inst-MT}
+\end{gather}
+
+\begin{gather}
+\inferrule
+{}
+{\instantiateType(E, \code{X}) = E , \code{X}}
+\ruleTag{InstType-Var}
+\\
+\inferrule
+{\instantiateType(E, \code{T}_1) = E_1, \code{T}'_1 \and
+\instantiateType(E_1, \code{T}_2) = E_2, \code{T}'_2}
+{\instantiateType(E, \code{T}_1\rightarrow\code{T}_2) = E_2, \code{T}'_1\rightarrow\code{T}'_2}
+\ruleTag{InstType-Arr}
+\\
+\inferrule
+{\instantiateRow(E, \code{R}) = E', \code{R}'}
+{\instantiateType(E, \{\ \code{R}\ \}) = E', \{\ \code{R}'\ \}}
+\ruleTag{InstType-Rcd}
+\\
+\inferrule
+{\instantiateRow(E, \code{R}) = E', \code{R}'}
+{\instantiateType(E, [\ \code{R}\ ]) = E', [\ \code{R}'\ ]}
+\ruleTag{InstType-Variant}
+\\
+\inferrule
+{\instantiateType(E, \code{MT}) = E', \code{MT}' \and
+ \union(E', \code{X}, \code{MT}') = E''}
+{\instantiateType(E, \mu \code{X}.\code{MT}) = E'', \code{X}}
+\ruleTag{InstType-Rec}
+\\
+\inferrule
+{\instantiateType(E, \code{MT}) = E', \code{MT}'}
+{\instantiateType(E, \code{Ref}\ \code{MT}) = E', \code{Ref}\ \code{MT}'}
+\ruleTag{InstType-Ref}
+\end{gather}
+
+\begin{gather}
+\inferrule
+{}
+{\instantiateRow(E, \cdot) = E, \cdot}
+\ruleTag{InstRow-Empty}
+\\
+\inferrule
+{}
+{\instantiateRow(E, \code{X}) = E, \code{X}}
+\ruleTag{InstRow-Var}
+\\
+\inferrule
+{\instantiatePresence(E, \code{P}) = E', \code{P}' \and
+ \instantiateRow(E', \code{R}) = E'', \code{R}'}
+{\instantiateRow(E, (\code{l}:\code{P}, \code{R})) = E'', (\code{l}:\code{P}', \code{R}')}
+\ruleTag{InstRow-Pre}
+\\
+\inferrule
+{\instantiateRow(E, \code{R}) = E', \code{R}' \and
+ \union(E', \code{X}, \code{R}') = E''}
+{\instantiateRow(E, \mu\code{X}.\code{R}) = E'', \code{X}}
+\ruleTag{InstRow-Rec}
+\end{gather}
+
+\begin{gather}
+\inferrule
+{}
+{\instantiatePresence(E, \code{Absent}) = E, \code{Absent}}
+\ruleTag{InstPre-Abs}
+\\
+\inferrule
+{\instantiateType(E, \code{MT}) = E', \code{MT}'}
+{\instantiatePresence(E, \code{Present}\ \code{MT}) = E', \code{Present}\ \code{MT}'}
+\ruleTag{InstPre-Pre}
+\\
+\inferrule
+{}
+{\instantiatePresence(E, \code{X}) = E, \code{X}}
+\ruleTag{InstPre-Var}
+\\
+\inferrule
+{\instantiateType(E, \code{MT}) = E', \code{MT}'}
+{\instantiatePresence(E, \code{X}\ \code{MT}) = E', \code{X}\ \code{MT}'}
+\ruleTag{InstPre-VarWithType}
 \end{gather}
 
 \subsection{Generalization}
