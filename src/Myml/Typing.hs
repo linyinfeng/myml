@@ -542,16 +542,26 @@ describePresence allowMu ctx (PresenceVar x) = do
     then return (PresenceVar x)
     else describePresence allowMu ctx p
 describePresence allowMu ctx (PresenceVarWithType x t) = do
-  p <-
+  pt <- describePresenceWithType allowMu ctx (PresenceWithTypeVar x)
+  case pt of
+    PresenceWithTypeAbsent  -> return Absent
+    PresenceWithTypePresent -> Present <$> describeProper allowMu ctx t
+    PresenceWithTypeVar x' ->
+      PresenceVarWithType x' <$> describeProper allowMu ctx t
+
+describePresenceWithType
+  :: Bool -> Set.Set VarName -> PresenceWithType -> Inference PresenceWithType
+describePresenceWithType _ _ PresenceWithTypeAbsent =
+  return PresenceWithTypeAbsent
+describePresenceWithType _ _ PresenceWithTypePresent =
+  return PresenceWithTypePresent
+describePresenceWithType allowMu ctx (PresenceWithTypeVar x) = do
+  pt <-
     classDesc (TySubPresenceWithType (PresenceWithTypeVar x))
       >>= ensurePresenceWithType
-  if p == PresenceWithTypeVar x
-    then PresenceVarWithType x <$> describeProper allowMu ctx t
-    else case p of
-      PresenceWithTypeAbsent  -> return Absent
-      PresenceWithTypePresent -> Present <$> describeProper allowMu ctx t
-      PresenceWithTypeVar x' ->
-        PresenceVarWithType x' <$> describeProper allowMu ctx t
+  if pt == PresenceWithTypeVar x
+    then return (PresenceWithTypeVar x)
+    else describePresenceWithType allowMu ctx pt
 
 describeRow :: Bool -> Set.Set VarName -> TypeRow -> Inference TypeRow
 describeRow _ _ RowEmpty                          = return RowEmpty
@@ -568,9 +578,7 @@ describeRow allowMu ctx (RowVar x)                = do
         Just KRow -> return (RowMu x r')
         Just k    -> throwError (ErrVarKindConflict x KRow k)
 describeRow allowMu ctx (RowPresence l p r) =
-  RowPresence l
-    <$> describePresence allowMu ctx p
-    <*> describeRow allowMu ctx r
+  RowPresence l <$> describePresence allowMu ctx p <*> describeRow allowMu ctx r
 describeRow allowMu ctx (RowMu x r) = if allowMu
   then RowMu x <$> describeRow allowMu (Set.insert x ctx) r
   else throwError (ErrCanNotHandleMuRow (RowMu x r))
