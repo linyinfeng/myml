@@ -558,7 +558,7 @@ describeRow _ _ RowEmpty                          = return RowEmpty
 describeRow _ ctx (RowVar x) | x `Set.member` ctx = return (RowVar x)
 describeRow allowMu ctx (RowVar x)                = do
   r <- classDesc (TySubRow (RowVar x)) >>= ensureRow
-  if r == (RowVar x)
+  if r == RowVar x
     then return (RowVar x)
     else do
       r' <- describeRow allowMu (Set.insert x ctx) r
@@ -569,7 +569,7 @@ describeRow allowMu ctx (RowVar x)                = do
         Just k    -> throwError (ErrVarKindConflict x KRow k)
 describeRow allowMu ctx (RowPresence l p r) =
   RowPresence l
-    <$> (describePresence allowMu ctx p)
+    <$> describePresence allowMu ctx p
     <*> describeRow allowMu ctx r
 describeRow allowMu ctx (RowMu x r) = if allowMu
   then RowMu x <$> describeRow allowMu (Set.insert x ctx) r
