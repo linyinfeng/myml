@@ -1,0 +1,33 @@
+import "../stdlib/fix.myml" ;;
+import "../stdlib/function.myml" ;;
+
+zro = `zro unit ;;
+suc = `suc ;;
+
+isZro = [ `zro _ = true, `suc _ = false ] ;;
+prd = [ `zro _ = `zro unit, `suc n-1 = n-1 ] ;;
+
+eq = fix (
+  λ eq n m .
+    if isZro n
+    then if isZro m
+        then true
+        else false
+    else if isZro m
+        then false
+        else eq (prd n) (prd m)) ;;
+
+add = fix (
+  λ add n m .
+    apply n
+      [ `zro _ = m
+      , `suc n-1 = suc (add n-1 m) ]
+  ) ;;
+
+n0 = zro ;;
+n1 = suc zro ;;
+suc' = add n1 ;;
+n2 = suc' n1 ;;
+n3 = suc' n2 ;;
+n4 = suc' n3 ;;
+n5 = suc' n4 ;;
