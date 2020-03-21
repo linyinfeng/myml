@@ -124,15 +124,16 @@ infer (TmRcdExtend l) = instantiate
       )
   )
 infer (TmRcdUpdate l) = instantiate
-  ( ScmForall "a"  KProper
+  ( ScmForall "a1" KProper
+  $ ScmForall "a2" KProper
   $ ScmForall "r"  KRow
   $ ScmForall "pt" KPresenceWithType
   $ ScmMono
-      (         TyVar "a"
-      `TyArrow` TyRecord (RowPresence l (Present (TyVar "a")) (RowVar "r"))
+      (         TyVar "a1"
+      `TyArrow` TyRecord (RowPresence l (Present (TyVar "a2")) (RowVar "r"))
       `TyArrow` TyRecord
                   (RowPresence l
-                               (PresenceVarWithType "pt" (TyVar "a"))
+                               (PresenceVarWithType "pt" (TyVar "a1"))
                                (RowVar "r")
                   )
       )
