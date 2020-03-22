@@ -31,6 +31,10 @@
 \DeclareMathOperator{\freeVariable}{fv}
 \DeclareMathOperator{\freeVariableWithKind}{fvKind}
 \DeclareMathOperator{\dangerousVariable}{dv}
+\DeclareMathOperator{\dangerousVariableRecordRow}{dvRcdRow}
+\DeclareMathOperator{\dangerousVariableRecordPresence}{dvRcdPre}
+\DeclareMathOperator{\dangerousVariableVariantRow}{dvVariantRow}
+\DeclareMathOperator{\dangerousVariableVariantPresence}{dvVariantPre}
 \DeclareMathOperator{\unify}{unify}
 \DeclareMathOperator{\unifyRow}{unifyRow}
 \DeclareMathOperator{\unifyPresence}{unifyPre}
@@ -596,7 +600,7 @@ Instantiation first replace every qualified type variable with fresh variables, 
 \begin{split}
 \generalizeValue(\Gamma, E, \code{MT}) & = \forall\ \overline{\freeVariable(\code{MT}') \setminus \freeVariable(\Gamma')}.\ \code{MT}' \\
 \Gamma' & = \describeContextScheme(\Gamma) \\
-\code{MT}' & = \describeType(E, \{\}, \code{MT})
+\code{MT}' & = \describeType(E, \emptyset, \code{MT})
 \end{split}
 \ruleTag{Gen-Value}
 \end{equation}
@@ -605,7 +609,7 @@ Instantiation first replace every qualified type variable with fresh variables, 
 \begin{split}
 \generalizeValue(\Gamma, E, \code{MT}) & = \forall\ \overline{\freeVariable(\code{MT}') \setminus \freeVariable(\Gamma') \setminus \dangerousVariable(\code{MT}')}.\ \code{MT}' \\
 \Gamma' & = \describeContextScheme(\Gamma) \\
-\code{MT}' & = \describeType(E, \{\}, \code{MT})
+\code{MT}' & = \describeType(E, \emptyset, \code{MT})
 \end{split}
 \ruleTag{Gen-NonValue}
 \end{equation}
