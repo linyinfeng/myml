@@ -86,13 +86,6 @@ smallStep (TmApp (TmApp TmAssign (TmLoc l)) v) | isValue v =
   gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
     Nothing -> throwError ExcNoRuleApplied
     Just _  -> TmUnit <$ modify (fmap (\s -> assign s l v))
-smallStep (TmApp TmNew (TmAbs self t)) = do
-  s <- get >>= maybeToExcept
-  let (l, s') = allocate s TmUnit
-  let obj     = substTerm (Map.singleton self (TmLoc l)) t
-  let s''     = assign s' l obj
-  put (Just s'')
-  return obj
 smallStep (TmApp (TmApp TmIntegerPlus (TmInteger n)) (TmInteger m)) =
   return (TmInteger (n + m))
 smallStep (TmApp (TmApp TmIntegerMul (TmInteger n)) (TmInteger m)) =

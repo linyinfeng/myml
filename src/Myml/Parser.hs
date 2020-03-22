@@ -150,9 +150,9 @@ parseTermAtom =
       , (TmIntegerNegate , "integerNegate#")
       , (TmIntegerQuotRem, "integerQuotRem#")
       , (TmIntegerCompare, "integerCompare#")
-      , (TmNew           , "new")
       , (TmIOGetChar     , "ioGetChar#")
       , (TmIOPutChar     , "ioPutChar#")
+      , (termNew         , "new")
       , (termSelf        , "self")
       ]
     )

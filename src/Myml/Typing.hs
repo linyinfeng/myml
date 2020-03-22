@@ -217,13 +217,7 @@ infer TmAssign = do
       KProper
       (ScmMono (TyArrow (TyRef (TyVar "a")) (TyArrow (TyVar "a") TyUnit)))
     )
-infer (TmLoc _) = throwError ErrStoreTypingNotImplemented
-infer TmNew     = do
-  checkImperativeFeaturesEnabled TmAssign
-  instantiate
-    ( ScmForall "a" KProper
-    $ ScmMono ((TyRef (TyVar "a") `TyArrow` TyVar "a") `TyArrow` TyVar "a")
-    )
+infer (TmLoc     _) = throwError ErrStoreTypingNotImplemented
 infer (TmInteger _) = return TyInteger
 infer TmIntegerPlus =
   return (TyInteger `TyArrow` TyInteger `TyArrow` TyInteger)

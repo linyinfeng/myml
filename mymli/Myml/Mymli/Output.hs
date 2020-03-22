@@ -68,8 +68,7 @@ displayValue TmRef              = pretty "ref"
 displayValue TmDeref            = pretty "!"
 displayValue (TmApp TmAssign v) = displayValue TmAssign <+> displayValue v
 displayValue TmAssign           = pretty ":=#"
-displayValue (TmLoc l)          = pretty "loc(" <> pretty l <> pretty ")"
-displayValue TmNew              = pretty "new"
+displayValue (TmLoc     l)      = pretty "loc(" <> pretty l <> pretty ")"
 displayValue (TmInteger n)      = pretty n
 displayValue TmIntegerPlus      = pretty "integerPlus#"
 displayValue TmIntegerMul       = pretty "integerMul#"

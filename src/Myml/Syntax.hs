@@ -7,6 +7,7 @@ module Myml.Syntax
   , deriveTermClass
   , deriveString
   , termSelf
+  , termNew
   , termSeq
   , termWildcardAbs
   , uniqueName
@@ -86,7 +87,6 @@ data Term = TmAbs VarName Term
           | TmDeref
           | TmAssign
           | TmLoc Integer
-          | TmNew
           -- Primitives
           -- Nat
           | TmInteger Integer
@@ -116,19 +116,31 @@ data TermClass = TermClass {
 deriveTermClass :: TermClass -> Term
 deriveTermClass (TermClass inherits body) = TmAbs
   "self"
-  (inheritsToLet inherits body)
+  (termWildcardAbs (inheritsToLet inherits body))
  where
   inheritsToLet ((t, x) : ps) inner =
-    TmLet x (TmApp t (TmVar "self")) (inheritsToLet ps inner)
+    TmLet x (TmApp (TmApp t (TmVar "self")) TmUnit) (inheritsToLet ps inner)
   inheritsToLet [] inner = inner
+
+termNew :: Term
+termNew = TmAbs "c" (TmApp (TmApp termZ (TmVar "c")) TmUnit)
+
+termZ :: Term
+termZ = TmAbs "f" (TmApp half half)
+ where
+  half = TmAbs
+    "x"
+    (TmApp (TmVar "f")
+           (TmAbs "v" (TmApp (TmApp (TmVar "x") (TmVar "x")) (TmVar "v")))
+    )
+
+termSelf :: Term
+termSelf = TmApp TmDeref (TmVar "self")
 
 deriveString :: String -> Term
 deriveString []       = TmVariant "nil" `TmApp` TmUnit
 deriveString (c : cs) = TmVariant "cons"
   `TmApp` recordLiteral [("head", TmChar c), ("tail", deriveString cs)]
-
-termSelf :: Term
-termSelf = TmApp TmDeref (TmVar "self")
 
 termSeq :: Term -> Term -> Term
 termSeq t1 t2 = TmApp (termWildcardAbs t2) t1
@@ -488,8 +500,7 @@ instance PrettyPrec Term where
   prettyPrec _ TmRef            = pretty "ref"
   prettyPrec _ TmDeref          = pretty "!"
   prettyPrec _ TmAssign         = pretty ":=#"
-  prettyPrec _ (TmLoc l)        = pretty "loc(" <> pretty l <> pretty ")"
-  prettyPrec _ TmNew            = pretty "new"
+  prettyPrec _ (TmLoc     l)    = pretty "loc(" <> pretty l <> pretty ")"
   prettyPrec _ (TmInteger n)    = pretty n
   prettyPrec _ TmIntegerPlus    = pretty "integerPlus#"
   prettyPrec _ TmIntegerMul     = pretty "integerMul#"
