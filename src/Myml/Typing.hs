@@ -81,8 +81,18 @@ resetVarPrefix ps = do
   let m' = Map.map (const 0) (Map.restrictKeys m ps) `Map.union` m
   modify (\s -> s { inferStateNewVar = NewVar m' })
 
-innerVarPrefix :: VarName
-innerVarPrefix = "\x03b2"
+newVarInner :: Kind -> Inference VarName
+newVarInner = newVar . ('_' :) . kindToPrefix
+
+kindPrefixes :: Set.Set VarName
+kindPrefixes = Set.fromList ["\x03b1", "\x03c6", "\x03c8", "\x03c1"]
+
+kindToPrefix :: Kind -> VarName
+kindToPrefix KProper           = "\x03b1"
+kindToPrefix KPresence         = "\x03c6"
+kindToPrefix KPresenceWithType = "\x03c8"
+kindToPrefix KRow              = "\x03c1"
+kindToPrefix k = error ("Unknown kind for prefix" ++ show (pretty k))
 
 checkImperativeFeaturesEnabled :: Term -> Inference ()
 checkImperativeFeaturesEnabled t = do
@@ -96,11 +106,11 @@ infer (TmVar x) = reader (Map.lookup x) >>= \case
 infer (TmApp t1 t2) = do
   ty1 <- infer t1
   ty2 <- infer t2
-  nv  <- TyVar <$> newVar innerVarPrefix
+  nv  <- TyVar <$> newVarInner KProper
   unifyProper ty1 (TyArrow ty2 nv)
   return nv
 infer (TmAbs x t) = do
-  nv <- TyVar <$> newVar innerVarPrefix
+  nv <- TyVar <$> newVarInner KProper
   ty <- local (Map.insert x (ScmMono nv)) (infer t)
   return (TyArrow nv ty)
 infer (TmLet x t1 t2) = do
@@ -229,16 +239,16 @@ infer TmCompareChar = instantiate
 
 instantiate :: TypeScheme -> Inference Type
 instantiate (ScmForall x KProper s) = do
-  nv <- newVar innerVarPrefix
+  nv <- newVarInner KProper
   s' <- liftEither (substType (Map.singleton x (TySubProper (TyVar nv))) s)
   instantiate s'
 instantiate (ScmForall x KPresence s) = do
-  nv <- newVar innerVarPrefix
+  nv <- newVarInner KPresence
   s' <- liftEither
     (substType (Map.singleton x (TySubPresence (PresenceVar nv))) s)
   instantiate s'
-instantiate (ScmForall x (KArrow KProper KPresence) s) = do
-  nv <- newVar innerVarPrefix
+instantiate (ScmForall x KPresenceWithType s) = do
+  nv <- newVarInner KPresenceWithType
   s' <- liftEither
     (substType
       (Map.singleton x (TySubPresenceWithType (PresenceWithTypeVar nv)))
@@ -246,7 +256,7 @@ instantiate (ScmForall x (KArrow KProper KPresence) s) = do
     )
   instantiate s'
 instantiate (ScmForall x KRow s) = do
-  nv <- newVar innerVarPrefix
+  nv <- newVarInner KRow
   s' <- liftEither (substType (Map.singleton x (TySubRow (RowVar nv))) s)
   instantiate s'
 instantiate (ScmForall _ k _) = error ("Unknown kind: " ++ show (pretty k))
@@ -357,16 +367,6 @@ dangerousVarVariantPresence (Present t) = dangerousVar t
 dangerousVarVariantPresence (PresenceVarWithType x t) =
   dangerousVar t >>= mapUnionWithKind (Map.singleton x KPresenceWithType)
 dangerousVarVariantPresence p = fvPresence p
-
-kindPrefixes :: Set.Set VarName
-kindPrefixes = Set.fromList ["\x03b1", "\x03c6", "\x03c8", "\x03c1"]
-
-kindToPrefix :: Kind -> VarName
-kindToPrefix KProper           = "\x03b1"
-kindToPrefix KPresence         = "\x03c6"
-kindToPrefix KPresenceWithType = "\x03c8"
-kindToPrefix KRow              = "\x03c1"
-kindToPrefix k = error ("Unknown kind for prefix" ++ show (pretty k))
 
 replacePrefix
   :: Map.Map VarName Kind
@@ -488,7 +488,7 @@ unifyRow' (RowPresence _l p r) RowEmpty =
 unifyRow' (RowPresence l1 p1 r1) (RowPresence l2 p2 r2) = if l1 == l2
   then unifyPresence p1 p2 >> unifyRow r1 r2
   else do
-    r3 <- newVar innerVarPrefix
+    r3 <- newVarInner KRow
     let r3' = RowVar r3
     unifyRow r1 (RowPresence l2 p2 r3')
     unifyRow r2 (RowPresence l1 p1 r3')
