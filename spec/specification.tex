@@ -1,6 +1,7 @@
 \documentclass{report}
 
 \usepackage[a4paper, margin=2cm]{geometry}
+\usepackage{textgreek}
 \usepackage{mathpartir}
 \usepackage{mathtools}
 \usepackage{amssymb}
@@ -39,6 +40,8 @@
 \newcommand{\entails}{\vdash}
 \newcommand{\typingRelation}[5]{#1, #2 \entails #3 \;:\; #4 ,\; #5}
 \newcommand{\composite}{\circ}
+\newcommand{\definedAs}{\stackrel{def}{=}}
+\newcommand{\sequencing}{;\;}
 
 \title{The Definition of \theLang}
 \author{Lin Yinfeng}
@@ -57,7 +60,7 @@
 
 \begin{align*}
 \code{t} \Coloneqq \quad & & \text{term} \\
-& \code{\lambda x.\ t} & \text{abstraction} \\
+& \code{\lambda\ x.\ t} & \text{abstraction} \\
 | \quad & \code{t\ t} & \text{application} \\
 | \quad & \code{x} & \text{variable} \\
 | \quad & \code{let\ x = t\ in\ t} & \text{let-in} \\
@@ -78,13 +81,16 @@
 
 \subsection{Derived Form}
 
-Working in progress.
+\begin{align*}
+\lambda\ \_ .\ \code{t} \definedAs & \lambda\ \code{x}.\ \code{t} \quad \text{where \(\code{x} \not\in \freeVariable(\code{t})\)} \\
+\code{t}_1\sequencing\code{t}_2 \definedAs & (\lambda\ \_ .\ \code{t}_2)\ \code{t}_1
+\end{align*}
 
 \subsection{Value}
 
 \begin{align*}
 \code{v} \Coloneqq \quad & & \text{value} \\
-& \code{\lambda x.\ t} & \text{abstraction} \\
+& \code{\lambda\ x.\ t} & \text{abstraction} \\
 | \quad & \code{rv} & \text{record value} \\
 | \quad & \code{mv} & \text{match value} \\
 | \quad & \code{\backtick l\ v} & \text{variant} \\
@@ -274,7 +280,7 @@ Evaluation of \theLang{} is defined in small step operational semantic. The rela
 
 \section{Substitution}
 
-Working in progress.
+A substitution \([\code{x}\mapsto\code{t}]\) is a mapping from term or type variables to terms or types. Apply substition \([\code{x}\mapsto\code{t}_1]\) to \(\code{t}_3\), is written \([\code{x}\mapsto\code{t}_1]\code{t}_2 = \code{t}_3\), which replace all occurrence of variable \(\code{x}\) in \(\code{t}_2\) to \(\code{t}_1\). Free variables in \(\code{t}_1\) should not be bound in \(\code{t}_3\). Use \textalpha-conversion to prevent free variables in \(\code{t}_1\) being bound.
 
 \section{Typing}
 
