@@ -49,6 +49,7 @@ module Myml.Syntax
   , mapDeleteWithKind
   , mapDiffWithKind
   -- pretty print
+  , prettyVariantLabel
   , prettyTypeRow
   , prettyTypeRow'
   )

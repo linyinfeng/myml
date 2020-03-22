@@ -5,10 +5,14 @@ module Myml.Mymli.Output
   , bold
   , withColor
   , withSGR
+  , displayValue
+  , displayScheme
   )
 where
 
+import           Myml.Syntax
 import           System.Console.ANSI
+import           Data.Text.Prettyprint.Doc
 
 ioErrorLabel :: IO ()
 ioErrorLabel = errorLabel "IO Error"
@@ -30,3 +34,83 @@ withSGR sgr io = do
   setSGR sgr
   io
   setSGR [Reset]
+
+displayValueErr :: Term -> a
+displayValueErr t = error
+  (  "fatal error: displayValue called with non-value term : "
+  ++ (show (pretty t))
+  )
+
+displayValue :: Term -> Doc ann
+displayValue rv@(TmApp (TmApp (TmRcdExtend _) _) _) = displayRcdValue rv
+displayValue rv@TmEmptyRcd                          = displayRcdValue rv
+displayValue (TmApp (TmRcdExtend l) v) =
+  displayValue (TmRcdExtend l) <+> displayValue v
+displayValue (TmRcdExtend l) = pretty "extend" <> parens (pretty l)
+displayValue (TmApp (TmRcdUpdate l) v) =
+  displayValue (TmRcdUpdate l) <+> displayValue v
+displayValue (TmRcdUpdate l) = pretty "update" <> parens (pretty l)
+displayValue (TmRcdAccess l) = pretty "access" <> parens (pretty l)
+displayValue mv@(TmApp (TmApp (TmMatchExtend _) _) _) = displayMatchValue mv
+displayValue mv@TmEmptyMatch = displayMatchValue mv
+displayValue (TmApp (TmMatchExtend l) v) =
+  displayValue (TmMatchExtend l) <+> displayValue v
+displayValue (TmMatchExtend l) =
+  pretty "extend" <> parens (prettyVariantLabel l)
+displayValue (TmApp (TmMatchUpdate l) v) =
+  displayValue (TmMatchUpdate l) <+> displayValue v
+displayValue (TmMatchUpdate l) =
+  pretty "update" <> parens (prettyVariantLabel l)
+displayValue (TmApp (TmVariant l) v) =
+  displayValue (TmVariant l) <+> displayValue v
+displayValue (TmVariant l)      = prettyVariantLabel l
+displayValue TmRef              = pretty "ref"
+displayValue TmDeref            = pretty "!"
+displayValue (TmApp TmAssign v) = displayValue TmAssign <+> displayValue v
+displayValue TmAssign           = pretty "_:=_"
+displayValue (TmLoc l)          = pretty "loc(" <> pretty l <> pretty ")"
+displayValue TmNew              = pretty "new"
+displayValue (TmNat n)          = pretty n
+displayValue TmSucc             = pretty "succ"
+displayValue TmPred             = pretty "pred"
+displayValue TmIsZero           = pretty "isZero"
+displayValue (TmChar c)         = pretty (show c)
+displayValue TmPutChar          = pretty "putChar#"
+displayValue TmGetChar          = pretty "getChar#"
+displayValue (TmApp TmCompareChar c@(TmChar _)) =
+  displayValue TmCompareChar <+> displayValue c
+displayValue TmCompareChar = pretty "compareChar#"
+displayValue TmAbs{}       = pretty "<\x3bb>"
+displayValue t             = displayValueErr t
+
+displayRcdValue :: Term -> Doc ann
+displayRcdValue t = align (group (open <> display True t <> close))
+ where
+  open  = flatAlt (pretty "{ ") (pretty "{")
+  close = flatAlt (pretty " }") (pretty "}")
+  display first (TmApp (TmApp (TmRcdExtend l) v) rv) =
+    (if first then mempty else line <> pretty ", ")
+      <>  pretty l
+      <+> pretty "="
+      <+> displayValue v
+      <>  display False rv
+  display _ TmEmptyRcd = mempty
+  display _ t'         = displayValueErr t'
+
+displayMatchValue :: Term -> Doc ann
+displayMatchValue t = align (group (open <> display True t <> close))
+ where
+  open  = flatAlt (pretty "[ ") (pretty "[")
+  close = flatAlt (pretty " ]") (pretty "]")
+  display first (TmApp (TmApp (TmMatchExtend l) v) rv) =
+    (if first then mempty else line <> pretty ", ")
+      <>  prettyVariantLabel l
+      <+> pretty "="
+      <+> displayValue v
+      <>  display False rv
+  display _ TmEmptyRcd = mempty
+  display _ t'         = displayValueErr t'
+
+displayScheme :: TypeScheme -> Doc ann
+displayScheme (ScmForall _ _ t) = displayScheme t
+displayScheme (ScmMono t      ) = pretty t

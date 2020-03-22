@@ -15,7 +15,9 @@ import           Myml.Parser.Common
 import           Myml.Lang.Syntax
 import           Myml.Lang.Parser
 import           Myml.Eval.Store
-import           Text.Trifecta           hiding ( Parser )
+import           Text.Trifecta           hiding ( Parser
+                                                , line
+                                                )
 import           System.FilePath
 import           System.IO
 import           System.Directory
@@ -30,11 +32,12 @@ import qualified Data.Map                      as Map
 processTopLevel' :: MonadIO m => TopLevel -> Mymli m MymliRequest
 processTopLevel' t = processTopLevel False t >> return MymliContinue
 
-printTermSchemePair :: Term -> TypeScheme -> IO ()
-printTermSchemePair t s = do
-  renderDoc (pretty t)
-  putStr "\n"
-  renderDoc (pretty ":" <+> align (pretty s))
+printValueSchemePair :: Term -> TypeScheme -> IO ()
+printValueSchemePair t s = do
+  renderDoc
+    (group
+      (displayValue t <> line <> pretty ":" <> line <> align (displayScheme s))
+    )
   putStr "\n"
  where
   renderDoc :: Doc ann -> IO ()
@@ -50,7 +53,7 @@ processTopLevel silent (TopTerm t) = do
       case evalRes of
         Left  e -> liftIO (typingErrorLabel >> print e) >> return False
         Right v -> do
-          unless silent (liftIO (printTermSchemePair v s))
+          unless silent (liftIO (printValueSchemePair v s))
           mymliGc
           return True
 processTopLevel silent (TopBind x t) = do
@@ -63,7 +66,7 @@ processTopLevel silent (TopBind x t) = do
         Left  e -> liftIO (typingErrorLabel >> print e) >> return False
         Right v -> do
           mymliAddBinding x t v s
-          unless silent (liftIO (printTermSchemePair (TmVar x) s))
+          unless silent (liftIO (printValueSchemePair v s))
           mymliGc
           return True
 processTopLevel _ (TopImport file) = do
