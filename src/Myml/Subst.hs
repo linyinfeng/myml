@@ -29,27 +29,7 @@ substTerm' (TmLet x t1 t2) = do
   t1'           <- substTerm' t1
   (newX, inner) <- handleTermBind x
   TmLet newX t1' <$> inner (substTerm' t2)
-substTerm' TmEmptyRcd        = return TmEmptyRcd
-substTerm' (TmRcdExtend l)   = return (TmRcdExtend l)
-substTerm' (TmRcdUpdate l)   = return (TmRcdUpdate l)
-substTerm' (TmRcdAccess l)   = return (TmRcdAccess l)
-substTerm' TmEmptyMatch      = return TmEmptyMatch
-substTerm' (TmMatchExtend l) = return (TmMatchExtend l)
-substTerm' (TmMatchUpdate l) = return (TmMatchUpdate l)
-substTerm' (TmVariant     l) = return (TmVariant l)
-substTerm' TmRef             = return TmRef
-substTerm' TmDeref           = return TmDeref
-substTerm' TmAssign          = return TmAssign
-substTerm' (TmLoc n)         = return (TmLoc n)
-substTerm' TmNew             = return TmNew
-substTerm' (TmNat n)         = return (TmNat n)
-substTerm' TmSucc            = return TmSucc
-substTerm' TmPred            = return TmPred
-substTerm' TmIsZero          = return TmIsZero
-substTerm' (TmChar c)        = return (TmChar c)
-substTerm' TmPutChar         = return TmPutChar
-substTerm' TmGetChar         = return TmGetChar
-substTerm' TmCompareChar     = return TmCompareChar
+substTerm' t = return t
 
 compositeTermSubst
   :: Map.Map VarName Term -> Map.Map VarName Term -> Map.Map VarName Term
@@ -84,7 +64,7 @@ instance TypeSubst Type where
   substType' (TyMu x t     ) = handleTypeBind x (TySubProper . TyVar)
     >>= \(newX, inner) -> TyMu newX <$> inner (substType' t)
   substType' (TyRef t) = TyRef <$> substType' t
-  substType' TyNat     = return TyNat
+  substType' TyInteger = return TyInteger
   substType' TyChar    = return TyChar
 
 instance TypeSubst TypeRow where

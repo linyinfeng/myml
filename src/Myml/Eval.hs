@@ -93,23 +93,33 @@ smallStep (TmApp TmNew (TmAbs self t)) = do
   let s''     = assign s' l obj
   put (Just s'')
   return obj
-smallStep (TmApp TmSucc (TmNat n)) = return (TmNat (succ n))
-smallStep (TmApp TmPred (TmNat n)) =
-  return (TmNat (if n == 0 then 0 else n - 1))
-smallStep (TmApp TmIsZero (TmNat n)) =
-  return (if n == 0 then termTrue else termFalse)
-smallStep (TmApp TmPutChar (TmChar c)) = liftIO (TmUnit <$ putChar c)
-smallStep (TmApp TmGetChar TmUnit) = liftIO (TmChar <$> getChar)
-smallStep (TmApp (TmApp TmCompareChar (TmChar c1)) (TmChar c2)) = return
-  (TmApp (TmVariant label) TmUnit)
- where
-  label = case compare c1 c2 of
-    LT -> "LT"
-    EQ -> "EQ"
-    GT -> "GT"
+smallStep (TmApp (TmApp TmIntegerPlus (TmInteger n)) (TmInteger m)) =
+  return (TmInteger (n + m))
+smallStep (TmApp (TmApp TmIntegerMul (TmInteger n)) (TmInteger m)) =
+  return (TmInteger (n * m))
+smallStep (TmApp TmIntegerAbs (TmInteger n)) = return (TmInteger (abs n))
+smallStep (TmApp TmIntegerSignum (TmInteger n)) = return (TmInteger (signum n))
+smallStep (TmApp TmIntegerNegate (TmInteger n)) = return (TmInteger (negate n))
+smallStep (TmApp (TmApp TmIntegerQuotRem (TmInteger n)) (TmInteger m)) = return
+  (recordLiteral [("quot", TmInteger q), ("rem", TmInteger r)])
+  where (q, r) = quotRem n m
+smallStep (TmApp (TmApp TmIntegerCompare (TmInteger n)) (TmInteger m)) =
+  return (orderingToTmOrdering (compare n m))
+smallStep (TmApp TmIOPutChar (TmChar c)) = liftIO (TmUnit <$ putChar c)
+smallStep (TmApp TmIOGetChar TmUnit    ) = liftIO (TmChar <$> getChar)
+smallStep (TmApp (TmApp TmCharCompare (TmChar c1)) (TmChar c2)) =
+  return (orderingToTmOrdering (compare c1 c2))
 smallStep (TmApp v1 t2) | isValue v1 = TmApp v1 <$> smallStep t2
 smallStep (TmApp t1 t2)              = flip TmApp t2 <$> smallStep t1
 smallStep (TmLet x v1 t2) | isValue v1 =
   return (substTerm (Map.singleton x v1) t2)
 smallStep (TmLet x t1 t2) = (\t1' -> TmLet x t1' t2) <$> smallStep t1
 smallStep _               = throwError ExcNoRuleApplied
+
+orderingToTmOrdering :: Ordering -> Term
+orderingToTmOrdering o = TmApp (TmVariant label) TmUnit
+ where
+  label = case o of
+    LT -> "LT"
+    EQ -> "EQ"
+    GT -> "GT"

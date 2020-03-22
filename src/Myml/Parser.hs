@@ -96,22 +96,9 @@ parseTermAtom =
     <|> variant
     <|> rcdAndMatchOps
     <|> access
-    <|> ref
-    <|> deref
-    <|> assign
-    <|> unit
-    <|> true
-    <|> false
-    <|> zero
-    <|> nat
-    <|> suc
-    <|> prd
-    <|> isZero
-    <|> new
-    <|> self
+    <|> simplePrimitives
+    <|> int
     <|> charLit
-    <|> getCharSharp
-    <|> putCharSharp
     <|> compareCharSharp
     <|> stringLit
     <|> var
@@ -136,24 +123,10 @@ parseTermAtom =
       "update"
     op <$> parens recordLabel
   access = TmRcdAccess <$> (reserve identStyle "access" *> parens recordLabel)
-  ref              = TmRef <$ reserve identStyle "ref"
-  deref            = TmDeref <$ reserve identStyle "!"
-  assign           = TmAssign <$ reserve identStyle "_:=_"
-  unit             = TmUnit <$ reserve identStyle "unit"
-  true             = termTrue <$ reserve identStyle "true"
-  false            = termFalse <$ reserve identStyle "false"
-  zero             = TmNat 0 <$ reserve identStyle "zero"
-  nat              = TmNat <$> natural
-  suc              = TmSucc <$ reserve identStyle "succ"
-  prd              = TmPred <$ reserve identStyle "pred"
-  isZero           = TmIsZero <$ reserve identStyle "isZero"
-  new              = TmNew <$ reserve identStyle "new"
+  int              = TmInteger <$> try integer
   charLit          = TmChar <$> charLiteral
-  getCharSharp     = TmGetChar <$ reserve identStyle "getChar#"
-  putCharSharp     = TmPutChar <$ reserve identStyle "putChar#"
-  compareCharSharp = TmCompareChar <$ reserve identStyle "compareChar#"
+  compareCharSharp = TmCharCompare <$ reserve identStyle "charCompare#"
   stringLit        = deriveString <$> stringLiteral
-  self             = termSelf <$ reserve identStyle "self"
   tupleOrParen =
     (\case
         []  -> TmUnit
@@ -161,6 +134,28 @@ parseTermAtom =
         l   -> recordLiteral (zip (map show [1 :: Integer ..]) l)
       )
       <$> parens (parseTerm `sepBy` symbol ",")
+  simplePrimitives = choice
+    (map
+      (\(t, s) -> t <$ reserve identStyle s)
+      [ (TmRef           , "ref")
+      , (TmDeref         , "!")
+      , (TmAssign        , ":=#")
+      , (TmUnit          , "unit")
+      , (termTrue        , "true")
+      , (termFalse       , "false")
+      , (TmIntegerPlus   , "integerPlus#")
+      , (TmIntegerMul    , "integerMul#")
+      , (TmIntegerAbs    , "integerAbs#")
+      , (TmIntegerSignum , "integerSignum#")
+      , (TmIntegerNegate , "integerNegate#")
+      , (TmIntegerQuotRem, "integerQuotRem#")
+      , (TmIntegerCompare, "integerCompare#")
+      , (TmNew           , "new")
+      , (TmIOGetChar     , "ioGetChar#")
+      , (TmIOPutChar     , "ioPutChar#")
+      , (termSelf        , "self")
+      ]
+    )
 
 paramsToAbs :: [VarName] -> Term -> Term
 paramsToAbs xs t =
@@ -205,15 +200,17 @@ typeOperatorTable =
 
 parseTypeAtom :: Parser Type
 parseTypeAtom =
-  (var <|> rcd <|> variant <|> unit <|> nat <|> parens parseType) <?> "typeAtom"
+  (var <|> rcd <|> variant <|> unit <|> int <|> tyChar <|> parens parseType)
+    <?> "typeAtom"
  where
   var = TyVar <$> ident identStyle
   rcd =
     TyRecord <$> (symbol "{" *> parseTypeRow (ident identStyle) <* symbol "}")
   variant =
     TyVariant <$> (symbol "[" *> parseTypeRow variantLabel <* symbol "]")
-  unit = TyUnit <$ reserve identStyle "Unit"
-  nat  = TyNat <$ reserve identStyle "Nat"
+  unit   = TyUnit <$ reserve identStyle "Unit"
+  int    = TyInteger <$ reserve identStyle "Integer"
+  tyChar = TyChar <$ reserve identStyle "Char"
 
 parseScheme :: Parser TypeScheme
 parseScheme =

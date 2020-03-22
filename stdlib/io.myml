@@ -2,8 +2,8 @@ import "fix.myml" ;;
 import "list.myml" ;;
 import "char.myml" ;;
 
-ioPutChar = putChar# ;;
-ioGetChar = getChar# ;;
+ioPutChar = ioPutChar# ;;
+ioGetChar = ioGetChar# ;;
 
 ioPutString s = listMap ioPutChar s; unit ;;
 

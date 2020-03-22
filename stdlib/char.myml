@@ -1,9 +1,5 @@
-import "fix.myml" ;;
-import "function.myml" ;;
+import "ordering.myml" ;;
 
-charCompare = compareChar# ;;
+charCompare = charCompare# ;;
 
-charEq c1 c2 = apply (charCompare c1 c2)
-  [ `LT _ = false
-  , `EQ _ = true
-  , `GT _ = false ] ;;
+charEq c1 c2 = orderingToEq (charCompare c1 c2) ;;

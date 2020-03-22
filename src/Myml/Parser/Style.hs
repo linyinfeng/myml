@@ -18,34 +18,52 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
  where
   coreReserved =
     [ "let"
+    , "="
     , "in"
+    , "\x3bb" -- lambda
+    , "\xb7"  -- underline
+    -- records and variants
     , "extend"
     , "update"
     , "access"
+    , "`"
+    -- ref
     , "ref"
+    , "!"
+    , ":="
+    , ":=#"
     , "unit"
+    -- bool
     , "true"
     , "false"
     , "if"
     , "then"
     , "else"
-    , "zero"
-    , "succ"
-    , "pred"
-    , "isZero"
+    -- class
     , "class"
     , "inherit"
-    , "new"
-    , "self"
     , "as"
-    , "getChar#"
-    , "putChar#"
-    , "compareChar#"
+    , "self"
+    , "new"
+    -- integer
+    , "integerPlus#"
+    , "integerMul#"
+    , "integerAbs#"
+    , "integerSignum#"
+    , "integerNegate#"
+    , "integerQuotRem#"
+    , "integerCompare#"
+    -- char
+    , "charCompare#"
+    -- io
+    , "ioGetChar#"
+    , "ioPutChar#"
     -- type
     , "Unit"
-    , "Nat"
+    , "Integer"
     , "Char"
     , "Rec"
+    , "\x3bc"
     , "Ref"
     , "Absent"
     , "Present"
@@ -56,15 +74,7 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
     , "=>"
     , "::"
     , ":"
-    , "="
     , "*"
-    , "`"
-    , ":="
-    , "_:=_"
-    , "!"
-    , "\x3bb"
-    , "\x3bc"
-    , "\xb7"
     ]
   langReserved = ["import", "="]
 

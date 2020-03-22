@@ -1,4 +1,5 @@
 import "fix.myml" ;;
+import "integer.myml" ;;
 
 listNil = `nil unit ;;
 
@@ -8,7 +9,7 @@ listSingleton x = listCons x listNil ;;
 
 listLength = fix (λ len .
   [ `nil _ = 0
-  , `cons l = succ (len l.tail) ]) ;;
+  , `cons l = integerPlus 1 (len l.tail) ]) ;;
 
 list++ = fix (λ ++ .
   [ `nil _ = \ ys . ys

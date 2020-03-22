@@ -1,0 +1,15 @@
+import "ordering.myml" ;;
+
+integerPlus = integerPlus# ;;
+integerMul = integerMul# ;;
+integerAbs = integerAbs# ;;
+integerSignum = integerSignum# ;;
+integerNegate = integerNegate# ;;
+integerQuotRem = integerQuotRem# ;;
+integerCompare = integerCompare# ;;
+
+integerMinus n m = integerPlus n (integerNegate m) ;;
+integerQuot n m = (integerQuotRem n m).quot ;;
+integerRem n m = (integerQuotRem n m).rem ;;
+
+integerEq n m = orderingToEq (integerCompare n m) ;;

@@ -103,28 +103,8 @@ class Locations a where
     locations :: a -> Set.Set Location
 
 instance Locations Term where
-  locations (TmAbs _  t   )   = locations t
-  locations (TmApp t1 t2  )   = locations t1 `Set.union` locations t2
-  locations (TmVar _      )   = Set.empty
-  locations (TmLet _ t1 t2)   = locations t1 `Set.union` locations t2
-  locations TmEmptyRcd        = Set.empty
-  locations (TmRcdExtend _)   = Set.empty
-  locations (TmRcdUpdate _)   = Set.empty
-  locations (TmRcdAccess _)   = Set.empty
-  locations TmEmptyMatch      = Set.empty
-  locations (TmMatchExtend _) = Set.empty
-  locations (TmMatchUpdate _) = Set.empty
-  locations (TmVariant     _) = Set.empty
-  locations TmRef             = Set.empty
-  locations TmDeref           = Set.empty
-  locations TmAssign          = Set.empty
-  locations (TmLoc l)         = Set.singleton l
-  locations TmNew             = Set.empty
-  locations (TmNat _)         = Set.empty
-  locations TmSucc            = Set.empty
-  locations TmPred            = Set.empty
-  locations TmIsZero          = Set.empty
-  locations (TmChar _)        = Set.empty
-  locations TmGetChar         = Set.empty
-  locations TmPutChar         = Set.empty
-  locations TmCompareChar     = Set.empty
+  locations (TmAbs _  t   ) = locations t
+  locations (TmApp t1 t2  ) = locations t1 `Set.union` locations t2
+  locations (TmLet _ t1 t2) = locations t1 `Set.union` locations t2
+  locations (TmLoc l      ) = Set.singleton l
+  locations _               = Set.empty

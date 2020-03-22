@@ -1,0 +1,4 @@
+orderingToEq =
+  [ `LT _ = false
+  , `EQ _ = true
+  , `GT _ = false ] ;;

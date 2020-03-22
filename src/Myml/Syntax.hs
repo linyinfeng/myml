@@ -20,6 +20,7 @@ module Myml.Syntax
   , Type(..)
   , pattern TyUnit
   , typeOrdering
+  , typeQuotRem
   , typeBool
   , TypeRow(..)
   , TypePresence(..)
@@ -88,15 +89,20 @@ data Term = TmAbs VarName Term
           | TmNew
           -- Primitives
           -- Nat
-          | TmNat Integer
-          | TmSucc
-          | TmPred
-          | TmIsZero
+          | TmInteger Integer
+          | TmIntegerPlus
+          | TmIntegerMul
+          | TmIntegerAbs
+          | TmIntegerSignum
+          | TmIntegerNegate
+          | TmIntegerQuotRem
+          | TmIntegerCompare
           -- Character
           | TmChar Char
-          | TmPutChar
-          | TmGetChar
-          | TmCompareChar
+          | TmCharCompare
+          -- IO
+          | TmIOPutChar
+          | TmIOGetChar
           deriving (Eq, Show)
 
 infixl 7 `TmApp`
@@ -175,14 +181,18 @@ instance Monad m => Serial m Term where
       \/ cons0 TmDeref
       \/ cons0 TmAssign
       -- do not generate location
-      \/ cons0 (TmNat 0)
-      \/ cons0 TmSucc
-      \/ cons0 TmPred
-      \/ cons0 TmIsZero
+      \/ cons1 TmInteger
+      \/ cons0 TmIntegerPlus
+      \/ cons0 TmIntegerMul
+      \/ cons0 TmIntegerAbs
+      \/ cons0 TmIntegerSignum
+      \/ cons0 TmIntegerNegate
+      \/ cons0 TmIntegerQuotRem
+      \/ cons0 TmIntegerCompare
       \/ cons1 TmChar
-      \/ cons0 TmPutChar
-      \/ cons0 TmGetChar
-      \/ cons0 TmCompareChar
+      \/ cons0 TmIOPutChar
+      \/ cons0 TmIOGetChar
+      \/ cons0 TmCharCompare
 
 data Type = TyVar VarName
           | TyArrow Type Type
@@ -191,7 +201,7 @@ data Type = TyVar VarName
           | TyMu VarName Type
           | TyRef Type
           -- Primitives
-          | TyNat
+          | TyInteger
           | TyChar
           deriving (Eq, Show, Ord)
 
@@ -206,6 +216,12 @@ typeOrdering r = TyVariant
   $ RowPresence "EQ" (Present TyUnit)
   $ RowPresence "GT" (Present TyUnit)
   $ RowVar r
+  )
+
+typeQuotRem :: VarName -> VarName -> Type
+typeQuotRem p1 p2 = TyRecord
+  ( RowPresence "quot" (PresenceVarWithType p1 TyInteger)
+  $ RowPresence "rem" (PresenceVarWithType p2 TyInteger) RowEmpty
   )
 
 typeBool :: VarName -> Type
@@ -223,7 +239,8 @@ instance Monad m => Serial m Type where
       \/ cons1 TyVariant
       \/ cons1 (TyMu "X")
       \/ cons1 TyRef
-      \/ cons0 TyNat
+      \/ cons0 TyInteger
+      \/ cons0 TyChar
 
 data TypeRow = RowEmpty
              | RowVar VarName
@@ -293,41 +310,31 @@ instance Monad m => Serial m Kind where
   series = pure KProper \/ cons0 KPresence \/ cons0 KRow \/ cons2 KArrow
 
 isValue :: Term -> Bool
+-- record value
 isValue t@(TmApp (TmApp (TmRcdExtend _) _) _) = isRcdValue t
 isValue t@TmEmptyRcd                          = isRcdValue t
-isValue (TmApp (TmRcdExtend _) t)             = isValue t
-isValue (TmRcdExtend _)                       = True
-isValue (TmApp (TmRcdUpdate _) t)             = isValue t
-isValue (TmRcdUpdate _)                       = True
-isValue (TmRcdAccess _)                       = True
+-- match value
 isValue t@(TmApp (TmApp (TmMatchExtend _) _) _) = isMatchValue t
 isValue t@TmEmptyMatch                        = isMatchValue t
+-- variant value
+isValue (TmApp (TmVariant _) t)               = isValue t
+-- partial applied
+isValue (TmApp (TmRcdExtend _) t)             = isValue t
+isValue (TmApp (TmRcdUpdate _) t)             = isValue t
 isValue (TmApp (TmMatchExtend _) t)           = isValue t
-isValue (TmMatchExtend _          )           = True
 isValue (TmApp (TmMatchUpdate _) t)           = isValue t
-isValue (TmMatchUpdate _          )           = True
-isValue (TmApp (TmVariant _) t    )           = isValue t
-isValue (TmVariant _              )           = True
-isValue TmRef                                 = True
-isValue TmDeref                               = True
 isValue (TmApp TmAssign t)                    = isValue t
-isValue TmAssign                              = True
-isValue (TmLoc _)                             = True
-isValue TmNew                                 = True
-isValue TmNat{}                               = True
-isValue TmSucc                                = True
-isValue TmPred                                = True
-isValue TmIsZero                              = True
-isValue (TmChar _)                            = True
-isValue TmPutChar                             = True
-isValue TmGetChar                             = True
-isValue (TmApp TmCompareChar (TmChar _))      = True
-isValue TmCompareChar                         = True
+isValue (TmApp TmCharCompare (TmChar _))      = True
+isValue (TmApp TmIntegerPlus (TmInteger _))   = True
+isValue (TmApp TmIntegerMul (TmInteger _))    = True
+isValue (TmApp TmIntegerQuotRem (TmInteger _)) = True
+isValue (TmApp TmIntegerCompare (TmInteger _)) = True
 -- Basic
 isValue TmApp{}                               = False
 isValue TmVar{}                               = False
 isValue TmAbs{}                               = True
 isValue TmLet{}                               = False
+isValue _                                     = True
 
 isRcdValue :: Term -> Bool
 isRcdValue TmEmptyRcd                      = True
@@ -343,31 +350,11 @@ isMatchValue (TmApp (TmApp (TmMatchExtend _label) v1) v2) =
 isMatchValue _ = False
 
 fvTerm :: Term -> Set.Set VarName
-fvTerm (TmVar x      )        = Set.singleton x
-fvTerm (TmAbs x  t   )        = Set.delete x (fvTerm t)
-fvTerm (TmApp t1 t2  )        = fvTerm t1 `Set.union` fvTerm t2
-fvTerm (TmLet x t1 t2)        = fvTerm t1 `Set.union` Set.delete x (fvTerm t2)
-fvTerm TmEmptyRcd             = Set.empty
-fvTerm (TmRcdExtend _label)   = Set.empty
-fvTerm (TmRcdUpdate _label)   = Set.empty
-fvTerm (TmRcdAccess _label)   = Set.empty
-fvTerm TmEmptyMatch           = Set.empty
-fvTerm (TmMatchExtend _label) = Set.empty
-fvTerm (TmMatchUpdate _label) = Set.empty
-fvTerm (TmVariant     _label) = Set.empty
-fvTerm TmRef                  = Set.empty
-fvTerm TmDeref                = Set.empty
-fvTerm TmAssign               = Set.empty
-fvTerm (TmLoc _loc)           = Set.empty
-fvTerm TmNew                  = Set.empty
-fvTerm (TmNat _n)             = Set.empty
-fvTerm TmSucc                 = Set.empty
-fvTerm TmPred                 = Set.empty
-fvTerm TmIsZero               = Set.empty
-fvTerm (TmChar _)             = Set.empty
-fvTerm TmPutChar              = Set.empty
-fvTerm TmGetChar              = Set.empty
-fvTerm TmCompareChar          = Set.empty
+fvTerm (TmVar x      ) = Set.singleton x
+fvTerm (TmAbs x  t   ) = Set.delete x (fvTerm t)
+fvTerm (TmApp t1 t2  ) = fvTerm t1 `Set.union` fvTerm t2
+fvTerm (TmLet x t1 t2) = fvTerm t1 `Set.union` Set.delete x (fvTerm t2)
+fvTerm _               = Set.empty
 
 mapUnionWithKind
   :: Map.Map VarName Kind
@@ -416,7 +403,7 @@ fvType (TyRecord  row) = fvRow row
 fvType (TyVariant row) = fvRow row
 fvType (TyMu x t     ) = fvType t >>= mapDeleteWithKind x KProper
 fvType (TyRef t      ) = fvType t
-fvType TyNat           = return Map.empty
+fvType TyInteger       = return Map.empty
 fvType TyChar          = return Map.empty
 
 fvRow :: TypeRow -> Either Error (Map.Map VarName Kind)
@@ -497,20 +484,24 @@ instance PrettyPrec Term where
     pretty "extend" <> parens (prettyVariantLabel l)
   prettyPrec _ (TmMatchUpdate l) =
     pretty "update" <> parens (prettyVariantLabel l)
-  prettyPrec _ (TmVariant l) = prettyVariantLabel l
-  prettyPrec _ TmRef         = pretty "ref"
-  prettyPrec _ TmDeref       = pretty "!"
-  prettyPrec _ TmAssign      = pretty "_:=_"
-  prettyPrec _ (TmLoc l)     = pretty "loc(" <> pretty l <> pretty ")"
-  prettyPrec _ TmNew         = pretty "new"
-  prettyPrec _ (TmNat n)     = pretty n
-  prettyPrec _ TmSucc        = pretty "succ"
-  prettyPrec _ TmPred        = pretty "pred"
-  prettyPrec _ TmIsZero      = pretty "isZero"
-  prettyPrec _ (TmChar c)    = pretty (show c)
-  prettyPrec _ TmPutChar     = pretty "putChar#"
-  prettyPrec _ TmGetChar     = pretty "getChar#"
-  prettyPrec _ TmCompareChar = pretty "compareChar#"
+  prettyPrec _ (TmVariant l)    = prettyVariantLabel l
+  prettyPrec _ TmRef            = pretty "ref"
+  prettyPrec _ TmDeref          = pretty "!"
+  prettyPrec _ TmAssign         = pretty ":=#"
+  prettyPrec _ (TmLoc l)        = pretty "loc(" <> pretty l <> pretty ")"
+  prettyPrec _ TmNew            = pretty "new"
+  prettyPrec _ (TmInteger n)    = pretty n
+  prettyPrec _ TmIntegerPlus    = pretty "integerPlus#"
+  prettyPrec _ TmIntegerMul     = pretty "integerMul#"
+  prettyPrec _ TmIntegerAbs     = pretty "integerAbs#"
+  prettyPrec _ TmIntegerSignum  = pretty "integerSignum#"
+  prettyPrec _ TmIntegerNegate  = pretty "integerNegate#"
+  prettyPrec _ TmIntegerQuotRem = pretty "integerQuotRem#"
+  prettyPrec _ TmIntegerCompare = pretty "integerCompare#"
+  prettyPrec _ (TmChar c)       = pretty (show c)
+  prettyPrec _ TmIOPutChar      = pretty "ioPutChar#"
+  prettyPrec _ TmIOGetChar      = pretty "ioGetChar#"
+  prettyPrec _ TmCharCompare    = pretty "charCompare#"
 
 prettyVariantLabel :: LabelName -> Doc ann
 prettyVariantLabel name = pretty '`' <> pretty name
@@ -542,8 +533,8 @@ instance PrettyPrec Type where
   prettyPrec n (TyRef t) = parensPrec (n > prec)
                                       (pretty "Ref" <+> prettyPrec prec t)
     where prec = 2
-  prettyPrec _ TyNat  = pretty "Nat"
-  prettyPrec _ TyChar = pretty "Char"
+  prettyPrec _ TyInteger = pretty "Integer"
+  prettyPrec _ TyChar    = pretty "Char"
 
 prettyTypeRow
   :: String -> String -> (LabelName -> Doc ann) -> TypeRow -> Doc ann

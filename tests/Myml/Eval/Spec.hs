@@ -18,7 +18,7 @@ tests = testGroup "Myml.Eval.Spec" [unitTests]
 assertBigStep
   :: Term -> Store (WithMark Term) -> Term -> Store (WithMark Term) -> Assertion
 assertBigStep t1 s1 t2 s2 =
-  runStateT (bigStep t1) (Just s1) >>= (@?= (t2, (Just s2)))
+  runStateT (bigStep t1) (Just s1) >>= (@?= (t2, Just s2))
 
 assertSmallStep
   :: Term
@@ -38,12 +38,12 @@ unitTests = testGroup
     (pTerm "(\x3bb x . x)")
     emptyStore
   , testCase "smallStep application order 1" $ assertSmallStep
-    (pTerm "(succ zero) (succ zero)")
+    (pTerm "(integerPlus# 1 0) (integerPlus# 1 0)")
     emptyStore
-    (Right (pTerm "1 (succ zero)"))
+    (Right (pTerm "1 (integerPlus# 1 0)"))
     emptyStore
   , testCase "smallStep application order 2" $ assertSmallStep
-    (pTerm "zero (succ zero)")
+    (pTerm "0 (integerPlus# 1 0)")
     emptyStore
     (Right (pTerm "0 1"))
     emptyStore
@@ -71,7 +71,7 @@ unitTests = testGroup
     `TmApp` TmLoc 0
     `TmApp` (TmRcdExtend "l1" `TmApp` TmLoc 1 `TmApp` TmEmptyRcd)
     )
-    (emptyStore `allocate'` TmNat 1 `allocate'` TmUnit)
+    (emptyStore `allocate'` TmInteger 1 `allocate'` TmUnit)
   , testCase "bigStep record access 1" $ assertBigStep
     (pTerm "{ l1 = ref unit } extend { l2 = unit }.l1")
     emptyStore
@@ -125,7 +125,7 @@ unitTests = testGroup
     (TmLoc 1)
     (emptyStore `allocate'` TmUnit)
   , testCase "bigStep assign" $ assertBigStep
-    (pTerm "(ref zero) := (\x3bb x . succ x) zero")
+    (pTerm "(ref 0) := (\x3bb x . integerPlus# 1 x) 0")
     emptyStore
     (pTerm "unit")
     (emptyStore `allocate'` pTerm "1")
@@ -137,7 +137,7 @@ unitTests = testGroup
   , testCase "bigStep unit"
     $ assertBigStep (pTerm "unit") emptyStore (pTerm "unit") emptyStore
   , testCase "bigStep seq" $ assertBigStep
-    (pTerm "let x = ref zero in x := succ zero; ! x")
+    (pTerm "let x = ref 0 in x := 1; ! x")
     emptyStore
     (pTerm "1")
     (emptyStore `allocate'` pTerm "1")
@@ -151,26 +151,44 @@ unitTests = testGroup
     (pTerm "zero")
     emptyStore
   , testCase "bigStep if 2" $ assertBigStep
-    (pTerm "if if false then false else true then succ zero else zero")
+    (pTerm "if if false then false else true then 1 else zero")
     emptyStore
     (pTerm "1")
     emptyStore
-  , testCase "bigStep zero"
-    $ assertBigStep (pTerm "zero") emptyStore (pTerm "zero") emptyStore
-  , testCase "bigStep succ" $ assertBigStep
-    (pTerm "succ ((\x3bb x . x) (succ zero))")
+  , testCase "bigStep integer plus"
+    $ assertBigStep (pTerm "integerPlus# 2 3") emptyStore (pTerm "5") emptyStore
+  , testCase "bigStep integer mul"
+    $ assertBigStep (pTerm "integerMul# 2 3") emptyStore (pTerm "6") emptyStore
+  , testCase "bigStep integer abs"
+    $ assertBigStep (pTerm "integerAbs# -2") emptyStore (pTerm "2") emptyStore
+  , testCase "bigStep integer signum" $ assertBigStep
+    (pTerm "integerSignum# -2")
+    emptyStore
+    (pTerm "-1")
+    emptyStore
+  , testCase "bigStep integer negate" $ assertBigStep
+    (pTerm "integerNegate# -2")
     emptyStore
     (pTerm "2")
     emptyStore
-  , testCase "bigStep pred 1" $ assertBigStep (pTerm "pred (succ zero)")
-                                              emptyStore
-                                              (pTerm "zero")
-                                              emptyStore
-  , testCase "bigStep pred 2"
-    $ assertBigStep (pTerm "pred zero") emptyStore (pTerm "zero") emptyStore
-  , testCase "bigStep isZero" $ assertBigStep
-    (pTerm "{ l1 = isZero (succ zero), l2 = isZero zero }")
+  , testCase "bigStep integer quotRem" $ assertBigStep
+    (pTerm "integerQuotRem# 5 2")
     emptyStore
-    (pTerm "{ l1 = false , l2 = true }")
+    (pTerm "{ quot = 2, rem = 1 }")
+    emptyStore
+  , testCase "bigStep integer compare1" $ assertBigStep
+    (pTerm "integerCompare# 5 2")
+    emptyStore
+    (pTerm "`GT unit")
+    emptyStore
+  , testCase "bigStep integer compare" $ assertBigStep
+    (pTerm "integerCompare# 2 2")
+    emptyStore
+    (pTerm "`EQ unit")
+    emptyStore
+  , testCase "bigStep integer compare" $ assertBigStep
+    (pTerm "integerCompare# 2 6")
+    emptyStore
+    (pTerm "`LT unit")
     emptyStore
   ]

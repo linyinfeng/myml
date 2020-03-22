@@ -224,15 +224,25 @@ infer TmNew     = do
     ( ScmForall "a" KProper
     $ ScmMono ((TyRef (TyVar "a") `TyArrow` TyVar "a") `TyArrow` TyVar "a")
     )
-infer (TmNat _) = return TyNat
-infer TmSucc    = return (TyArrow TyNat TyNat)
-infer TmPred    = return (TyArrow TyNat TyNat)
-infer TmIsZero =
-  instantiate (ScmForall "r" KRow $ ScmMono (TyArrow TyNat (typeBool "r")))
+infer (TmInteger _) = return TyInteger
+infer TmIntegerPlus =
+  return (TyInteger `TyArrow` TyInteger `TyArrow` TyInteger)
+infer TmIntegerMul = return (TyInteger `TyArrow` TyInteger `TyArrow` TyInteger)
+infer TmIntegerAbs     = return (TyInteger `TyArrow` TyInteger)
+infer TmIntegerSignum  = return (TyInteger `TyArrow` TyInteger)
+infer TmIntegerNegate  = return (TyInteger `TyArrow` TyInteger)
+infer TmIntegerQuotRem = instantiate
+  (ScmForall "p1" KPresenceWithType $ ScmForall "p2" KPresenceWithType $ ScmMono
+    (TyInteger `TyArrow` TyInteger `TyArrow` typeQuotRem "p1" "p2")
+  )
+infer TmIntegerCompare = instantiate
+  ( ScmForall "r" KRow
+  $ ScmMono (TyInteger `TyArrow` TyInteger `TyArrow` typeOrdering "r")
+  )
 infer (TmChar _)    = return TyChar
-infer TmGetChar     = return (TyArrow TyUnit TyChar)
-infer TmPutChar     = return (TyArrow TyChar TyUnit)
-infer TmCompareChar = instantiate
+infer TmIOGetChar   = return (TyArrow TyUnit TyChar)
+infer TmIOPutChar   = return (TyArrow TyChar TyUnit)
+infer TmCharCompare = instantiate
   ( ScmForall "r" KRow
   $ ScmMono (TyChar `TyArrow` TyChar `TyArrow` typeOrdering "r")
   )
@@ -274,7 +284,7 @@ instantiateType (TyMu x t   ) = do
   unifyProper (TyVar x) t'
   return (TyVar x)
 instantiateType (TyRef t) = TyRef <$> instantiateType t
-instantiateType TyNat     = return TyNat
+instantiateType TyInteger = return TyInteger
 instantiateType TyChar    = return TyChar
 
 instantiateRow :: TypeRow -> Inference TypeRow
@@ -525,8 +535,8 @@ describeProper allowMu ctx (TyRef t ) = TyRef <$> describeProper allowMu ctx t
 describeProper allowMu ctx (TyMu x t) = if allowMu
   then TyMu x <$> describeProper allowMu (Set.insert x ctx) t
   else throwError (ErrCanNotHandleMuType (TyMu x t))
-describeProper _ _ TyNat  = return TyNat
-describeProper _ _ TyChar = return TyChar
+describeProper _ _ TyInteger = return TyInteger
+describeProper _ _ TyChar    = return TyChar
 
 describePresence
   :: Bool -> Set.Set VarName -> TypePresence -> Inference TypePresence

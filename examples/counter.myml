@@ -1,7 +1,9 @@
+import "../stdlib/integer.myml" ;;
+
 Counter r =
   class
     { get _ = ! r.x
-    , inc _ = r.x := succ (! r.x) } ;;
+    , inc _ = r.x := integerPlus 1 (! r.x) } ;;
 BackupCounter r =
   class
     inherit Counter r as super

@@ -1,0 +1,10 @@
+import "bool.myml" ;;
+import "char.myml" ;;
+import "fix.myml" ;;
+import "function.myml" ;;
+import "integer.myml" ;;
+import "io.myml" ;;
+import "list.myml" ;;
+import "ordering.myml" ;;
+import "ski.myml" ;;
+import "string.myml" ;;

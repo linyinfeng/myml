@@ -67,19 +67,23 @@ displayValue (TmVariant l)      = prettyVariantLabel l
 displayValue TmRef              = pretty "ref"
 displayValue TmDeref            = pretty "!"
 displayValue (TmApp TmAssign v) = displayValue TmAssign <+> displayValue v
-displayValue TmAssign           = pretty "_:=_"
+displayValue TmAssign           = pretty ":=#"
 displayValue (TmLoc l)          = pretty "loc(" <> pretty l <> pretty ")"
 displayValue TmNew              = pretty "new"
-displayValue (TmNat n)          = pretty n
-displayValue TmSucc             = pretty "succ"
-displayValue TmPred             = pretty "pred"
-displayValue TmIsZero           = pretty "isZero"
+displayValue (TmInteger n)      = pretty n
+displayValue TmIntegerPlus      = pretty "integerPlus#"
+displayValue TmIntegerMul       = pretty "integerMul#"
+displayValue TmIntegerAbs       = pretty "integerAbs#"
+displayValue TmIntegerSignum    = pretty "integerSignum#"
+displayValue TmIntegerNegate    = pretty "integerNegate#"
+displayValue TmIntegerQuotRem   = pretty "integerQuotRem#"
+displayValue TmIntegerCompare   = pretty "integerCompare#"
 displayValue (TmChar c)         = pretty (show c)
-displayValue TmPutChar          = pretty "putChar#"
-displayValue TmGetChar          = pretty "getChar#"
-displayValue (TmApp TmCompareChar c@(TmChar _)) =
-  displayValue TmCompareChar <+> displayValue c
-displayValue TmCompareChar = pretty "compareChar#"
+displayValue TmIOPutChar        = pretty "ioPutChar#"
+displayValue TmIOGetChar        = pretty "ioGetChar#"
+displayValue (TmApp TmCharCompare c@(TmChar _)) =
+  displayValue TmCharCompare <+> displayValue c
+displayValue TmCharCompare = pretty "charCompare#"
 displayValue TmAbs{}       = pretty "<\x3bb>"
 displayValue t             = displayValueErr t
 

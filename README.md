@@ -36,6 +36,9 @@ Use command `:help` in mymli for help information.
 Multi-line terms and bindings can be inputted by `:input` command.
 
 ```text
+-- module system is unfinished, only file can be imported now
+import "stdlib/integer.myml" ;;
+
 -- single line comment
 {-# multi-line comment can be {-# nested #-} #-}
 
@@ -48,19 +51,13 @@ const x _ = x ;;
 diverge _ = (λ x . x x) (λ x . x x) ;;
 z f = (λ x . f (λ v . x x v)) (λ x . f (λ v . x x v)) ;;
 
-g = λ eq . λ n . λ m .
-  if isZero n
-  then (if isZero m then true else false)
-  else (if isZero m then false else eq (pred n) (pred m)) ;;
-natEq = z g ;;
-
 r = { } ;;
 rExtended = r extend { l = id } ;;
 
 Counter r =
   class
     { get _ = ! r.x
-    , inc _ = r.x := succ (! r.x) } ;;
+    , inc _ = r.x := integerPlus 1 (! r.x) } ;;
 BackupCounter r =
   class
     inherit Counter r as super
@@ -80,5 +77,5 @@ EvenBackupCounter r =
     super extend
       { backup = superBackup.backup
       , restore = superBackup.restore } ;;
-c = new EvenBackupCounter { x = ref 0 } ;;
+c = new (EvenBackupCounter { x = ref 0 }) ;;
 ```
