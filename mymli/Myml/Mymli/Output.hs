@@ -112,7 +112,7 @@ displayMatchValue t = align (group (open <> display True t <> close))
       <+> pretty "="
       <+> displayValue v
       <>  display False rv
-  display _ TmEmptyRcd = mempty
+  display _ TmEmptyMatch = mempty
   display _ t'         = displayValueErr t'
 
 displayScheme :: TypeScheme -> Doc ann

@@ -4,11 +4,17 @@
 
 My toy programming language (working in progress).
 
+## Warning
+
+The language is rapidly changing. Everthing including syntax, evaluation behaviors, type system and user interface is unstable.
+
+## Feature
+
 Based on Hindley-Milner type system, with
 
 * Equi-recursive types
 * Extensible records and extensible variants based on row polymorphism
-* Reference(Optional)
+* Reference
 * Class as derived form
 
 ## Build and Run
