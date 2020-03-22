@@ -113,7 +113,7 @@ displayMatchValue t = align (group (open <> display True t <> close))
       <+> displayValue v
       <>  display False rv
   display _ TmEmptyMatch = mempty
-  display _ t'         = displayValueErr t'
+  display _ t'           = displayValueErr t'
 
 displayScheme :: TypeScheme -> Doc ann
 displayScheme (ScmForall _ _ t) = displayScheme t

@@ -358,13 +358,12 @@ dangerousVarRow (RowPresence _label p r) = do
 dangerousVarRow (RowMu x r) = do
   dr <- dangerousVarRow r
   case Map.lookup x dr of
-    Nothing -> return dr
+    Nothing   -> return dr
     Just KRow -> fvRow (RowMu x r)
-    Just k       -> Left (ErrVarKindConflict x KRow k)
+    Just k    -> Left (ErrVarKindConflict x KRow k)
 dangerousVarRow r = fvRow r
 
-dangerousVarPresence
-  :: TypePresence -> Either Error (Map.Map VarName Kind)
+dangerousVarPresence :: TypePresence -> Either Error (Map.Map VarName Kind)
 dangerousVarPresence (Present t              ) = dangerousVar t
 -- mark generalization of PresenceVarWithType safe
 dangerousVarPresence (PresenceVarWithType _ t) = dangerousVar t
