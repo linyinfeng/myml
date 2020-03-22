@@ -288,8 +288,6 @@ The operation \(\find(E, e) = e'\) return the descriptor of the element \(e\) in
 
 The operation \(\union(E, a, b) = E'\) equate the equivalence class of element \(a\) and \(b\), make the descriptor of the equivalence class of element \(b\) as the descriptor of the unioned equivalence class. Return the new equivalence relation \(E'\).
 
-The element \(a\) in operation \(\union(E, a, b)\) can only be a variable in type.
-
 \subsection{Type Description from Equivalence Relation}
 
 Equivalence relation of type, row and presence forms tree representations of monomorphic type.
@@ -719,30 +717,94 @@ Working in progress.
 \ruleTag{T-New}
 \end{gather}
 
-\subsection{Unify}
+\subsection{Unification}
 
 \begin{align*}
-\unify(E, \code{MT}_1, \code{MT}_2) = \\
-& \text{let}\ \code{MT}_1 = \find(E, \code{MT}_1)\ \text{in} \\
-& \text{let}\ \code{MT}'_2 = \find(E, \code{MT}_2)\ \text{in} \\
-& \text{if}\ \code{MT}_1 = \code{MT}_2 \\
-& \text{then}\ E \\
-& \text{else}\ \text{if}\ \code{MT}_1 = \code{X} \\
-& \quad \text{then}\ \union(E, \code{X}, \code{MT}_2) \\
-& \text{else}\ \text{if}\ \code{MT}_2 = \code{X} \\
-& \quad \text{then}\ \union(E, \code{X}, \code{MT}_1) \\
+\unify(E, \code{MT}_1, \code{MT}_2) = \;
+& \text{let}\ \code{S} = \find(E, \code{MT}_1)\ \text{in} \\
+& \text{let}\ \code{T} = \find(E, \code{MT}_2)\ \text{in} \\
+& \text{if}\ \code{S} = \code{T} \\
+& \quad \text{then}\ E \\
+& \text{else}\ \text{if}\ \code{S} = \code{X} \\
+& \quad \text{then}\ \union(E, \code{X}, \code{T}) \\
+& \text{else}\ \text{if}\ \code{T} = \code{X} \\
+& \quad \text{then}\ \union(E, \code{X}, \code{S}) \\
 & \text{else} \\
-& \quad \text{let}\ E' = \union(E, \code{MT}_1, \code{MT}_2)\ \text{in} \\
-& \quad \text{if}\ \code{MT}_1 = \code{MT}_{11}\rightarrow\code{MT}_{12}\ \text{and}\ \code{MT}_2 = \code{MT}_{21}\rightarrow\code{MT}_{22} \\
-& \quad \quad \text{then}\ \text{let}\ E'' = \unify(E', \code{MT}_{11}, \code{MT}_{21})\ \text{in}\ \unify(E'', \code{MT}_{12}, \code{MT}_{22}) \\
-& \quad \text{else}\ \text{if}\ \code{MT}_1 = \{\ \code{R}_1\ \}\ \text{and}\ \code{MT}_2 = \{\ \code{R}_2\ \} \\
+& \quad \text{let}\ E' = \union(E, \code{S}, \code{T})\ \text{in} \\
+& \quad \text{if}\ \code{S} = \code{S}_{1}\rightarrow\code{S}_{2}\ \text{and}\ \code{T} = \code{T}_{1}\rightarrow\code{T}_{2} \\
+& \quad \quad \text{then}\ \text{let}\ E'' = \unify(E', \code{S}_{1}, \code{T}_{1})\ \text{in}\ \unify(E'', \code{S}_{2}, \code{T}_{2}) \\
+& \quad \text{else}\ \text{if}\ \code{S} = \{\ \code{R}_1\ \}\ \text{and}\ \code{T} = \{\ \code{R}_2\ \} \\
 & \quad \quad \text{then}\ \unifyRow(E', \code{R}_1, \code{R}_2) \\
-& \quad \text{else}\ \text{if}\ \code{MT}_1 = [\ \code{R}_1\ ]\ \text{and}\ \code{MT}_2 = [\ \code{R}_2\ ] \\
+& \quad \text{else}\ \text{if}\ \code{S} = [\ \code{R}_1\ ]\ \text{and}\ \code{T} = [\ \code{R}_2\ ] \\
 & \quad \quad \text{then}\ \unifyRow(E', \code{R}_1, \code{R}_2) \\
-& \quad \text{else}\ \text{if}\ \code{MT}_1 = \code{Ref}\ \code{MT}'_1\ \text{and}\ \code{MT}_2 = \code{Ref}\ \code{MT}'_2 \\
-& \quad \quad\text{then}\ \unify(E', \code{MT}'_1, \code{MT}'_2) \\
+& \quad \text{else}\ \text{if}\ \code{S} = \code{Ref}\ \code{S}'\ \text{and}\ \code{T} = \code{Ref}\ \code{T}' \\
+& \quad \quad\text{then}\ \unify(E', \code{S}', \code{T}') \\
 & \quad \text{else} \\
 & \quad \quad \text{fail}
+\end{align*}
+
+\begin{align*}
+\unify(E, \code{R}_1, \code{R}_2) = \;
+& \text{let}\ \code{R}'_1 = \find(E, \code{R}_1)\ \text{in} \\
+& \text{let}\ \code{R}'_2 = \find(E, \code{R}_2)\ \text{in} \\
+& \text{if}\ \code{R}'_1 = \code{R}'_2 \\
+& \quad \text{then}\ E \\
+& \text{else}\ \text{if}\ \code{R}'_1 = \code{X} \\
+& \quad \text{then}\ \union(E, \code{X}, \code{R}'_2) \\
+& \text{else}\ \text{if}\ \code{R}'_2 = \code{X} \\
+& \quad \text{then}\ \union(E, \code{X}, \code{R}'_1) \\
+& \text{else}\ \text{if}\ \code{R}'_1 = \cdot\ \text{and}\ \code{R}'_2 = \code{l}:\code{P},\code{R}''_2 \\
+& \quad \text{then}\ \text{let}\ E' = \unifyPresence(E, \code{P}, \code{Absent})\ \text{in}\ \unifyRow(E', \code{R}''_2, \cdot) \\
+& \text{else}\ \text{if}\ \code{R}'_1 = \code{l}:\code{P},\code{R}''_1\ \text{and}\ \code{R}'_2 = \cdot \\
+& \quad \text{then}\ \text{let}\ E' = \unifyPresence(E, \code{P}, \code{Absent})\ \text{in}\ \unifyRow(E', \code{R}''_1, \cdot) \\
+& \text{else}\ \text{if}\ \code{R}'_1 = \code{l}:\code{P}_1,\code{R}''_1\ \text{and}\ \code{R}'_2 = \code{l}:\code{P}_2,\code{R}''_2 \\
+& \quad \text{then}\ \text{let}\ E' = \unifyPresence(E, \code{P}_1, \code{P}_2)\ \text{in}\ \unifyRow(E', \code{R}''_1, \code{R}''_2) \\
+& \text{else}\ \text{if}\ \code{R}'_1 = \code{l}_1:\code{P}_1,\code{R}''_1\ \text{and}\ \code{R}'_2 = \code{l}_2:\code{P}_2,\code{R}''_2 \\
+& \quad \text{then}\ \text{let}\ \code{R}_3 = \newVariable\ \code{in} \\
+& \qquad \text{let}\ E' = \unifyRow(E, \code{R}''_1, (\code{l}_2:\code{P}_2,\code{R}_3))\ \text{in}\ \unifyRow(E', \code{R}''_2, (\code{l}_1:\code{P}_1,\code{R}_3)) \\
+& \text{else} \\
+& \quad \text{fail}
+\end{align*}
+
+\begin{align*}
+\unifyPresence(E, \code{P}_1, \code{P}_2) = \;
+& \text{let}\ \code{P}'_1 = \find(E, \code{P}_1)\ \text{in} \\
+& \text{let}\ \code{P}'_2 = \find(E, \code{P}_2)\ \text{in} \\
+& \text{if}\ \code{P}'_1 = \code{P}'_2 \\
+& \quad \text{then}\ E \\
+& \text{else}\ \text{if}\ \code{P}'_1 = \code{X}\ \text{then} \\
+& \quad \text{then}\ \union(E, \code{X}, \code{P}'_2) \\
+& \text{else}\ \text{if}\ \code{P}'_2 = \code{X}\ \text{then} \\
+& \quad \text{then}\ \union(E, \code{X}, \code{P}'_1) \\
+& \text{else}\ \text{if}\ \code{P}'_1 = \code{Present}\ \code{MT}_1\ \text{and}\ \code{P}'_2 = \code{Present}\ \code{MT}_2\ \text{then} \\
+& \quad \text{then}\ \unify(E, \code{MT}_1, \code{MT}_2) \\
+& \text{else}\ \text{if}\ \code{P}'_1 = \code{X}_1\ \code{MT}_1\ \text{and}\ \code{P}'_2 = \code{Absent}\ \text{then} \\
+& \quad \text{then}\ \unifyPresenceWithType(E, \code{X}_1, \code{PTAbsent}) \\
+& \text{else}\ \text{if}\ \code{P}'_1 = \code{Absent}\ \text{and}\ \code{P}'_2 = \code{X}_2\ \code{MT}_2\ \text{then} \\
+& \quad \text{then}\ \unifyPresenceWithType(E, \code{X}_2, \code{PTAbsent}) \\
+& \quad \text{then}\ \unify(E, \code{MT}_1, \code{MT}_2) \\
+& \text{else}\ \text{if}\ \code{P}'_1 = \code{X}_1\ \code{MT}_1\ \text{and}\ \code{P}'_2 = \code{Present}\ \code{MT}_2\ \text{then} \\
+& \quad \text{then}\ \text{let}\ E' = \unifyPresenceWithType(E, \code{X}_1, \code{PTPresent})\ \text{in}\ \unify(E', \code{MT}_1, \code{MT}_2) \\
+& \text{else}\ \text{if}\ \code{P}'_1 = \code{Present}\ \code{MT}_1\ \text{and}\ \code{P}'_2 = \code{X}_2\ \code{MT}_2\ \text{then} \\
+& \quad \text{then}\ \text{let}\ E' = \unifyPresenceWithType(E, \code{X}_2, \code{PTPresent})\ \text{in}\ \unify(E', \code{MT}_1, \code{MT}_2) \\
+& \text{else}\ \text{if}\ \code{P}'_1 = \code{X}_1\ \code{MT}_1\ \text{and}\ \code{P}'_2 = \code{X}_2\ \code{MT}_2\ \text{then} \\
+& \quad \text{then}\ \text{let}\ E' = \unifyPresenceWithType(E, \code{X}_1, \code{X}_2)\ \text{in}\ \unify(E', \code{MT}_1, \code{MT}_2) \\
+& \text{else} \\
+& \quad \text{fail}
+\end{align*}
+
+\begin{align*}
+\unifyPresenceWithType(E, \code{PT}_1, \code{PT}_2) = \;
+& \text{let}\ \code{PT}'_1 = \find(E, \code{PT}_1)\ \text{in} \\
+& \text{let}\ \code{PT}'_2 = \find(E, \code{PT}_2)\ \text{in} \\
+& \text{if}\ \code{PT}'_1 = \code{PT}'_2 \\
+& \quad \text{then}\ E \\
+& \text{else}\ \text{if}\ \code{PT}'_1 = \code{X}\ \text{then} \\
+& \quad \text{then}\ \union(E, \code{X}, \code{PT}'_2) \\
+& \text{else}\ \text{if}\ \code{PT}'_2 = \code{X}\ \text{then} \\
+& \quad \text{then}\ \union(E, \code{X}, \code{PT}'_1) \\
+& \text{else} \\
+& \quad \text{fail}
 \end{align*}
 
 \chapter{\theLang{} the Language}
