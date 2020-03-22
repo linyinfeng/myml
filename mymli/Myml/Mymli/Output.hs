@@ -42,48 +42,12 @@ displayValueErr t = error
   )
 
 displayValue :: Term -> Doc ann
-displayValue rv@(TmApp (TmApp (TmRcdExtend _) _) _) = displayRcdValue rv
-displayValue rv@TmEmptyRcd                          = displayRcdValue rv
-displayValue (TmApp (TmRcdExtend l) v) =
-  displayValue (TmRcdExtend l) <+> displayValue v
-displayValue (TmRcdExtend l) = pretty "extend" <> parens (pretty l)
-displayValue (TmApp (TmRcdUpdate l) v) =
-  displayValue (TmRcdUpdate l) <+> displayValue v
-displayValue (TmRcdUpdate l) = pretty "update" <> parens (pretty l)
-displayValue (TmRcdAccess l) = pretty "access" <> parens (pretty l)
+displayValue rv@(TmApp (TmApp (TmRcdExtend _) _) _)   = displayRcdValue rv
+displayValue rv@TmEmptyRcd                            = displayRcdValue rv
 displayValue mv@(TmApp (TmApp (TmMatchExtend _) _) _) = displayMatchValue mv
-displayValue mv@TmEmptyMatch = displayMatchValue mv
-displayValue (TmApp (TmMatchExtend l) v) =
-  displayValue (TmMatchExtend l) <+> displayValue v
-displayValue (TmMatchExtend l) =
-  pretty "extend" <> parens (prettyVariantLabel l)
-displayValue (TmApp (TmMatchUpdate l) v) =
-  displayValue (TmMatchUpdate l) <+> displayValue v
-displayValue (TmMatchUpdate l) =
-  pretty "update" <> parens (prettyVariantLabel l)
-displayValue (TmApp (TmVariant l) v) =
-  displayValue (TmVariant l) <+> displayValue v
-displayValue (TmVariant l)      = prettyVariantLabel l
-displayValue TmRef              = pretty "ref"
-displayValue TmDeref            = pretty "!"
-displayValue (TmApp TmAssign v) = displayValue TmAssign <+> displayValue v
-displayValue TmAssign           = pretty ":=#"
-displayValue (TmLoc     l)      = pretty "loc(" <> pretty l <> pretty ")"
-displayValue (TmInteger n)      = pretty n
-displayValue TmIntegerPlus      = pretty "integerPlus#"
-displayValue TmIntegerMul       = pretty "integerMul#"
-displayValue TmIntegerAbs       = pretty "integerAbs#"
-displayValue TmIntegerSignum    = pretty "integerSignum#"
-displayValue TmIntegerNegate    = pretty "integerNegate#"
-displayValue TmIntegerQuotRem   = pretty "integerQuotRem#"
-displayValue TmIntegerCompare   = pretty "integerCompare#"
-displayValue (TmChar c)         = pretty (show c)
-displayValue TmIOPutChar        = pretty "ioPutChar#"
-displayValue TmIOGetChar        = pretty "ioGetChar#"
-displayValue (TmApp TmCharCompare c@(TmChar _)) =
-  displayValue TmCharCompare <+> displayValue c
-displayValue TmCharCompare = pretty "charCompare#"
-displayValue TmAbs{}       = pretty "<\x3bb>"
+displayValue mv@TmEmptyMatch                          = displayMatchValue mv
+displayValue TmAbs{}                                  = pretty "<\x3bb>"
+displayValue t | isValue t = pretty t
 displayValue t             = displayValueErr t
 
 displayRcdValue :: Term -> Doc ann
