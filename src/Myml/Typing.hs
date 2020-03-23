@@ -301,7 +301,9 @@ instantiatePresence (PresenceVarWithType x t) =
 generalize :: Term -> Type -> Inference TypeScheme
 generalize t ty = do
   tyDesc <- describeProper False Set.empty ty
-  tFv    <- liftEither (fvType tyDesc)
+  -- this step replace all Presents only appear in covariant location to a fresh variable
+  tyRep  <- replaceSafePresent tyDesc
+  tFv    <- liftEither (fvType tyRep)
   env    <- ask
   envFv  <- Map.foldl
     (\a b -> bind2AndLift
@@ -316,11 +318,11 @@ generalize t ty = do
   imperative <- gets imperativeFeaturesEnabled
   let xs = tFv `Map.difference` envFv
   xs' <- if imperative && not (isValue t)
-    then liftEither (dangerousVar tyDesc >>= mapDiffWithKind xs)
+    then liftEither (dangerousVar tyRep >>= mapDiffWithKind xs)
     else return xs
   (sub, newXs) <- replacePrefix xs'
-  tyDesc'      <- liftEither (substType sub tyDesc)
-  return (Map.foldrWithKey ScmForall (ScmMono tyDesc') newXs)
+  tyRep'       <- liftEither (substType sub tyRep)
+  return (Map.foldrWithKey ScmForall (ScmMono tyRep') newXs)
  where
   bind2AndLift f ma mb = do
     a <- ma
@@ -362,6 +364,34 @@ dangerousVarPresence (Present t              ) = dangerousVar t
 -- mark generalization of PresenceVarWithType safe
 dangerousVarPresence (PresenceVarWithType _ t) = dangerousVar t
 dangerousVarPresence p                         = fvPresence p
+
+replaceSafePresent :: Type -> Inference Type
+replaceSafePresent (TyArrow t1 t2) = TyArrow t1 <$> replaceSafePresent t2
+replaceSafePresent (TyMu    x  t ) = do
+  dt <- liftEither (dangerousVar t)
+  case Map.lookup x dt of
+    Nothing      -> TyMu x <$> replaceSafePresent t
+    Just KProper -> return (TyMu x t) -- x included in dangerous variables
+    Just k       -> throwError (ErrVarKindConflict x KProper k)
+replaceSafePresent (TyRecord r) = TyRecord <$> replaceSafePresentRow r
+replaceSafePresent t            = return t
+
+replaceSafePresentRow :: TypeRow -> Inference TypeRow
+replaceSafePresentRow (RowPresence label p r) =
+  RowPresence label <$> replaceSafePresentPresence p <*> replaceSafePresentRow r
+replaceSafePresentRow (RowMu x r) = do
+  dr <- liftEither (dangerousVarRow r)
+  case Map.lookup x dr of
+    Nothing   -> RowMu x <$> replaceSafePresentRow r
+    Just KRow -> return (RowMu x r) -- x included in dangerous variables
+    Just k    -> throwError (ErrVarKindConflict x KRow k)
+replaceSafePresentRow r = return r
+
+replaceSafePresentPresence :: TypePresence -> Inference TypePresence
+replaceSafePresentPresence (Present t) = do
+  x <- newVarInner KPresenceWithType
+  PresenceVarWithType x <$> replaceSafePresent t
+replaceSafePresentPresence p = return p
 
 replacePrefix
   :: Map.Map VarName Kind

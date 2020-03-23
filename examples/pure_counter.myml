@@ -5,3 +5,4 @@ rec Counter r =
   class
     { get _ = r.x
     , inc _ = new (Counter (r update { x = integerPlus 1 r.x })) } ;;
+c = new (Counter {x = 0}) ;;

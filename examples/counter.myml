@@ -54,7 +54,6 @@ incAndGet = λ c . c.inc (); c.get () ;;
 incAndGetCounter = incAndGet counter ;;
 incAndGetBackupCounter = incAndGet backupCounter ;;
 
--- Error!
--- selectedCounter = if true then resetCounter else backupCounter ;;
+selectedCounter = if true then resetCounter else backupCounter ;;
 
 mixinCounter = new (MixinCounter { x = ref 0, b = ref 0 }) ;;
