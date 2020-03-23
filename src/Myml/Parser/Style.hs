@@ -18,6 +18,7 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
  where
   coreReserved =
     [ "let"
+    , "rec"
     , "="
     , "in"
     , "\x3bb" -- lambda

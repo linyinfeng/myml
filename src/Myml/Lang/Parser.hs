@@ -4,7 +4,6 @@ module Myml.Lang.Parser
   )
 where
 
-import           Myml.Syntax
 import           Myml.Lang.Syntax
 import           Myml.Parser
 import           Myml.Parser.Common
@@ -21,14 +20,8 @@ parseTopLevels = many parseTopLevel
 
 parseTopBind :: Parser TopLevel
 parseTopBind = do
-  b <- try
-    (do
-      x      <- ident identStyle
-      params <- many (ident identStyle)
-      reserve identStyle "="
-      return (\t -> TopBind x (foldr TmAbs t params))
-    )
-  b <$> parseTerm
+  (x, t) <- try letBindingPair
+  return (TopBind x t)
 
 parseTopTerm :: Parser TopLevel
 parseTopTerm = TopTerm <$> parseTerm

@@ -8,6 +8,7 @@ module Myml.Syntax
   , deriveString
   , termSelf
   , termNew
+  , termZ
   , termSeq
   , termWildcardAbs
   , uniqueName

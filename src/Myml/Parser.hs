@@ -3,6 +3,7 @@
 module Myml.Parser
   ( parseTerm
   , parseTermAtom
+  , letBindingPair
   , parseType
   , parseTypeAtom
   , parseTypeRow
@@ -14,12 +15,14 @@ module Myml.Parser
 where
 
 import           Myml.Syntax
+import           Myml.Subst
 import           Myml.Parser.Common
 import           Myml.Parser.Style
 import           Myml.Parser.Helper
 import           Text.Trifecta           hiding ( Parser )
 import           Text.Parser.Expression
 import           Control.Applicative
+import qualified Data.Map                      as Map
 
 parseTerm :: Parser Term
 parseTerm = buildExpressionParser termOperatorTable parseTermAtom <?> "term"
@@ -46,8 +49,7 @@ termOperatorTable =
     return (paramsToAbs xs)
   opLet = do
     reserve identStyle "let"
-    x  <- ident identStyle
-    t1 <- equalPair
+    (x, t1) <- letBindingPair
     reserve identStyle "in"
     return (TmLet x t1)
   opApp       = return TmApp
@@ -99,7 +101,6 @@ parseTermAtom =
     <|> simplePrimitives
     <|> int
     <|> charLit
-    <|> compareCharSharp
     <|> stringLit
     <|> var
     <|> tupleOrParen
@@ -123,10 +124,9 @@ parseTermAtom =
       "update"
     op <$> parens recordLabel
   access = TmRcdAccess <$> (reserve identStyle "access" *> parens recordLabel)
-  int              = TmInteger <$> try integer
-  charLit          = TmChar <$> charLiteral
-  compareCharSharp = TmCharCompare <$ reserve identStyle "charCompare#"
-  stringLit        = deriveString <$> stringLiteral
+  int       = TmInteger <$> try integer
+  charLit   = TmChar <$> charLiteral
+  stringLit = deriveString <$> stringLiteral
   tupleOrParen =
     (\case
         []  -> TmUnit
@@ -152,6 +152,7 @@ parseTermAtom =
       , (TmIntegerCompare, "integerCompare#")
       , (TmIOGetChar     , "ioGetChar#")
       , (TmIOPutChar     , "ioPutChar#")
+      , (TmCharCompare   , "charCompare#")
       , (termNew         , "new")
       , (termSelf        , "self")
       ]
@@ -172,6 +173,17 @@ equalPair = do
   params <- many (ident identStyle)
   reserve identStyle "="
   paramsToAbs params <$> parseTerm
+
+letBindingPair :: Parser (VarName, Term)
+letBindingPair = do
+  isRec <- optional (reserve identStyle "rec")
+  x     <- ident identStyle
+  body  <- equalPair
+  case isRec of
+    Nothing -> return (x, body)
+    Just () ->
+      let sub = Map.singleton x (TmApp termZ (TmAbs x body))
+      in  return (x, substTerm sub body)
 
 recordLabel :: Parser LabelName
 recordLabel = ident identStyle
