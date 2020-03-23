@@ -40,7 +40,7 @@ displayValueErr t = error
   ("fatal error: displayValue called with non-value term : " ++ show (pretty t))
 
 displayValue :: Term -> Doc ann
-displayValue t = displayValuePrec 0 t
+displayValue = displayValuePrec 0
 
 displayValuePrec :: Int -> Term -> Doc ann
 displayValuePrec _ t | not (isValue t)                    = displayValueErr t
@@ -63,12 +63,12 @@ displayRcdValue t = align (group (open <> display True t <> close))
  where
   open  = flatAlt (pretty "{ ") (pretty "{")
   close = flatAlt (pretty " }") (pretty "}")
-  display first (TmApp (TmApp (TmRcdExtend l) v) rv) =
-    (if first then mempty else line <> pretty ", ")
+  display lastExtend (TmApp (TmApp (TmRcdExtend l) v) rv) =
+    display False rv
       <>  pretty l
       <+> pretty "="
       <+> displayValue v
-      <>  display False rv
+      <>  (if lastExtend then mempty else line <> pretty ", ")
   display _ TmEmptyRcd = mempty
   display _ t'         = displayValueErr t'
 
@@ -77,12 +77,12 @@ displayMatchValue t = align (group (open <> display True t <> close))
  where
   open  = flatAlt (pretty "[ ") (pretty "[")
   close = flatAlt (pretty " ]") (pretty "]")
-  display first (TmApp (TmApp (TmMatchExtend l) v) rv) =
-    (if first then mempty else line <> pretty ", ")
+  display lastExtend (TmApp (TmApp (TmMatchExtend l) v) rv) =
+    display False rv
       <>  prettyVariantLabel l
       <+> pretty "="
       <+> displayValue v
-      <>  display False rv
+      <>  (if lastExtend then mempty else line <> pretty ", ")
   display _ TmEmptyMatch = mempty
   display _ t'           = displayValueErr t'
 
