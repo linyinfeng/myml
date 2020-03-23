@@ -12,7 +12,10 @@ Child =
     super extend
       { hello _ = ioPutStringLine "Hello!" } ;;
 
+
+
 child = new Child ;;
+
 
 storeSelfAndReturnedSelf obj =
   let r = ref obj in

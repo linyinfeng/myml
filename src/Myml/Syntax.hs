@@ -136,7 +136,7 @@ termZ = TmAbs "f" (TmApp half half)
     )
 
 termSelf :: Term
-termSelf = TmApp TmDeref (TmVar "self")
+termSelf = TmApp (TmVar "self") TmUnit
 
 deriveString :: String -> Term
 deriveString []       = TmVariant "nil" `TmApp` TmUnit

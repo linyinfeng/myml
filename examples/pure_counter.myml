@@ -1,10 +1,7 @@
 import "../stdlib/fix.myml" ;;
 import "../stdlib/integer.myml" ;;
 
-Counter =
-  let gen C r =
-    class
-      { get _ = r.x
-      , inc _ = new (C (r update { x = integerPlus 1 r.x })) }
-  in
-    fix gen ;;
+rec Counter r =
+  class
+    { get _ = r.x
+    , inc _ = new (Counter (r update { x = integerPlus 1 r.x })) } ;;
