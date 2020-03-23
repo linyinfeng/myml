@@ -52,6 +52,8 @@ module Myml.Syntax
   , mapDeleteWithKind
   , mapDiffWithKind
   -- pretty print
+  , PrettyPrec(..)
+  , parensPrec
   , prettyVariantLabel
   , prettyTypeRow
   , prettyTypeRow'
@@ -473,7 +475,7 @@ instance PrettyPrec Term where
   prettyPrec n (TmApp t1 t2) = parensPrec
     (n > prec)
     (align (prettyPrec prec t1 <> softline <> prettyPrec (prec + 1) t2))
-    where prec = 3
+    where prec = 1
   prettyPrec _ (TmVar name   ) = pretty name
   prettyPrec n (TmLet x t1 t2) = parensPrec
     (n > prec)

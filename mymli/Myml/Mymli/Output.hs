@@ -37,18 +37,26 @@ withSGR sgr io = do
 
 displayValueErr :: Term -> a
 displayValueErr t = error
-  (  "fatal error: displayValue called with non-value term : "
-  ++ (show (pretty t))
-  )
+  ("fatal error: displayValue called with non-value term : " ++ show (pretty t))
 
 displayValue :: Term -> Doc ann
-displayValue rv@(TmApp (TmApp (TmRcdExtend _) _) _)   = displayRcdValue rv
-displayValue rv@TmEmptyRcd                            = displayRcdValue rv
-displayValue mv@(TmApp (TmApp (TmMatchExtend _) _) _) = displayMatchValue mv
-displayValue mv@TmEmptyMatch                          = displayMatchValue mv
-displayValue TmAbs{}                                  = pretty "<\x3bb>"
-displayValue t | isValue t = pretty t
-displayValue t             = displayValueErr t
+displayValue t = displayValuePrec 0 t
+
+displayValuePrec :: Int -> Term -> Doc ann
+displayValuePrec _ t | not (isValue t)                    = displayValueErr t
+displayValuePrec _ rv@(TmApp (TmApp (TmRcdExtend _) _) _) = displayRcdValue rv
+displayValuePrec _ rv@TmEmptyRcd                          = displayRcdValue rv
+displayValuePrec _ mv@(TmApp (TmApp (TmMatchExtend _) _) _) =
+  displayMatchValue mv
+displayValuePrec _ mv@TmEmptyMatch = displayMatchValue mv
+displayValuePrec n (TmApp v1 v2)   = parensPrec
+  (n > prec)
+  (align
+    (displayValuePrec prec v1 <> softline <> displayValuePrec (prec + 1) v2)
+  )
+  where prec = 1
+displayValuePrec _ TmAbs{} = pretty "<\x3bb>"
+displayValuePrec n t       = prettyPrec n t
 
 displayRcdValue :: Term -> Doc ann
 displayRcdValue t = align (group (open <> display True t <> close))
