@@ -10,14 +10,19 @@ BackupCounter r =
     super extend
       { backup _ =  r.b := ! r.x
       , restore _ = r.x := ! r.b } ;;
-ResetCounter r =
+SetCounter r =
   class
     inherit Counter r as super
     super extend
-      { reset _ = r.x := 0 } ;;
+      { set n = r.x := n } ;;
+ResetCounter r =
+  class
+    inherit SetCounter r as super
+    super extend
+      { reset _ = self.set 0 } ;;
 MixinCounter r =
   class
-    inherit Counter r as super
+    inherit ResetCounter r as super
     inherit BackupCounter r as superBackup
     inherit ResetCounter r as superReset
     super extend
@@ -39,11 +44,17 @@ Inc2EvenCounter r =
 rep = { x = ref 0, b = ref 0 } ;;
 counter = new (Counter rep) ;;
 backupCounter = new (BackupCounter rep) ;;
-resetCounter = new (ResetCounter rep) ;;
+resetCounter = let obj = new (ResetCounter rep) in
+  { get = obj.get
+  , inc = obj.inc
+  , set = obj.set
+  , reset = obj.reset } ;;
 
 incAndGet = λ c . c.inc (); c.get () ;;
 incAndGetCounter = incAndGet counter ;;
 incAndGetBackupCounter = incAndGet backupCounter ;;
 
-selectedCounter = if true then resetCounter else backupCounter ;;
-incAndGetSelectedCounter = incAndGet selectedCounter ;;
+-- Error!
+-- selectedCounter = if true then resetCounter else backupCounter ;;
+
+mixinCounter = new (MixinCounter { x = ref 0, b = ref 0 }) ;;
