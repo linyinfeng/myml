@@ -64,7 +64,7 @@ termOperatorTable =
       <* symbol "{"
     pairs <- recordPair `sepBy` symbol ","
     _     <- symbol "}"
-    return (flip (labaledApps ext) pairs)
+    return (flip (labeledApps ext) pairs)
   opMatchExtend = do
     ext <-
       try
@@ -76,7 +76,7 @@ termOperatorTable =
       <* symbol "["
     pairs <- matchPair `sepBy` symbol ","
     _     <- symbol "]"
-    return (flip (labaledApps ext) pairs)
+    return (flip (labeledApps ext) pairs)
   opAssign = (\a b -> TmApp (TmApp TmAssign a) b) <$ reserve identStyle ":="
   opSeq    = termSeq <$ try (symbol ";" <* notFollowedBy (char ';'))
   opClass  = do

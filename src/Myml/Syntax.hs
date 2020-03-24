@@ -16,7 +16,7 @@ module Myml.Syntax
   , termTrue
   , termFalse
   , termIf
-  , labaledApps
+  , labeledApps
   , recordLiteral
   , matchLiteral
   , Type(..)
@@ -171,14 +171,14 @@ termIf t1 t2 t3 = TmApp
   (matchLiteral [("true", termWildcardAbs t2), ("false", termWildcardAbs t3)])
   t1
 
-labaledApps :: (LabelName -> Term) -> Term -> [(LabelName, Term)] -> Term
-labaledApps ext = foldl (\inner (l, c) -> TmApp (TmApp (ext l) c) inner)
+labeledApps :: (LabelName -> Term) -> Term -> [(LabelName, Term)] -> Term
+labeledApps ext = foldl (\inner (l, c) -> TmApp (TmApp (ext l) c) inner)
 
 recordLiteral :: [(LabelName, Term)] -> Term
-recordLiteral = labaledApps TmRcdExtend TmEmptyRcd
+recordLiteral = labeledApps TmRcdExtend TmEmptyRcd
 
 matchLiteral :: [(LabelName, Term)] -> Term
-matchLiteral = labaledApps TmMatchExtend TmEmptyMatch
+matchLiteral = labeledApps TmMatchExtend TmEmptyMatch
 
 instance Monad m => Serial m Term where
   series =
