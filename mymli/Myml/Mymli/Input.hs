@@ -21,14 +21,14 @@ import           Control.Applicative
 import           Control.Monad.Trans
 import           System.Console.Haskeline
 
-data Input = InputTopLevel TopLevel
+data Input = InputTopLevel (Careted TopLevel)
            | InputCommand Command
 
 type ParseResult = Either ErrInfo Input
 
 parseMymliInput :: Parser Input
 parseMymliInput =
-  (InputCommand <$> parseCommand) <|> (InputTopLevel <$> parseTopLevel)
+  (InputCommand <$> parseCommand) <|> (InputTopLevel <$> careted parseTopLevel)
 
 getMymliInput :: (InputT IO) ParseResult
 getMymliInput = getMymliInput'

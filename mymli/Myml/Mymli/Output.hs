@@ -2,6 +2,7 @@ module Myml.Mymli.Output
   ( ioErrorLabel
   , errorLabel
   , typingErrorLabel
+  , evalErrorLabel
   , bold
   , withColor
   , withSGR
@@ -19,6 +20,9 @@ ioErrorLabel = errorLabel "IO Error"
 
 typingErrorLabel :: IO ()
 typingErrorLabel = errorLabel "Typing Error"
+
+evalErrorLabel :: IO ()
+evalErrorLabel = errorLabel "Evaluation Error"
 
 errorLabel :: String -> IO ()
 errorLabel label = bold (withColor Dull Red (putStr (label ++ ": ")))

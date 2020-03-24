@@ -1,6 +1,7 @@
 module Myml.Lang.Parser
   ( parseTopLevel
   , parseTopLevels
+  , parseTopLevelsCareted
   )
 where
 
@@ -17,6 +18,9 @@ parseTopLevel =
 
 parseTopLevels :: Parser [TopLevel]
 parseTopLevels = many parseTopLevel
+
+parseTopLevelsCareted :: Parser [Careted TopLevel]
+parseTopLevelsCareted = many (careted parseTopLevel)
 
 parseTopBind :: Parser TopLevel
 parseTopBind = do

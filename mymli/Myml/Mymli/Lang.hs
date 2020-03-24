@@ -18,6 +18,8 @@ import           Myml.Eval.Store
 import           Text.Trifecta           hiding ( Parser
                                                 , line
                                                 )
+import qualified Text.Trifecta.Rendering       as TR
+import           Text.Trifecta.Delta
 import           System.FilePath
 import           System.IO
 import           System.Directory
@@ -29,7 +31,7 @@ import           Data.Text.Prettyprint.Doc
 import           Data.Text.Prettyprint.Doc.Render.Text
 import qualified Data.Map                      as Map
 
-processTopLevel' :: MonadIO m => TopLevel -> Mymli m MymliRequest
+processTopLevel' :: MonadIO m => Careted TopLevel -> Mymli m MymliRequest
 processTopLevel' t = processTopLevel False t >> return MymliContinue
 
 printValueSchemePair :: Term -> TypeScheme -> IO ()
@@ -43,33 +45,42 @@ printValueSchemePair t s = do
   renderDoc :: Doc ann -> IO ()
   renderDoc d = renderIO stdout (layoutSmart defaultLayoutOptions d)
 
-processTopLevel :: MonadIO m => Bool -> TopLevel -> Mymli m Bool
-processTopLevel silent (TopTerm t) = do
+printCaret :: Caret -> IO ()
+printCaret (Caret d l) = do
+  putStr (show (prettyDelta d))
+  putStr ": "
+
+processTopLevel :: MonadIO m => Bool -> Careted TopLevel -> Mymli m Bool
+processTopLevel silent (TopTerm t :^ car) = do
   inferRes <- mymliInferTypeAndUpdateBinding t
   case inferRes of
-    Left  e -> liftIO (typingErrorLabel >> print e) >> return False
+    Left e ->
+      liftIO (printCaret car >> typingErrorLabel >> print e) >> return False
     Right s -> do
       evalRes <- mymliEval t
       case evalRes of
-        Left  e -> liftIO (typingErrorLabel >> print e) >> return False
+        Left e ->
+          liftIO (printCaret car >> evalErrorLabel >> print e) >> return False
         Right v -> do
           unless silent (liftIO (printValueSchemePair v s))
           mymliGc
           return True
-processTopLevel silent (TopBind x t) = do
+processTopLevel silent (TopBind x t :^ car) = do
   inferRes <- mymliInferTypeAndUpdateBinding t
   case inferRes of
-    Left  e -> liftIO (typingErrorLabel >> print e) >> return False
+    Left e ->
+      liftIO (printCaret car >> typingErrorLabel >> print e) >> return False
     Right s -> do
       evalRes <- mymliEval t
       case evalRes of
-        Left  e -> liftIO (typingErrorLabel >> print e) >> return False
+        Left e ->
+          liftIO (printCaret car >> evalErrorLabel >> print e) >> return False
         Right v -> do
           mymliAddBinding x t v s
           unless silent (liftIO (printValueSchemePair v s))
           mymliGc
           return True
-processTopLevel _ (TopImport file) = do
+processTopLevel _ (TopImport file :^ _) = do
   result <- searchAndParseFile file
   case result of
     Nothing             -> return False
@@ -80,7 +91,7 @@ processTopLevel _ (TopImport file) = do
       return success
 
 searchAndParseFile
-  :: MonadIO m => FilePath -> Mymli m (Maybe ([TopLevel], FilePath))
+  :: MonadIO m => FilePath -> Mymli m (Maybe ([Careted TopLevel], FilePath))
 searchAndParseFile file = do
   searchPath <- gets envSearchPath
   exists     <- liftIO
@@ -92,9 +103,9 @@ searchAndParseFile file = do
     Just path -> fmap (, path) <$> liftIO (parseSingleFile path)
  where
   parseSingleFile = handle (\(e :: IOException) -> print e >> return Nothing)
-    . parseFromFile (unParser (whiteSpace *> parseTopLevels <* eof))
+    . parseFromFile (unParser (whiteSpace *> parseTopLevelsCareted <* eof))
 
-processTopLevels :: MonadIO m => Bool -> [TopLevel] -> Mymli m Bool
+processTopLevels :: MonadIO m => Bool -> [Careted TopLevel] -> Mymli m Bool
 processTopLevels _      []           = return True
 processTopLevels silent (t : remain) = do
   success <- processTopLevel silent t
