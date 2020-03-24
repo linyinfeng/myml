@@ -18,7 +18,6 @@ import           Myml.Eval.Store
 import           Text.Trifecta           hiding ( Parser
                                                 , line
                                                 )
-import qualified Text.Trifecta.Rendering       as TR
 import           Text.Trifecta.Delta
 import           System.FilePath
 import           System.IO
@@ -46,7 +45,7 @@ printValueSchemePair t s = do
   renderDoc d = renderIO stdout (layoutSmart defaultLayoutOptions d)
 
 printCaret :: Caret -> IO ()
-printCaret (Caret d l) = do
+printCaret (Caret d _) = do
   putStr (show (prettyDelta d))
   putStr ": "
 
