@@ -317,7 +317,7 @@ generalize t ty = do
   _          <- liftEither (mapUnionWithKind tFv envFv)
   imperative <- gets imperativeFeaturesEnabled
   let xs = tFv `Map.difference` envFv
-  xs' <- if imperative && not (isValue t || isVar t)
+  xs' <- if imperative && not (isNonExpansive t)
     then liftEither (dangerousVar tyRep >>= mapDiffWithKind xs)
     else return xs
   (sub, newXs) <- replacePrefix xs'
@@ -328,8 +328,40 @@ generalize t ty = do
     a <- ma
     b <- mb
     liftEither (f a b)
-  isVar (TmVar _) = True
-  isVar _         = False
+
+isNonExpansive :: Term -> Bool
+-- record extend and update
+isNonExpansive (TmApp (TmApp (TmRcdExtend _) t1) t2) =
+  isNonExpansive t1 && isNonExpansive t2
+isNonExpansive (TmApp (TmApp (TmRcdUpdate _) t1) t2) =
+  isNonExpansive t1 && isNonExpansive t2
+isNonExpansive TmEmptyRcd = True
+-- match value
+isNonExpansive (TmApp (TmApp (TmMatchExtend _) t1) t2) =
+  isNonExpansive t1 && isNonExpansive t2
+isNonExpansive (TmApp (TmApp (TmMatchUpdate _) t1) t2) =
+  isNonExpansive t1 && isNonExpansive t2
+isNonExpansive TmEmptyMatch                = True
+-- variant value
+isNonExpansive (TmApp (TmVariant     _) t) = isNonExpansive t
+-- partial applied
+isNonExpansive (TmApp (TmRcdExtend   _) t) = isNonExpansive t
+isNonExpansive (TmApp (TmRcdUpdate   _) t) = isNonExpansive t
+isNonExpansive (TmApp (TmMatchExtend _) t) = isNonExpansive t
+isNonExpansive (TmApp (TmMatchUpdate _) t) = isNonExpansive t
+isNonExpansive (TmApp TmAssign          t) = isNonExpansive t
+isNonExpansive (TmApp TmCharCompare     t) = isNonExpansive t
+isNonExpansive (TmApp TmIntegerPlus     t) = isNonExpansive t
+isNonExpansive (TmApp TmIntegerMul      t) = isNonExpansive t
+isNonExpansive (TmApp TmIntegerQuotRem  t) = isNonExpansive t
+isNonExpansive (TmApp TmIntegerCompare  t) = isNonExpansive t
+-- Basic
+isNonExpansive (TmApp _                 _) = False
+isNonExpansive (TmVar _                  ) = True
+isNonExpansive (TmAbs _ _                ) = True
+isNonExpansive (TmLet _ t1 t2) = isNonExpansive t1 && isNonExpansive t2
+isNonExpansive _                           = True
+
 
 dangerousVar :: Type -> Either Error (Map.Map VarName Kind)
 -- dangerousVar = fvType -- traditional value restriction
