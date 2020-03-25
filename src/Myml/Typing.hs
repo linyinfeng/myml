@@ -317,7 +317,7 @@ generalize t ty = do
   _          <- liftEither (mapUnionWithKind tFv envFv)
   imperative <- gets imperativeFeaturesEnabled
   let xs = tFv `Map.difference` envFv
-  xs' <- if imperative && not (isNonExpansive t)
+  xs' <- if imperative && maybeExpansive
     then liftEither (dangerousVar tyRep >>= mapDiffWithKind xs)
     else return xs
   (sub, newXs) <- replacePrefix xs'
@@ -328,6 +328,9 @@ generalize t ty = do
     a <- ma
     b <- mb
     liftEither (f a b)
+
+maybeExpansive :: Term -> Bool
+maybeExpansive = not . isNonExpansive
 
 isNonExpansive :: Term -> Bool
 -- record extend and update
@@ -361,7 +364,6 @@ isNonExpansive (TmVar _                  ) = True
 isNonExpansive (TmAbs _ _                ) = True
 isNonExpansive (TmLet _ t1 t2) = isNonExpansive t1 && isNonExpansive t2
 isNonExpansive _                           = True
-
 
 dangerousVar :: Type -> Either Error (Map.Map VarName Kind)
 -- dangerousVar = fvType -- traditional value restriction
