@@ -6,7 +6,7 @@ My toy programming language (working in progress).
 
 ## Warning
 
-The language is rapidly changing. Everthing including syntax, evaluation behaviors, type system and user interface is unstable.
+The language is rapidly changing. Everything including syntax, evaluation behaviors, type system and user interface is unstable.
 
 ## Feature
 
