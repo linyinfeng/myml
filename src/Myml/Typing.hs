@@ -317,7 +317,7 @@ generalize t ty = do
   _          <- liftEither (mapUnionWithKind tFv envFv)
   imperative <- gets imperativeFeaturesEnabled
   let xs = tFv `Map.difference` envFv
-  xs' <- if imperative && maybeExpansive
+  xs' <- if imperative && maybeExpansive t
     then liftEither (dangerousVar tyRep >>= mapDiffWithKind xs)
     else return xs
   (sub, newXs) <- replacePrefix xs'
