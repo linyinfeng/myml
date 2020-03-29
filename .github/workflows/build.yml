@@ -55,10 +55,12 @@ jobs:
         mkdir -p ~/.ghcup/bin
         curl https://gitlab.haskell.org/haskell/ghcup/raw/master/ghcup > ~/.ghcup/bin/ghcup
         chmod +x ~/.ghcup/bin/ghcup
-        echo "::add-path::~/.ghcup/bin"
+        echo "::add-path::$HOME/.ghcup/bin"
+        echo "::add-path::$HOME/.cabal/bin"
 
     - name: Setup haskell
       run: |
+        ghcup upgrade
         ghcup install ${{ matrix.ghc }}
         ghcup set ${{ matrix.ghc }}
         ghcup install-cabal ${{ matrix.cabal }}
