@@ -5,7 +5,6 @@ module Myml.Mymli.Option
 where
 
 import           Options.Applicative
-import           Data.Semigroup                 ( (<>) )
 
 newtype MymliOptions = MymliOptions
   { optPure :: Bool }

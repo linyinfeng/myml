@@ -10,7 +10,6 @@ import           Myml.Mymli.Option
 import           Text.Trifecta
 import           Control.Monad.State
 import qualified Options.Applicative           as O
-import           Data.Semigroup                 ( (<>) )
 import qualified Data.Text.IO                  as Text.IO
 import           System.Console.Haskeline
 import           System.Directory
