@@ -55,7 +55,7 @@ jobs:
         mkdir -p ~/.ghcup/bin
         curl https://gitlab.haskell.org/haskell/ghcup/raw/master/ghcup > ~/.ghcup/bin/ghcup
         chmod +x ~/.ghcup/bin/ghcup
-        echo "::add-path::~/.ghcup/bin/ghcup"
+        echo "::add-path::~/.ghcup/bin"
 
     - name: Setup haskell
       run: |
