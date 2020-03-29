@@ -84,7 +84,7 @@ jobs:
     - name: Upload mymli executable
       uses: actions/upload-artifact@master
       with:
-        name: mymli-${{ runner.os }}
+        name: mymli-${{ runner.os }}-${{ matrix.ghc }}-${{ matrix.cabal }}
         path: bin
 
   format-check:
