@@ -50,12 +50,15 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-${{ matrix.ghc }}-${{ matrix.cabal }}-dist-newstyle-${{ steps.get-date.outputs.date }}-
 
-    - name: Setup Haskell
+    - name: Setup ghcup
       run: |
         mkdir -p ~/.ghcup/bin
         curl https://gitlab.haskell.org/haskell/ghcup/raw/master/ghcup > ~/.ghcup/bin/ghcup
         chmod +x ~/.ghcup/bin/ghcup
         echo "::add-path::~/.ghcup/bin/ghcup"
+
+    - name: Setup haskell
+      run: |
         ghcup install ${{ matrix.ghc }}
         ghcup set ${{ matrix.ghc }}
         ghcup install-cabal ${{ matrix.cabal }}
