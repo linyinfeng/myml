@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase, RankNTypes #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Myml.Typing
   ( NewVar(..)

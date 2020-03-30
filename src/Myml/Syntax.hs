@@ -1,4 +1,11 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, PatternSynonyms #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
 
 module Myml.Syntax
   ( Error(..)
@@ -67,6 +74,7 @@ import qualified Data.Set                      as Set
 import           Text.Printf
 import           Data.Text.Prettyprint.Doc
 import           Test.SmallCheck.Series
+import           Data.Functor.Foldable.TH
 
 type VarName = String
 type LabelName = String
@@ -109,6 +117,8 @@ data Term = TmAbs VarName Term
           deriving (Eq, Show)
 
 infixl 7 `TmApp`
+
+makeBaseFunctor ''Term
 
 data TermClass = TermClass {
     classInherits :: [(Term, VarName)],
