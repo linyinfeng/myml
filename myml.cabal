@@ -24,7 +24,7 @@ source-repository head
 
 common haskell
   default-language: Haskell2010
-  ghc-options: -Wall
+  ghc-options: -Wall -Werror
 
 common dependencies
   build-depends:
@@ -62,7 +62,6 @@ library
       Paths_myml
   hs-source-dirs:
       src
-  ghc-options: -Wall
 
 executable mymli
   import:

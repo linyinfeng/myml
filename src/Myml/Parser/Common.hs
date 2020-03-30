@@ -13,7 +13,6 @@ import           Text.Parser.LookAhead
 import           Text.Parser.Token.Style
 import           Control.Monad
 import           Control.Applicative
-import           Control.Monad.Fail
 
 newtype Parser a = Parser { unParser :: Text.Trifecta.Parser a }
   deriving ( Monad
