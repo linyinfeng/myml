@@ -11,6 +11,7 @@ module Myml.Syntax
   , termZ
   , termSeq
   , termWildcardAbs
+  , termWildcardLet
   , uniqueName
   , pattern TmUnit
   , termTrue
@@ -150,6 +151,9 @@ termSeq t1 t2 = TmApp (termWildcardAbs t2) t1
 
 termWildcardAbs :: Term -> Term
 termWildcardAbs t = TmAbs (uniqueName (fvTerm t) "_") t
+
+termWildcardLet :: Term -> Term -> Term
+termWildcardLet t1 t2 = TmLet (uniqueName (fvTerm t2) "_") t1 t2
 
 uniqueName :: Set.Set VarName -> VarName -> VarName
 uniqueName sv base = fromJust

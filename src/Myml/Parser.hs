@@ -51,7 +51,8 @@ termOperatorTable =
     reserve identStyle "let"
     (x, t1) <- letBindingPair
     reserve identStyle "in"
-    return (TmLet x t1)
+    let l = if x == "_" then const termWildcardLet else TmLet
+    return (l x t1)
   opApp       = return TmApp
   opRcdAccess = TmApp . TmRcdAccess <$> (symbol "." *> ident identStyle)
   opRcdExtend = do
