@@ -6,10 +6,12 @@ where
 
 import           Options.Applicative
 
-newtype MymliOptions = MymliOptions
-  { optPure :: Bool }
+data MymliOptions = MymliOptions
+  { optFile :: Maybe FilePath
+  , optPure :: Bool }
   deriving (Show)
 
 mymliOptions :: Parser MymliOptions
-mymliOptions = MymliOptions <$> switch
-  (long "pure" <> short 'p' <> help "Whether to disable imperative features")
+mymliOptions =
+  MymliOptions <$> optional (argument str (metavar "FILE")) <*> switch
+    (long "pure" <> short 'p' <> help "Whether to disable imperative features")

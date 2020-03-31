@@ -4,6 +4,8 @@ module Myml.Mymli.Lang
   ( processTopLevel
   , processTopLevel'
   , processTopLevels
+  , searchAndParseFile
+  , mymliEnvForFile
   )
 where
 
