@@ -76,6 +76,12 @@ jobs:
     - name: Run tests
       run: cabal v2-run myml-test
 
+    - name: Test stdlib
+      run: ./tools/test-sources stdlib
+
+    - name: Test examples
+      run: ./tools/test-sources examples
+
     - name: Install mymli
       run: |
         mkdir -p bin

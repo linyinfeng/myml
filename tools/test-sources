@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -e
+
+TOOL_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+PROJECT_HOME=$(realpath "$TOOL_DIR/..")
+
+cd "$PROJECT_HOME"
+
+while read -d '' -r; do
+    files+=( "$REPLY" )
+done < <(find "$1" -name '*.myml' -type f -print0)
+
+for file in "${files[@]}"
+do
+    echo "test file: $file"
+    cabal run mymli -- "$file"
+done
