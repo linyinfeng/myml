@@ -9,7 +9,7 @@ jobs:
       matrix:
         # os: [ubuntu-latest, windows-latest]
         os: [ubuntu-latest]
-        ghc: [ '8.6.5', 'recommended' ]
+        ghc: [ 'recommended', 'latest' ]
         cabal: [ 'recommended' ]
     steps:
     - name: Checkout
