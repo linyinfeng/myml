@@ -62,10 +62,7 @@ processTopLevel silent (TopTerm t :^ car) = do
       case evalRes of
         Left e ->
           liftIO (printCaret car >> evalErrorLabel >> print e) >> return False
-        Right v -> do
-          unless silent (liftIO (printValueSchemePair v s))
-          mymliGc
-          return True
+        Right v -> postEval silent v s
 processTopLevel silent (TopBind x t :^ car) = do
   inferRes <- mymliInferTypeAndUpdateBinding t
   case inferRes of
@@ -78,9 +75,7 @@ processTopLevel silent (TopBind x t :^ car) = do
           liftIO (printCaret car >> evalErrorLabel >> print e) >> return False
         Right v -> do
           mymliAddBinding x t v s
-          unless silent (liftIO (printValueSchemePair v s))
-          mymliGc
-          return True
+          postEval silent v s
 processTopLevel _ (TopImport file :^ _) = do
   result <- searchAndParseFile file
   case result of
@@ -90,6 +85,12 @@ processTopLevel _ (TopImport file :^ _) = do
       (success, fileEnv) <- liftIO (runMymli (processTopLevels True inputs) env)
       when success (mymliMergeFileEnv fileEnv >> mymliGc)
       return success
+
+postEval :: MonadIO m => Bool -> Term -> TypeScheme -> Mymli m Bool
+postEval silent v s = do
+  unless silent (liftIO (printValueSchemePair v s))
+  mymliGc
+  return True
 
 searchAndParseFile
   :: MonadIO m => FilePath -> Mymli m (Maybe ([Careted TopLevel], FilePath))
