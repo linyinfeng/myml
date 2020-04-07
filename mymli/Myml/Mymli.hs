@@ -63,9 +63,8 @@ runFile path = do
   case result of
     Nothing          -> return False
     Just (inputs, _) -> do
-      env     <- mymliEnvForFile path
-      success <- liftIO (evalMymli (processTopLevels True inputs) env)
-      return success
+      env <- mymliEnvForFile path
+      liftIO (evalMymli (processTopLevels True inputs) env)
 
 boolToExitCode :: Bool -> ExitCode
 boolToExitCode True  = ExitSuccess

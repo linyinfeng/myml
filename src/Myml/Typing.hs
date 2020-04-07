@@ -393,8 +393,8 @@ dangerousVarRow (RowMu x r) = do
     Nothing   -> return dr
     Just KRow -> fvRow (RowMu x r)
     Just k    -> Left (ErrVarKindConflict x KRow k)
-dangerousVarRow (RowVar _) = return (Map.empty) -- for variant
-dangerousVarRow RowEmpty   = return (Map.empty)
+dangerousVarRow (RowVar _) = return Map.empty -- for variant
+dangerousVarRow RowEmpty   = return Map.empty
 
 dangerousVarPresence :: TypePresence -> Either Error (Map.Map VarName Kind)
 dangerousVarPresence (Present t              ) = dangerousVar t
