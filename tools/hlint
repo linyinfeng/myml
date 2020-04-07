@@ -1,0 +1,7 @@
+#!/bin/bash
+
+TOOL_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+PROJECT_HOME=$(realpath "$TOOL_DIR/..")
+
+find $PROJECT_HOME -not -path '*/.*/*' -not -path '*/dist*/*' -name '*.hs' \
+  -exec hlint {} \;
