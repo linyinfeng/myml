@@ -24,11 +24,9 @@ MixinCounter r =
   class
     inherit ResetCounter r as super
     inherit BackupCounter r as superBackup
-    inherit ResetCounter r as superReset
     super extend
       { backup = superBackup.backup
-      , restore = superBackup.restore
-      , reset = superReset.reset } ;;
+      , restore = superBackup.restore } ;;
 Inc2Counter r =
   class
     inherit Counter r as super
@@ -38,22 +36,18 @@ Inc2EvenCounter r =
   class
     inherit Inc2Counter r as super
     super update
-      { inc _ = super.inc (); super.inc ()
-      , inc2 = super.inc2 } ;;
+      { inc _ = super.inc (); super.inc () } ;;
 
 rep = { x = ref 0, b = ref 0 } ;;
 counter = new (Counter rep) ;;
 backupCounter = new (BackupCounter rep) ;;
-resetCounter = let obj = new (ResetCounter rep) in
-  { get = obj.get
-  , inc = obj.inc
-  , set = obj.set
-  , reset = obj.reset } ;;
+resetCounter = new (ResetCounter rep) ;;
 
-incAndGet = λ c . c.inc (); c.get () ;;
+incAndGet c = c.inc (); c.get () ;;
 incAndGetCounter = incAndGet counter ;;
 incAndGetBackupCounter = incAndGet backupCounter ;;
 
 selectedCounter = if true then resetCounter else backupCounter ;;
 
 mixinCounter = new (MixinCounter { x = ref 0, b = ref 0 }) ;;
+inc2EvenCounter = new (Inc2EvenCounter { x = ref 0 }) ;;
