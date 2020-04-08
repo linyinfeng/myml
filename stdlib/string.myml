@@ -1,6 +1,8 @@
 import "char.myml" ;;
 import "list.myml" ;;
 import "function.myml" ;;
+import "integer.myml" ;;
+import "maybe.myml" ;;
 
 rec stringCompare s1 s2 =
   apply s1
@@ -18,3 +20,18 @@ stringEq s1 s2 = apply (stringCompare s1 s2)
   [ `LT _ = false
   , `EQ _ = true
   , `GT _ = false ] ;;
+
+rec integerShow n =
+  let signum = integerSignum n in
+  if integerEq signum 1 then
+    let qr = integerQuotRem n 10 in
+    let lastDigit = maybeFromJust (digitToChar qr.rem) in
+    let front =
+      if integerEq qr.quot 0
+      then listNil
+      else integerShow qr.quot in
+    list++ front (listSingleton lastDigit)
+  else if integerEq signum -1 then
+    listCons '-' (integerShow (integerAbs n))
+  else
+    "0" ;;

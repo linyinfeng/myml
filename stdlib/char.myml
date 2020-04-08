@@ -1,5 +1,19 @@
 import "ordering.myml" ;;
+import "integer.myml" ;;
 
 charCompare = charCompare# ;;
 
 charEq c1 c2 = orderingToEq (charCompare c1 c2) ;;
+
+digitToChar d =
+       if integerEq d 0 then `just '0'
+  else if integerEq d 1 then `just '1'
+  else if integerEq d 2 then `just '2'
+  else if integerEq d 3 then `just '3'
+  else if integerEq d 4 then `just '4'
+  else if integerEq d 5 then `just '5'
+  else if integerEq d 6 then `just '6'
+  else if integerEq d 7 then `just '7'
+  else if integerEq d 8 then `just '8'
+  else if integerEq d 9 then `just '9'
+  else `nothing () ;;

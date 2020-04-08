@@ -1,0 +1,27 @@
+import "function.myml" ;;
+import "fix.myml" ;;
+
+maybeNothing = `nothing () ;;
+maybeJust x = `just x ;;
+
+maybeFromJust =
+  [ `just = id
+  , `nothing = diverge ] ;;
+
+maybeFmap f =
+  [ `just x = `just (f x)
+  , `nothing _ = maybeNothing ] ;;
+
+maybePure = maybeNothing ;;
+
+maybe<*> mf ma =
+  apply mf
+    [ `just f = maybeFmap f ma
+    , `nothing _ = maybeNothing ] ;;
+
+maybeReturn = maybeNothing ;;
+
+maybe>>= ma f =
+  apply ma
+    [ `just a = f a
+    , `nothing _ = maybeNothing ] ;;

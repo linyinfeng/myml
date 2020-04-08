@@ -1,0 +1,21 @@
+import "list.myml" ;;
+import "function.myml" ;;
+
+Stack l =
+  class
+    { push n = l := listCons n (! l)
+    , pop _ =
+        let head = listHead (! l) in
+        l :=
+          apply (listTail (! l))
+            [ `nothing _ = listNil
+            , `just t = t ] ;
+        head } ;;
+PeekStack l =
+  class
+    inherit Stack l as super
+    super extend
+      { peek _ = listHead (! l) } ;;
+
+emptyStack _ = new (Stack (ref listNil)) ;;
+emptyPeekStack _ = new (PeekStack (ref listNil)) ;;

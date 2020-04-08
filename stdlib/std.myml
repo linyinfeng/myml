@@ -5,6 +5,8 @@ import "function.myml" ;;
 import "integer.myml" ;;
 import "io.myml" ;;
 import "list.myml" ;;
+import "maybe.myml" ;;
 import "ordering.myml" ;;
 import "ski.myml" ;;
+import "stack.myml" ;;
 import "string.myml" ;;

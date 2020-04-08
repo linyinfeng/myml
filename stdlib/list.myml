@@ -5,6 +5,14 @@ listNil = `nil unit ;;
 
 listCons x xs = `cons { head = x, tail = xs } ;;
 
+listHead =
+  [ `nil _ = `nothing ()
+  , `cons l = `just l.head ] ;;
+
+listTail =
+  [ `nil _ = `nothing ()
+  , `cons l = `just l.tail ] ;;
+
 listSingleton x = listCons x listNil ;;
 
 rec listLength =
