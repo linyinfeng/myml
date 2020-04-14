@@ -428,6 +428,8 @@ replaceSafePresentPresence :: TypePresence -> Inference TypePresence
 replaceSafePresentPresence (Present t) = do
   x <- newVarInner KPresenceWithType
   PresenceVarWithType x <$> replaceSafePresent t
+replaceSafePresentPresence (PresenceVarWithType x t) =
+  PresenceVarWithType x <$> replaceSafePresent t
 replaceSafePresentPresence p = return p
 
 replacePrefix
