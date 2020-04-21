@@ -12,6 +12,7 @@ where
 import           Myml.Mymli.Common
 import           Myml.Mymli.Environment
 import           Myml.Mymli.Output
+import           Myml.Mymli.Option
 import           Myml.Syntax
 import           Myml.Parser.Common
 import           Myml.Lang.Syntax
@@ -35,14 +36,16 @@ import qualified Data.Map                      as Map
 processTopLevel' :: MonadIO m => Careted TopLevel -> Mymli m MymliRequest
 processTopLevel' t = processTopLevel False t >> return MymliContinue
 
-printValueSchemePair :: Term -> TypeScheme -> IO ()
-printValueSchemePair t s = do
+printValueSchemePair :: MymliOptions -> Term -> TypeScheme -> IO ()
+printValueSchemePair opt t s = do
   renderDoc
     (group
-      (displayValue t <> line <> pretty ":" <> line <> align (displayScheme s))
+      (displayTerm t <> line <> pretty ":" <> line <> align (displayScheme s))
     )
   putStr "\n"
  where
+  displayTerm :: Term -> Doc ann
+  displayTerm = if optVerbose opt then pretty else displayValue
   renderDoc :: Doc ann -> IO ()
   renderDoc d = renderIO stdout (layoutSmart defaultLayoutOptions d)
 
@@ -88,7 +91,8 @@ processTopLevel _ (TopImport file :^ _) = do
 
 postEval :: MonadIO m => Bool -> Term -> TypeScheme -> Mymli m Bool
 postEval silent v s = do
-  unless silent (liftIO (printValueSchemePair v s))
+  options <- gets envOption
+  unless silent (liftIO (printValueSchemePair options v s))
   mymliGc
   return True
 
