@@ -31,6 +31,8 @@ termOperatorTable :: OperatorTable Parser Term
 termOperatorTable =
   [ [Postfix (chainedPostfix (opRcdAccess <|> opRcdExtend <|> opMatchExtend))]
   , [Infix opApp AssocLeft]
+  , [Infix opMul AssocLeft, Infix opQuot AssocLeft]
+  , [Infix opPlus AssocLeft, Infix opMinus AssocLeft]
   , [Infix opAssign AssocNone]
   , [Infix opSeq AssocRight]
   , [Prefix (chainedPrefix (opIf <|> opAbs <|> opLet <|> opClass))]
@@ -91,6 +93,16 @@ termOperatorTable =
         return (t, x)
       )
     return (deriveTermClass . TermClass inherits)
+  opPlus = (\t1 t2 -> (TmIntegerPlus `TmApp` t1 `TmApp` t2)) <$ symbol "+"
+  opMinus =
+    (\t1 t2 -> (TmIntegerPlus `TmApp` t1 `TmApp` (TmIntegerNegate `TmApp` t2)))
+      <$ symbol "-"
+  opMul = (\t1 t2 -> (TmIntegerMul `TmApp` t1 `TmApp` t2)) <$ symbol "*"
+  opQuot =
+    (\t1 t2 ->
+        (TmRcdAccess "quot" `TmApp` (TmIntegerQuotRem `TmApp` t1 `TmApp` t2))
+      )
+      <$ symbol "*"
 
 parseTermAtom :: Parser Term
 parseTermAtom =

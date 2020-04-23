@@ -46,6 +46,10 @@ reservedTokens = H.fromList (coreReserved ++ langReserved)
     , "self"
     , "new"
     -- integer
+    , "+"
+    , "-"
+    , "*"
+    , "/"
     , "integerPlus#"
     , "integerMul#"
     , "integerAbs#"
