@@ -68,9 +68,9 @@ BackupCounter r =
   class
     inherit Counter r as super
     let b = ref (! r.x) in
-      super extend
-        { backup _ =  b := ! r.x
-        , restore _ = r.x := ! b } ;;
+    super extend
+    { backup _ =  b := ! r.x
+    , restore _ = r.x := ! b } ;;
 EvenCounter r =
   class
     inherit Counter r as super
@@ -81,7 +81,7 @@ EvenBackupCounter r =
     inherit EvenCounter r as super
     inherit BackupCounter r as superBackup
     super extend
-      { backup = superBackup.backup
-      , restore = superBackup.restore } ;;
+    { backup = superBackup.backup
+    , restore = superBackup.restore } ;;
 c = new (EvenBackupCounter { x = ref 0 }) ;;
 ```
