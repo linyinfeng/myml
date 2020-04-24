@@ -119,11 +119,11 @@ data TermClass = TermClass {
 
 deriveTermClass :: TermClass -> Term
 deriveTermClass (TermClass inherits body) = TmAbs
-  "self"
+  "slf"
   (termWildcardAbs (inheritsToLet inherits body))
  where
   inheritsToLet ((t, x) : ps) inner =
-    TmLet x (TmApp (TmApp t (TmVar "self")) TmUnit) (inheritsToLet ps inner)
+    TmLet x (TmApp (TmApp t (TmVar "slf")) TmUnit) (inheritsToLet ps inner)
   inheritsToLet [] inner = inner
 
 termNew :: Term
@@ -139,7 +139,7 @@ termZ = TmAbs "f" (TmApp half half)
     )
 
 termSelf :: Term
-termSelf = TmApp (TmVar "self") TmUnit
+termSelf = TmApp (TmVar "slf") TmUnit
 
 deriveString :: String -> Term
 deriveString []       = TmVariant "nil" `TmApp` TmUnit
