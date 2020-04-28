@@ -1,0 +1,13 @@
+rec eval =
+  [ `Add ns = eval ns.1 + eval ns.2
+  , `Number n = n
+  ] ;;
+
+eval (`Add ((`Number 4), (`Number 5))) ;;
+
+rec eval' =
+  eval extend
+    [ `Sub ns = eval' ns.1 - eval' ns.2
+    ] ;;
+
+eval' (`Sub ((`Add ((`Number 4), (`Number 5))), (`Number 6))) ;; -- 3
