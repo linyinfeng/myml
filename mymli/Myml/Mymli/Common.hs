@@ -18,6 +18,7 @@ import           Myml.Mymli.Environment
 import           Control.Monad.State
 import           Control.Monad.Except
 import qualified Data.Map                      as Map
+import qualified Data.Set                      as Set
 
 prompt :: String
 prompt = "\ESC[1;32m\STXmymli\ESC[0m\STX> "
@@ -50,9 +51,9 @@ mymliInferTypeAndUpdateBinding t = do
     return (typeBindings', inferred)
 
 updateBinding :: Term -> TypeScheme -> Inference TypeScheme
-updateBinding t s = do
+updateBinding _t s = do
   fv <- liftEither (fvScheme s)
-  if Map.null fv then return s else instantiate s >>= generalize t
+  if Map.null fv then return s else describeScheme True Set.empty s
 
 mymliSubstEnv :: Monad m => Term -> Mymli m Term
 mymliSubstEnv t = flip substTerm t <$> gets envValueBindings

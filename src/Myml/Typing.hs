@@ -22,6 +22,7 @@ module Myml.Typing
   , unifyPresence
   , unifyRow
   -- describe
+  , describeScheme
   , describeProper
   , describePresence
   , describeRow
