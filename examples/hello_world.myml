@@ -1,3 +1,11 @@
-import "../stdlib/io.myml" ;;
+listNil = `nil unit ;;
+listCons x xs = `cons { head = x, tail = xs } ;;
 
-ioPutStringLine "Hello, world!" ;;
+rec listMap f =
+  [ `nil _ = listNil
+  , `cons l = listCons (f l.head) (listMap f l.tail) ] ;;
+
+ioPutString s = listMap ioPutChar s; unit ;;
+ioPutStringLine s = ioPutString s; ioPutChar '\n' ;;
+
+ioPutStringLine "hello, world" ;;
