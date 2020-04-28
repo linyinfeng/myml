@@ -1,53 +1,70 @@
-import "../stdlib/integer.myml" ;;
-
 Counter r =
   class
     { get _ = ! r.x
-    , inc _ = r.x := integerPlus 1 (self.get ()) } ;;
+    , inc _ = r.x := 1 + (self.get unit)
+    } ;;
+counter = new (Counter { x = ref 0 }) ;;
+
+Counter r =
+  \ slf . \ _ .
+    { get _ = ! r.x
+    , inc _ = r.x := ((slf unit).get unit) + 1
+    } ;;
+fix f = (\ x . f (\ v . x x v)) (\ x . f (\ v . x x v)) ;;
+counter = (\ c . fix c unit) (Counter { x = ref 0 }) ;;
+
 BackupCounter r =
   class
     inherit Counter r as super
     super extend
       { backup _ =  r.b := ! r.x
       , restore _ = r.x := ! r.b } ;;
-SetCounter r =
+backupCounter = new (BackupCounter { x = ref 0, b = ref 0 }) ;;
+
+BackupCounter r =
   class
     inherit Counter r as super
-    super extend
-      { set n = r.x := n } ;;
+    { get = super.get
+    , inc = super.inc
+    , backup _ =  r.b := ! r.x
+    , restore _ = r.x := ! r.b
+    } ;;
+backupCounter = new (BackupCounter { x = ref 0, b = ref 0 }) ;;
+
 ResetCounter r =
   class
-    inherit SetCounter r as super
-    super extend
-      { reset _ = self.set 0 } ;;
-MixinCounter r =
-  class
-    inherit ResetCounter r as super
-    inherit BackupCounter r as superBackup
-    super extend
-      { backup = superBackup.backup
-      , restore = superBackup.restore } ;;
-Inc2Counter r =
-  class
     inherit Counter r as super
     super extend
-      { inc2 _ = self.inc (); self.inc () } ;;
-Inc2EvenCounter r =
+      { set n = r.x := n
+      , reset _ = self.set 0 } ;;
+MixinCounter r =
   class
-    inherit Inc2Counter r as super
-    super update
-      { inc _ = super.inc (); super.inc () } ;;
-
-rep = { x = ref 0, b = ref 0 } ;;
-counter = new (Counter rep) ;;
-backupCounter = new (BackupCounter rep) ;;
-resetCounter = new (ResetCounter rep) ;;
-
-incAndGet c = c.inc (); c.get () ;;
-incAndGetCounter = incAndGet counter ;;
-incAndGetBackupCounter = incAndGet backupCounter ;;
-
-selectedCounter = if true then resetCounter else backupCounter ;;
-
+    inherit Counter r as super
+    inherit ResetCounter r as superReset
+    inherit BackupCounter r as superBackup
+    super extend
+      { set = superReset.set
+      , reset = superReset.reset
+      , backup = superBackup.backup
+      , restore = superBackup.restore } ;;
 mixinCounter = new (MixinCounter { x = ref 0, b = ref 0 }) ;;
-inc2EvenCounter = new (Inc2EvenCounter { x = ref 0 }) ;;
+
+mixinCounter.get unit ;; -- 0
+mixinCounter.inc unit ; mixinCounter.get unit ;; -- 1
+mixinCounter.backup unit ;;
+mixinCounter.set 100 ; mixinCounter.get unit ;; -- 100
+mixinCounter.restore unit ; mixinCounter.get unit ;; -- 1
+mixinCounter.reset unit ; mixinCounter.get unit ;; -- 0
+
+incGet counter = counter.inc unit; counter.get unit ;;
+incGet counter ;;
+incGet backupCounter ;;
+
+backupInc counter = counter.backup unit; counter.inc unit ;;
+backupInc backupCounter ;;
+-- backupInc counter ;; -- error!
+
+someBool = true ;;
+selectedCounter = if someBool then mixinCounter else counter ;;
+selectedCounter.inc unit ;;
+-- selectedCounter.backup unit ;; -- error!
