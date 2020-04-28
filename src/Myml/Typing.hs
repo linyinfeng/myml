@@ -15,6 +15,7 @@ module Myml.Typing
   , instantiateRow
   , instantiatePresence
   , generalize
+  , replaceSafePresent
   -- unify
   , unifyProper
   , unifyPresenceWithType
@@ -114,9 +115,15 @@ infer (TmAbs x t) = do
   ty <- local (Map.insert x (ScmMono nv)) (infer t)
   return (TyArrow nv ty)
 infer (TmLet x t1 t2) = do
-  ty1 <- infer t1
-  s   <- generalize t1 ty1
-  local (Map.insert x s) (infer t2)
+  ty1  <- infer t1
+  ctx  <- ask
+  ctx' <- mapM (describeScheme True Set.empty) ctx
+  local
+    (const ctx')
+    (do
+      s <- generalize t1 ty1
+      local (Map.insert x s) (infer t2)
+    )
 infer TmEmptyRcd      = return (TyRecord RowEmpty)
 infer (TmRcdExtend l) = instantiate
   ( ScmForall "a"  KProper
@@ -305,14 +312,11 @@ generalize t ty = do
   tyRep  <- replaceSafePresent tyDesc
   tFv    <- liftEither (fvType tyRep)
   env    <- ask
-  envFv  <- Map.foldl
-    (\a b -> bind2AndLift
-      mapUnionWithKind
-      a
-      (describeScheme True Set.empty b >>= liftEither . fvScheme)
+  envFv  <- liftEither
+    (Map.foldl (\a b -> bind2AndLift mapUnionWithKind a (fvScheme b))
+               (return Map.empty)
+               env
     )
-    (return Map.empty)
-    env
   -- check kind conflicts
   _          <- liftEither (mapUnionWithKind tFv envFv)
   imperative <- gets imperativeFeaturesEnabled
@@ -338,6 +342,8 @@ isNonExpansive (TmApp (TmApp (TmRcdExtend _) t1) t2) =
   isNonExpansive t1 && isNonExpansive t2
 isNonExpansive (TmApp (TmApp (TmRcdUpdate _) t1) t2) =
   isNonExpansive t1 && isNonExpansive t2
+isNonExpansive (TmApp (TmRcdAccess _) t) =
+  isNonExpansive t
 isNonExpansive TmEmptyRcd = True
 -- match value
 isNonExpansive (TmApp (TmApp (TmMatchExtend _) t1) t2) =
@@ -542,7 +548,11 @@ unifyRow r1 r2 = do
     else case (r1', r2') of
       (RowVar x1, _        ) -> equate (TySubRow (RowVar x1)) (TySubRow r2')
       (_        , RowVar x2) -> equate (TySubRow (RowVar x2)) (TySubRow r1')
-      _                      -> unifyRow' r1' r2'
+      -- _                      -> unifyRow' r1' r2'
+      _                    -> do
+        -- record r1' already unified with r2'
+        -- equate (TySubRow r1') (TySubRow r2')
+        unifyRow' r1' r2' -- unify structures
 
 unifyRow' :: TypeRow -> TypeRow -> Inference ()
 unifyRow' RowEmpty (RowPresence _l p r) =

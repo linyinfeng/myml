@@ -112,8 +112,7 @@
 | \quad & \code{!} & \text{dereference} \\
 | \quad & \code{\coloneqq} & \text{assignment 1} \\
 | \quad & \code{\coloneqq\ v} & \text{assignment 2} \\
-| \quad & \code{l} & \text{location} \\
-| \quad & \code{new} & \text{new}
+| \quad & \code{l} & \text{location}
 \end{align*}
 
 \begin{align*}
@@ -607,7 +606,7 @@ Instantiation first replace every qualified type variable with fresh variables, 
 
 \begin{equation}
 \begin{split}
-\generalizeValue(\Gamma, E, \code{MT}) & = \forall\ \overline{\freeVariable(\code{MT}') \setminus \freeVariable(\Gamma') \setminus \dangerousVariable(\code{MT}')}.\ \code{MT}' \\
+\generalize(\Gamma, E, \code{MT}) & = \forall\ \overline{\freeVariable(\code{MT}') \setminus \freeVariable(\Gamma') \setminus \dangerousVariable(\code{MT}')}.\ \code{MT}' \\
 \Gamma' & = \describeContextScheme(\Gamma) \\
 \code{MT}' & = \describeType(E, \emptyset, \code{MT})
 \end{split}
