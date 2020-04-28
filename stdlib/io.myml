@@ -3,9 +3,6 @@ import "list.myml" ;;
 import "char.myml" ;;
 import "function.myml" ;;
 
-ioPutChar = ioPutChar ;;
-ioGetChar = ioGetChar ;;
-
 ioPutString s = listMap ioPutChar s; unit ;;
 
 ioPutStringLine s = ioPutString s; ioPutChar '\n' ;;
