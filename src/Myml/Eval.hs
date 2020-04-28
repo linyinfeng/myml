@@ -21,13 +21,14 @@ import qualified Data.Map                      as Map
 data EvalExcept = ExcNoRuleApplied
   deriving (Show, Eq)
 
-bigStep :: Term -> (StateT (Maybe (Store (WithMark Term))) IO) Term
+type BigStepState = StateT (Maybe (Store (WithMark Term))) IO
+
+bigStep :: Term -> BigStepState Term
 bigStep t = runExceptT (smallStep t) >>= \case
   Left  ExcNoRuleApplied -> return t
   Right t'               -> bigStep t'
 
-bigStepSafe
-  :: Term -> (StateT (Maybe (Store (WithMark Term))) IO) (Either Error Term)
+bigStepSafe :: Term -> BigStepState (Either Error Term)
 bigStepSafe t = do
   t' <- bigStep t
   return (if isValue t' then Right t' else Left (ErrEvalStuck t'))
