@@ -241,8 +241,9 @@ infer TmIntegerCompare = instantiate
   ( ScmForall "r" KRow
   $ ScmMono (TyInteger `TyArrow` TyInteger `TyArrow` typeOrdering "r")
   )
-infer (TmChar _)    = return TyChar
-infer TmIOGetChar   = return (TyArrow TyUnit TyChar)
+infer (TmChar _)  = return TyChar
+infer TmIOGetChar = instantiate
+  (ScmForall "r" KRow $ ScmMono (TyArrow TyUnit (typeMaybe TyChar "r")))
 infer TmIOPutChar   = return (TyArrow TyChar TyUnit)
 infer TmCharCompare = instantiate
   ( ScmForall "r" KRow

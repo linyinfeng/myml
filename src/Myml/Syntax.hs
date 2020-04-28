@@ -16,6 +16,8 @@ module Myml.Syntax
   , pattern TmUnit
   , termTrue
   , termFalse
+  , termNothing
+  , termJust
   , termIf
   , labeledApps
   , recordLiteral
@@ -25,6 +27,7 @@ module Myml.Syntax
   , typeOrdering
   , typeQuotRem
   , typeBool
+  , typeMaybe
   , TypeRow(..)
   , TypePresence(..)
   , PresenceWithType(..)
@@ -170,6 +173,12 @@ termTrue = TmApp (TmVariant "true") TmUnit
 termFalse :: Term
 termFalse = TmApp (TmVariant "false") TmUnit
 
+termNothing :: Term
+termNothing = TmApp (TmVariant "nothing") TmUnit
+
+termJust :: Term -> Term
+termJust t = TmApp (TmVariant "just") t
+
 termIf :: Term -> Term -> Term -> Term
 termIf t1 t2 t3 = TmApp
   (matchLiteral [("true", termWildcardAbs t2), ("false", termWildcardAbs t3)])
@@ -247,6 +256,13 @@ typeBool :: VarName -> Type
 typeBool r = TyVariant
   ( RowPresence "true"  (Present TyUnit)
   $ RowPresence "false" (Present TyUnit)
+  $ RowVar r
+  )
+
+typeMaybe :: Type -> VarName -> Type
+typeMaybe ty r = TyVariant
+  ( RowPresence "nothing" (Present TyUnit)
+  $ RowPresence "just"    (Present ty)
   $ RowVar r
   )
 
@@ -506,20 +522,20 @@ instance PrettyPrec Term where
   prettyPrec _ (TmVariant l)    = prettyVariantLabel l
   prettyPrec _ TmRef            = pretty "ref"
   prettyPrec _ TmDeref          = pretty "!"
-  prettyPrec _ TmAssign         = pretty ":=#"
+  prettyPrec _ TmAssign         = pretty "assign"
   prettyPrec _ (TmLoc     l)    = pretty "loc(" <> pretty l <> pretty ")"
   prettyPrec _ (TmInteger n)    = pretty n
-  prettyPrec _ TmIntegerPlus    = pretty "integerPlus#"
-  prettyPrec _ TmIntegerMul     = pretty "integerMul#"
-  prettyPrec _ TmIntegerAbs     = pretty "integerAbs#"
-  prettyPrec _ TmIntegerSignum  = pretty "integerSignum#"
-  prettyPrec _ TmIntegerNegate  = pretty "integerNegate#"
-  prettyPrec _ TmIntegerQuotRem = pretty "integerQuotRem#"
-  prettyPrec _ TmIntegerCompare = pretty "integerCompare#"
+  prettyPrec _ TmIntegerPlus    = pretty "integerPlus"
+  prettyPrec _ TmIntegerMul     = pretty "integerMul"
+  prettyPrec _ TmIntegerAbs     = pretty "integerAbs"
+  prettyPrec _ TmIntegerSignum  = pretty "integerSignum"
+  prettyPrec _ TmIntegerNegate  = pretty "integerNegate"
+  prettyPrec _ TmIntegerQuotRem = pretty "integerQuotRem"
+  prettyPrec _ TmIntegerCompare = pretty "integerCompare"
   prettyPrec _ (TmChar c)       = pretty (show c)
-  prettyPrec _ TmIOPutChar      = pretty "ioPutChar#"
-  prettyPrec _ TmIOGetChar      = pretty "ioGetChar#"
-  prettyPrec _ TmCharCompare    = pretty "charCompare#"
+  prettyPrec _ TmIOPutChar      = pretty "ioPutChar"
+  prettyPrec _ TmIOGetChar      = pretty "ioGetChar"
+  prettyPrec _ TmCharCompare    = pretty "charCompare"
 
 prettyVariantLabel :: LabelName -> Doc ann
 prettyVariantLabel name = pretty '`' <> pretty name

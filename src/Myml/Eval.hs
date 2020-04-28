@@ -15,6 +15,7 @@ import           Myml.Eval.Store
 import           Myml.Subst
 import           Control.Monad.Except
 import           Control.Monad.State
+import           Control.Exception
 import qualified Data.Map                      as Map
 
 data EvalExcept = ExcNoRuleApplied
@@ -99,7 +100,13 @@ smallStep (TmApp (TmApp TmIntegerQuotRem (TmInteger n)) (TmInteger m)) = return
 smallStep (TmApp (TmApp TmIntegerCompare (TmInteger n)) (TmInteger m)) =
   return (orderingToTmOrdering (compare n m))
 smallStep (TmApp TmIOPutChar (TmChar c)) = liftIO (TmUnit <$ putChar c)
-smallStep (TmApp TmIOGetChar TmUnit    ) = liftIO (TmChar <$> getChar)
+smallStep (TmApp TmIOGetChar TmUnit    ) = liftIO
+  (do
+    e <- try getChar :: IO (Either IOError Char)
+    case e of
+      Right c -> return (termJust (TmChar c))
+      Left  _ -> return termNothing
+  )
 smallStep (TmApp (TmApp TmCharCompare (TmChar c1)) (TmChar c2)) =
   return (orderingToTmOrdering (compare c1 c2))
 smallStep (TmApp v1 t2) | isValue v1 = TmApp v1 <$> smallStep t2

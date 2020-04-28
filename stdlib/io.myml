@@ -1,16 +1,20 @@
 import "fix.myml" ;;
 import "list.myml" ;;
 import "char.myml" ;;
+import "function.myml" ;;
 
-ioPutChar = ioPutChar# ;;
-ioGetChar = ioGetChar# ;;
+ioPutChar = ioPutChar ;;
+ioGetChar = ioGetChar ;;
 
 ioPutString s = listMap ioPutChar s; unit ;;
 
 ioPutStringLine s = ioPutString s; ioPutChar '\n' ;;
 
 rec ioGetLine _ =
-  let c = ioGetChar unit in
-    if charEq c '\n'
-    then listNil
-    else listCons c (ioGetLine unit) ;;
+  apply (ioGetChar unit)
+    [ `nothing _ = listNil
+    , `just c =
+        if charEq c '\n'
+        then listNil
+        else listCons c (ioGetLine unit)
+    ] ;;

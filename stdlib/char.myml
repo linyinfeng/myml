@@ -1,8 +1,6 @@
 import "ordering.myml" ;;
 import "integer.myml" ;;
 
-charCompare = charCompare# ;;
-
 charEq c1 c2 = orderingToEq (charCompare c1 c2) ;;
 
 digitToChar d =
