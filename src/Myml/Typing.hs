@@ -342,9 +342,8 @@ isNonExpansive (TmApp (TmApp (TmRcdExtend _) t1) t2) =
   isNonExpansive t1 && isNonExpansive t2
 isNonExpansive (TmApp (TmApp (TmRcdUpdate _) t1) t2) =
   isNonExpansive t1 && isNonExpansive t2
-isNonExpansive (TmApp (TmRcdAccess _) t) =
-  isNonExpansive t
-isNonExpansive TmEmptyRcd = True
+isNonExpansive (TmApp (TmRcdAccess _) t) = isNonExpansive t
+isNonExpansive TmEmptyRcd                = True
 -- match value
 isNonExpansive (TmApp (TmApp (TmMatchExtend _) t1) t2) =
   isNonExpansive t1 && isNonExpansive t2
@@ -549,7 +548,7 @@ unifyRow r1 r2 = do
       (RowVar x1, _        ) -> equate (TySubRow (RowVar x1)) (TySubRow r2')
       (_        , RowVar x2) -> equate (TySubRow (RowVar x2)) (TySubRow r1')
       -- _                      -> unifyRow' r1' r2'
-      _                    -> do
+      _                      -> do
         -- record r1' already unified with r2'
         -- equate (TySubRow r1') (TySubRow r2')
         unifyRow' r1' r2' -- unify structures
