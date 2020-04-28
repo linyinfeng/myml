@@ -166,11 +166,8 @@ unitTests = testGroup
     emptyStore
     (pTerm "-1")
     emptyStore
-  , testCase "bigStep integer negate" $ assertBigStep
-    (pTerm "integerNegate -2")
-    emptyStore
-    (pTerm "2")
-    emptyStore
+  , testCase "bigStep integer negate"
+    $ assertBigStep (pTerm "integerNegate -2") emptyStore (pTerm "2") emptyStore
   , testCase "bigStep integer quotRem" $ assertBigStep
     (pTerm "integerQuotRem 5 2")
     emptyStore
