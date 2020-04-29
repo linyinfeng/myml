@@ -11,3 +11,17 @@ rec eval' =
     ] ;;
 
 eval' (`Sub ((`Add ((`Number 4), (`Number 5))), (`Number 6))) ;; -- 3
+
+match1 =
+  [ `left x = x + 1
+  , `right x = x + 2
+  ] ;;
+
+match2 =
+  match1 extend
+    [ `center x = x + 3 ] ;;
+
+match1 (`left 0) ;; -- 1
+match1 (`right 0) ;; -- 2
+-- match1 (`center 0) ;; -- error!
+match2 (`center 0) ;; -- 3
