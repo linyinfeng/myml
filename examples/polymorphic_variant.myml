@@ -25,3 +25,8 @@ match1 (`left 0) ;; -- 1
 match1 (`right 0) ;; -- 2
 -- match1 (`center 0) ;; -- error!
 match2 (`center 0) ;; -- 3
+
+someBool = true ;;
+v = if someBool then `left 0 else `center 0 ;;
+-- match1 v ;; -- error!
+match2 v ;; -- 3
