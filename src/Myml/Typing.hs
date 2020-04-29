@@ -417,27 +417,32 @@ replaceSafePresent (TyMu    x  t ) = do
     Nothing      -> TyMu x <$> replaceSafePresent t
     Just KProper -> return (TyMu x t) -- x included in dangerous variables
     Just k       -> throwError (ErrVarKindConflict x KProper k)
-replaceSafePresent (TyRecord r) = TyRecord <$> replaceSafePresentRow r
-replaceSafePresent t            = return t
+replaceSafePresent (TyRecord  r) = TyRecord <$> replaceSafePresentRow True r
+replaceSafePresent (TyVariant r) = TyVariant <$> replaceSafePresentRow False r
+replaceSafePresent t             = return t
 
-replaceSafePresentRow :: TypeRow -> Inference TypeRow
-replaceSafePresentRow (RowPresence label p r) =
-  RowPresence label <$> replaceSafePresentPresence p <*> replaceSafePresentRow r
-replaceSafePresentRow (RowMu x r) = do
+replaceSafePresentRow :: Bool -> TypeRow -> Inference TypeRow
+replaceSafePresentRow shouldReplace (RowPresence label p r) =
+  RowPresence label
+    <$> replaceSafePresentPresence shouldReplace p
+    <*> replaceSafePresentRow shouldReplace r
+replaceSafePresentRow shouldReplace (RowMu x r) = do
   dr <- liftEither (dangerousVarRow r)
   case Map.lookup x dr of
-    Nothing   -> RowMu x <$> replaceSafePresentRow r
+    Nothing   -> RowMu x <$> replaceSafePresentRow shouldReplace r
     Just KRow -> return (RowMu x r) -- x included in dangerous variables
     Just k    -> throwError (ErrVarKindConflict x KRow k)
-replaceSafePresentRow r = return r
+replaceSafePresentRow _shouldReplace r = return r
 
-replaceSafePresentPresence :: TypePresence -> Inference TypePresence
-replaceSafePresentPresence (Present t) = do
-  x <- newVarInner KPresenceWithType
+replaceSafePresentPresence :: Bool -> TypePresence -> Inference TypePresence
+replaceSafePresentPresence shouldReplace (Present t) = if shouldReplace
+  then do
+    x <- newVarInner KPresenceWithType
+    PresenceVarWithType x <$> replaceSafePresent t
+  else Present <$> replaceSafePresent t
+replaceSafePresentPresence _shouldReplace (PresenceVarWithType x t) =
   PresenceVarWithType x <$> replaceSafePresent t
-replaceSafePresentPresence (PresenceVarWithType x t) =
-  PresenceVarWithType x <$> replaceSafePresent t
-replaceSafePresentPresence p = return p
+replaceSafePresentPresence _shouldReplace p = return p
 
 replacePrefix
   :: Map.Map VarName Kind
