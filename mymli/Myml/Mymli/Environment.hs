@@ -20,13 +20,13 @@ import           Control.Monad.State
 import qualified Data.Map                      as Map
 
 data MymliEnv = MymliEnv
-  { envOption :: MymliOptions
-  , envStore :: Maybe (Store (WithMark Term))
-  , envTermBindings :: Map.Map VarName Term
+  { envOption        :: MymliOptions
+  , envStore         :: Maybe (Store (WithMark Term))
+  , envTermBindings  :: Map.Map VarName Term
   , envValueBindings :: Map.Map VarName Term
-  , envTypeBindings :: Map.Map VarName TypeScheme
-  , envInferState :: InferenceState
-  , envSearchPath :: [FilePath]
+  , envTypeBindings  :: Map.Map VarName TypeScheme
+  , envInferState    :: InferenceState
+  , envSearchPath    :: [FilePath]
   }
 
 emptyMymlEnv :: MymliOptions -> MymliEnv

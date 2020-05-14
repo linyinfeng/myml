@@ -57,9 +57,11 @@ type Inference a
     )
     a
 
-data InferenceState = InferenceState { inferStateNewVar :: NewVar
-                                     , imperativeFeaturesEnabled :: Bool }
-                                     deriving Show
+data InferenceState = InferenceState
+  { inferStateNewVar          :: NewVar
+  , imperativeFeaturesEnabled :: Bool
+  }
+  deriving Show
 
 runInference
   :: Inference a

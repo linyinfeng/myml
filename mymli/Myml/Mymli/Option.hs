@@ -7,10 +7,11 @@ where
 import           Options.Applicative
 
 data MymliOptions = MymliOptions
-  { optFile :: Maybe FilePath
-  , optPure :: Bool
-  , optVerbose :: Bool}
-  deriving (Show)
+  { optFile    :: Maybe FilePath
+  , optPure    :: Bool
+  , optVerbose :: Bool
+  }
+  deriving Show
 
 mymliOptions :: Parser MymliOptions
 mymliOptions =

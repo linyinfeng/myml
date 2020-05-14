@@ -114,9 +114,9 @@ data Term = TmAbs VarName Term
 
 infixl 7 `TmApp`
 
-data TermClass = TermClass {
-    classInherits :: [(Term, VarName)],
-    classBody :: Term
+data TermClass = TermClass
+  { classInherits :: [(Term, VarName)]
+  , classBody     :: Term
   }
   deriving (Eq, Show)
 
