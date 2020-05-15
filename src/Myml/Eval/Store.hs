@@ -76,8 +76,7 @@ sweepStore :: Store (WithMark a) -> Store (WithMark a)
 sweepStore (Store sData sMinFree) = Store hold sMinFree
   where (hold, _) = Map.partition isMarkedTrue sData
 
-markSweepClear
-  :: Locations a => [a] -> Store (WithMark a) -> Store (WithMark a)
+markSweepClear :: Locations a => [a] -> Store (WithMark a) -> Store (WithMark a)
 markSweepClear items s = clearStoreMark $ sweepStore $ markStore items s
 
 emptyStore :: Store (WithMark a)
