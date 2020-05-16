@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Myml.Mymli.Command
   ( Command(..)
@@ -42,7 +42,7 @@ processCommand CmdShowStore = do
   maybeStore <- gets envStore
   case maybeStore of
     Nothing -> return ()
-    Just Store { storeData, ..} ->
+    Just Store { storeData } ->
       liftIO (print (pretty (Map.toList (Map.map removeMark storeData))))
   return MymliContinue
 processCommand CmdShowValueBindings = do
