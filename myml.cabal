@@ -112,7 +112,7 @@ test-suite myml-test
   hs-source-dirs:
       tests
   build-depends:
-    , myml
+      myml
     , tasty
     , tasty-hunit
     , tasty-smallcheck
