@@ -9,3 +9,10 @@ cabal.project.local
 .idea
 *.iml
 .vscode
+
+# nix files
+result
+
+# envrc
+.envrc
+.direnv
