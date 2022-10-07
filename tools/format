@@ -1,10 +1,8 @@
-#!/bin/bash
-
-BRITTANY="docker run --rm -v $(pwd):/work herpinc/brittany:latest brittany"
+#!/usr/bin/env bash
 
 TOOL_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 PROJECT_HOME=$(realpath "$TOOL_DIR/..")
 
 find $PROJECT_HOME -not -path '*/.*/*' -not -path '*/dist*/*' -name '*.hs' \
   -exec realpath --relative-to "$PROJECT_HOME" {} \; |\
-  xargs $BRITTANY --write-mode=inplace $@
+  xargs ormolu --mode=inplace $@

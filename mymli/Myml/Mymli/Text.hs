@@ -1,34 +1,39 @@
-{-# LANGUAGE QuasiQuotes, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Myml.Mymli.Text
-  ( mymliGreetingText
-  , mymliHelpText
-  , mymliByeText
-  , mymlVersionText
-  , mymlOptionHelpHeaderString
+  ( mymliGreetingText,
+    mymliHelpText,
+    mymliByeText,
+    mymlVersionText,
+    mymlOptionHelpHeaderString,
   )
 where
 
-import           NeatInterpolation
-import           Data.Text
-import           Paths_myml                     ( version )
-import           Data.Version                   ( showVersion )
+import Data.Text
+import Data.Version (showVersion)
+import NeatInterpolation
+import Paths_myml (version)
 
 mymlVersionText :: Text
 mymlVersionText = pack (showVersion version)
 
 mymliGreetingText :: Text
-mymliGreetingText = [trimming|
+mymliGreetingText =
+  [trimming|
   mymli, version ${mymlVersionText}: https://github.com/linyinfeng/myml/  :help for help
   |]
 
 mymlOptionHelpHeaderString :: String
-mymlOptionHelpHeaderString = unpack [trimming|
+mymlOptionHelpHeaderString =
+  unpack
+    [trimming|
   mymli ${mymlVersionText}, Lin Yinfeng <lin.yinfeng@outlook.com>
   |]
 
 mymliHelpText :: Text
-mymliHelpText = [trimming|
+mymliHelpText =
+  [trimming|
   Commands available from the prompt:
     <term> ;;                     Evaluate <term>
     <x> <params> ... = <term> ;;  Evaluate <term> and add binding

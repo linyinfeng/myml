@@ -1,22 +1,22 @@
 module Myml.Mymli.Command.Parser
-  ( parseCommand
+  ( parseCommand,
   )
 where
 
-import           Myml.Mymli.Command
-import           Myml.Parser
-import           Myml.Parser.Common
-import           Text.Trifecta           hiding ( Parser )
-import           Control.Applicative
+import Control.Applicative
+import Myml.Mymli.Command
+import Myml.Parser
+import Myml.Parser.Common
+import Text.Trifecta hiding (Parser)
 
 parseCommand :: Parser Command
 parseCommand =
   symbol ":"
-    *> (   parseHelpCommand
-       <|> parseExitCommand
-       <|> parseShowTypeCommand
-       <|> parseShowStoreCommand
-       <|> parseShowBindingsCommand
+    *> ( parseHelpCommand
+           <|> parseExitCommand
+           <|> parseShowTypeCommand
+           <|> parseShowStoreCommand
+           <|> parseShowBindingsCommand
        )
 
 parseHelpCommand :: Parser Command
@@ -35,7 +35,7 @@ parseShowTypeCommand = do
 
 parseShowBindingsCommand :: Parser Command
 parseShowBindingsCommand = symbol "bindings" *> (v <|> t <|> ty)
- where
-  v  = CmdShowValueBindings <$ symbol "value"
-  t  = CmdShowTermBindings <$ symbol "term"
-  ty = CmdShowTypeBindings <$ symbol "type"
+  where
+    v = CmdShowValueBindings <$ symbol "value"
+    t = CmdShowTermBindings <$ symbol "term"
+    ty = CmdShowTypeBindings <$ symbol "type"

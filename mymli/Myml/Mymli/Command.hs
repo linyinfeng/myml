@@ -1,31 +1,31 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Myml.Mymli.Command
-  ( Command(..)
-  , processCommand
+  ( Command (..),
+    processCommand,
   )
 where
 
-import           Myml.Mymli.Environment
-import           Myml.Syntax
-import           Myml.Eval.Store
-import           Myml.Mymli.Common
-import           Myml.Mymli.Output
-import           Myml.Mymli.Text
-import qualified Data.Text.IO                  as Text.IO
-import           Control.Monad.Trans
-import           Control.Monad.State
-import           Data.Text.Prettyprint.Doc
-import qualified Data.Map                      as Map
+import Control.Monad.State
+import qualified Data.Map as Map
+import qualified Data.Text.IO as Text.IO
+import Prettyprinter
+import Myml.Eval.Store
+import Myml.Mymli.Common
+import Myml.Mymli.Environment
+import Myml.Mymli.Output
+import Myml.Mymli.Text
+import Myml.Syntax
 
-data Command = CmdExit
-             | CmdHelp
-             | CmdShowType Term
-             | CmdShowStore
-             | CmdShowValueBindings
-             | CmdShowTermBindings
-             | CmdShowTypeBindings
-             deriving (Show)
+data Command
+  = CmdExit
+  | CmdHelp
+  | CmdShowType Term
+  | CmdShowStore
+  | CmdShowValueBindings
+  | CmdShowTermBindings
+  | CmdShowTypeBindings
+  deriving (Show)
 
 processCommand :: MonadIO m => Command -> Mymli m MymliRequest
 processCommand CmdExit = return MymliExit
@@ -35,14 +35,14 @@ processCommand CmdHelp = do
 processCommand (CmdShowType t) = do
   inferRes <- mymliInferTypeAndUpdateBinding t
   case inferRes of
-    Left  e -> liftIO (typingErrorLabel >> print e)
+    Left e -> liftIO (typingErrorLabel >> print e)
     Right s -> liftIO (print (pretty s))
   return MymliContinue
 processCommand CmdShowStore = do
   maybeStore <- gets envStore
   case maybeStore of
     Nothing -> return ()
-    Just Store { storeData } ->
+    Just Store {storeData} ->
       liftIO (print (pretty (Map.toList (Map.map removeMark storeData))))
   return MymliContinue
 processCommand CmdShowValueBindings = do

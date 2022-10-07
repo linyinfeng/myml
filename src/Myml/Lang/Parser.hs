@@ -1,16 +1,16 @@
 module Myml.Lang.Parser
-  ( parseTopLevel
-  , parseTopLevels
-  , parseTopLevelsCareted
+  ( parseTopLevel,
+    parseTopLevels,
+    parseTopLevelsCareted,
   )
 where
 
-import           Myml.Lang.Syntax
-import           Myml.Parser
-import           Myml.Parser.Common
-import           Myml.Parser.Style
-import           Text.Trifecta           hiding ( Parser )
-import           Control.Applicative
+import Control.Applicative
+import Myml.Lang.Syntax
+import Myml.Parser
+import Myml.Parser.Common
+import Myml.Parser.Style
+import Text.Trifecta hiding (Parser)
 
 parseTopLevel :: Parser TopLevel
 parseTopLevel =

@@ -16,3 +16,4 @@ result
 # envrc
 .envrc
 .direnv
+shell.nix

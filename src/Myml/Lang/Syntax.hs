@@ -1,10 +1,11 @@
 module Myml.Lang.Syntax
-  ( TopLevel(..)
+  ( TopLevel (..),
   )
 where
 
-import           Myml.Syntax
+import Myml.Syntax
 
-data TopLevel = TopBind VarName Term
-              | TopTerm Term
-              | TopImport String
+data TopLevel
+  = TopBind VarName Term
+  | TopTerm Term
+  | TopImport String

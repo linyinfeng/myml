@@ -1,153 +1,161 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, PatternSynonyms #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Myml.Syntax
-  ( Error(..)
-  , Term(..)
-  , TermClass(..)
-  , deriveTermClass
-  , deriveString
-  , termSelf
-  , termNew
-  , termZ
-  , termSeq
-  , termWildcardAbs
-  , termWildcardLet
-  , uniqueName
-  , pattern TmUnit
-  , termTrue
-  , termFalse
-  , termNothing
-  , termJust
-  , termIf
-  , labeledApps
-  , recordLiteral
-  , matchLiteral
-  , Type(..)
-  , pattern TyUnit
-  , typeOrdering
-  , typeQuotRem
-  , typeBool
-  , typeMaybe
-  , TypeRow(..)
-  , TypePresence(..)
-  , PresenceWithType(..)
-  , TypeSubstitutor(..)
-  , varToTySub
-  , kindOfTySub
-  , TypeScheme(..)
-  -- kind and help constructor
-  , Kind(..)
-  , pattern KPresenceWithType
-  -- string alias
-  , VarName
-  , LabelName
-  -- definition of value
-  , isValue
-  -- free variable
-  , fvTerm
-  , fvType
-  , fvPresence
-  , fvPresenceWithType
-  , fvRow
-  , fvScheme
-  , fvTySub
-  -- kind helpers
-  , mapUnionWithKind
-  , mapDeleteWithKind
-  , mapDiffWithKind
-  -- pretty print
-  , PrettyPrec(..)
-  , parensPrec
-  , prettyVariantLabel
-  , prettyTypeRow
-  , prettyTypeRow'
+  ( Error (..),
+    Term (..),
+    TermClass (..),
+    deriveTermClass,
+    deriveString,
+    termSelf,
+    termNew,
+    termZ,
+    termSeq,
+    termWildcardAbs,
+    termWildcardLet,
+    uniqueName,
+    pattern TmUnit,
+    termTrue,
+    termFalse,
+    termNothing,
+    termJust,
+    termIf,
+    labeledApps,
+    recordLiteral,
+    matchLiteral,
+    Type (..),
+    pattern TyUnit,
+    typeOrdering,
+    typeQuotRem,
+    typeBool,
+    typeMaybe,
+    TypeRow (..),
+    TypePresence (..),
+    PresenceWithType (..),
+    TypeSubstituter (..),
+    varToTySub,
+    kindOfTySub,
+    TypeScheme (..),
+    -- kind and help constructor
+    Kind (..),
+    pattern KPresenceWithType,
+    -- string alias
+    VarName,
+    LabelName,
+    -- definition of value
+    isValue,
+    -- free variable
+    fvTerm,
+    fvType,
+    fvPresence,
+    fvPresenceWithType,
+    fvRow,
+    fvScheme,
+    fvTySub,
+    -- kind helpers
+    mapUnionWithKind,
+    mapDeleteWithKind,
+    mapDiffWithKind,
+    -- pretty print
+    PrettyPrec (..),
+    parensPrec,
+    prettyVariantLabel,
+    prettyTypeRow,
+    prettyTypeRow',
   )
 where
 
-import           Data.Maybe                     ( fromJust )
-import           Data.List                      ( find )
-import qualified Data.Map                      as Map
-import qualified Data.Set                      as Set
-import           Text.Printf
-import           Data.Text.Prettyprint.Doc
-import           Test.SmallCheck.Series
+import Data.List (find)
+import qualified Data.Map as Map
+import Data.Maybe (fromJust)
+import qualified Data.Set as Set
+import Prettyprinter
+import Test.SmallCheck.Series
+import Text.Printf
 
 type VarName = String
+
 type LabelName = String
 
-data Term = TmAbs VarName Term
-          | TmApp Term Term
-          | TmVar VarName
-          | TmLet VarName Term Term
-          -- Polymorphic record
-          | TmEmptyRcd
-          | TmRcdExtend LabelName
-          | TmRcdUpdate LabelName
-          | TmRcdAccess LabelName
-          -- Polymorphic variants
-          | TmEmptyMatch
-          | TmMatchExtend LabelName
-          | TmMatchUpdate LabelName
-          | TmVariant LabelName
-          -- Reference
-          | TmRef
-          | TmDeref
-          | TmAssign
-          | TmLoc Integer
-          -- Primitives
-          -- Nat
-          | TmInteger Integer
-          | TmIntegerPlus
-          | TmIntegerMul
-          | TmIntegerAbs
-          | TmIntegerSignum
-          | TmIntegerNegate
-          | TmIntegerQuotRem
-          | TmIntegerCompare
-          -- Character
-          | TmChar Char
-          | TmCharCompare
-          -- IO
-          | TmIOPutChar
-          | TmIOGetChar
-          deriving (Eq, Show)
+data Term
+  = TmAbs VarName Term
+  | TmApp Term Term
+  | TmVar VarName
+  | TmLet VarName Term Term
+  | -- Polymorphic record
+    TmEmptyRcd
+  | TmRcdExtend LabelName
+  | TmRcdUpdate LabelName
+  | TmRcdAccess LabelName
+  | -- Polymorphic variants
+    TmEmptyMatch
+  | TmMatchExtend LabelName
+  | TmMatchUpdate LabelName
+  | TmVariant LabelName
+  | -- Reference
+    TmRef
+  | TmDeref
+  | TmAssign
+  | TmLoc Integer
+  | -- Primitives
+    -- Nat
+    TmInteger Integer
+  | TmIntegerPlus
+  | TmIntegerMul
+  | TmIntegerAbs
+  | TmIntegerSignum
+  | TmIntegerNegate
+  | TmIntegerQuotRem
+  | TmIntegerCompare
+  | -- Character
+    TmChar Char
+  | TmCharCompare
+  | -- IO
+    TmIOPutChar
+  | TmIOGetChar
+  deriving (Eq, Show)
 
 infixl 7 `TmApp`
 
 data TermClass = TermClass
-  { classInherits :: [(Term, VarName)]
-  , classBody     :: Term
+  { classInherits :: [(Term, VarName)],
+    classBody :: Term
   }
   deriving (Eq, Show)
 
 deriveTermClass :: TermClass -> Term
-deriveTermClass (TermClass inherits body) = TmAbs
-  "slf"
-  (termWildcardAbs (inheritsToLet inherits body))
- where
-  inheritsToLet ((t, x) : ps) inner =
-    TmLet x (TmApp (TmApp t (TmVar "slf")) TmUnit) (inheritsToLet ps inner)
-  inheritsToLet [] inner = inner
+deriveTermClass (TermClass inherits body) =
+  TmAbs
+    "slf"
+    (termWildcardAbs (inheritsToLet inherits body))
+  where
+    inheritsToLet ((t, x) : ps) inner =
+      TmLet x (TmApp (TmApp t (TmVar "slf")) TmUnit) (inheritsToLet ps inner)
+    inheritsToLet [] inner = inner
 
 termNew :: Term
 termNew = TmAbs "c" (TmApp (TmApp termZ (TmVar "c")) TmUnit)
 
 termZ :: Term
 termZ = TmAbs "f" (TmApp half half)
- where
-  half = TmAbs
-    "x"
-    (TmApp (TmVar "f")
-           (TmAbs "v" (TmApp (TmApp (TmVar "x") (TmVar "x")) (TmVar "v")))
-    )
+  where
+    half =
+      TmAbs
+        "x"
+        ( TmApp
+            (TmVar "f")
+            (TmAbs "v" (TmApp (TmApp (TmVar "x") (TmVar "x")) (TmVar "v")))
+        )
 
 termSelf :: Term
 termSelf = TmApp (TmVar "slf") TmUnit
 
 deriveString :: String -> Term
-deriveString []       = TmVariant "nil" `TmApp` TmUnit
-deriveString (c : cs) = TmVariant "cons"
-  `TmApp` recordLiteral [("head", TmChar c), ("tail", deriveString cs)]
+deriveString [] = TmVariant "nil" `TmApp` TmUnit
+deriveString (c : cs) =
+  TmVariant "cons"
+    `TmApp` recordLiteral [("head", TmChar c), ("tail", deriveString cs)]
 
 termSeq :: Term -> Term -> Term
 termSeq t1 t2 = TmApp (termWildcardAbs t2) t1
@@ -159,10 +167,12 @@ termWildcardLet :: Term -> Term -> Term
 termWildcardLet t1 t2 = TmLet (uniqueName (fvTerm t2) "_") t1 t2
 
 uniqueName :: Set.Set VarName -> VarName -> VarName
-uniqueName sv base = fromJust
-  (find (`Set.notMember` sv)
+uniqueName sv base =
+  fromJust
+    ( find
+        (`Set.notMember` sv)
         (base : map (\i -> base ++ show i) [(1 :: Integer) ..])
-  )
+    )
 
 pattern TmUnit :: Term
 pattern TmUnit = TmEmptyRcd
@@ -177,12 +187,13 @@ termNothing :: Term
 termNothing = TmApp (TmVariant "nothing") TmUnit
 
 termJust :: Term -> Term
-termJust t = TmApp (TmVariant "just") t
+termJust = TmApp (TmVariant "just")
 
 termIf :: Term -> Term -> Term -> Term
-termIf t1 t2 t3 = TmApp
-  (matchLiteral [("true", termWildcardAbs t2), ("false", termWildcardAbs t3)])
-  t1
+termIf t1 t2 t3 =
+  TmApp
+    (matchLiteral [("true", termWildcardAbs t2), ("false", termWildcardAbs t3)])
+    t1
 
 labeledApps :: (LabelName -> Term) -> Term -> [(LabelName, Term)] -> Term
 labeledApps ext = foldl (\inner (l, c) -> TmApp (TmApp (ext l) c) inner)
@@ -199,7 +210,7 @@ instance Monad m => Serial m Term where
       \/ cons2 TmApp
       \/ cons0 (TmVar "x")
       \/ cons2 (TmLet "x")
-      \/ cons0 TmEmptyRcd  -- TmUnit
+      \/ cons0 TmEmptyRcd -- TmUnit
       \/ cons0 (TmRcdExtend "l")
       \/ cons0 (TmRcdAccess "l")
       \/ cons0 TmEmptyMatch
@@ -222,16 +233,17 @@ instance Monad m => Serial m Term where
       \/ cons0 TmIOGetChar
       \/ cons0 TmCharCompare
 
-data Type = TyVar VarName
-          | TyArrow Type Type
-          | TyRecord TypeRow
-          | TyVariant TypeRow
-          | TyMu VarName Type
-          | TyRef Type
-          -- Primitives
-          | TyInteger
-          | TyChar
-          deriving (Eq, Show, Ord)
+data Type
+  = TyVar VarName
+  | TyArrow Type Type
+  | TyRecord TypeRow
+  | TyVariant TypeRow
+  | TyMu VarName Type
+  | TyRef Type
+  | -- Primitives
+    TyInteger
+  | TyChar
+  deriving (Eq, Show, Ord)
 
 infixr 7 `TyArrow`
 
@@ -239,32 +251,36 @@ pattern TyUnit :: Type
 pattern TyUnit = TyRecord RowEmpty
 
 typeOrdering :: VarName -> Type
-typeOrdering r = TyVariant
-  ( RowPresence "LT" (Present TyUnit)
-  $ RowPresence "EQ" (Present TyUnit)
-  $ RowPresence "GT" (Present TyUnit)
-  $ RowVar r
-  )
+typeOrdering r =
+  TyVariant
+    ( RowPresence "LT" (Present TyUnit) $
+        RowPresence "EQ" (Present TyUnit) $
+          RowPresence "GT" (Present TyUnit) $
+            RowVar r
+    )
 
 typeQuotRem :: VarName -> VarName -> Type
-typeQuotRem p1 p2 = TyRecord
-  ( RowPresence "quot" (PresenceVarWithType p1 TyInteger)
-  $ RowPresence "rem" (PresenceVarWithType p2 TyInteger) RowEmpty
-  )
+typeQuotRem p1 p2 =
+  TyRecord
+    ( RowPresence "quot" (PresenceVarWithType p1 TyInteger) $
+        RowPresence "rem" (PresenceVarWithType p2 TyInteger) RowEmpty
+    )
 
 typeBool :: VarName -> Type
-typeBool r = TyVariant
-  ( RowPresence "true"  (Present TyUnit)
-  $ RowPresence "false" (Present TyUnit)
-  $ RowVar r
-  )
+typeBool r =
+  TyVariant
+    ( RowPresence "true" (Present TyUnit) $
+        RowPresence "false" (Present TyUnit) $
+          RowVar r
+    )
 
 typeMaybe :: Type -> VarName -> Type
-typeMaybe ty r = TyVariant
-  ( RowPresence "nothing" (Present TyUnit)
-  $ RowPresence "just"    (Present ty)
-  $ RowVar r
-  )
+typeMaybe ty r =
+  TyVariant
+    ( RowPresence "nothing" (Present TyUnit) $
+        RowPresence "just" (Present ty) $
+          RowVar r
+    )
 
 instance Monad m => Serial m Type where
   series =
@@ -277,66 +293,75 @@ instance Monad m => Serial m Type where
       \/ cons0 TyInteger
       \/ cons0 TyChar
 
-data TypeRow = RowEmpty
-             | RowVar VarName
-             | RowPresence LabelName TypePresence TypeRow
-             | RowMu VarName TypeRow
-              deriving (Show, Eq, Ord)
+data TypeRow
+  = RowEmpty
+  | RowVar VarName
+  | RowPresence LabelName TypePresence TypeRow
+  | RowMu VarName TypeRow
+  deriving (Show, Eq, Ord)
 
 -- preserve depth
 instance Monad m => Serial m TypeRow where
   series =
-    cons0 RowEmpty \/ cons0 (RowVar "X") \/ cons2 (RowPresence "l") \/ cons1
-      (RowMu "X")
+    cons0 RowEmpty \/ cons0 (RowVar "X") \/ cons2 (RowPresence "l")
+      \/ cons1
+        (RowMu "X")
 
-data TypePresence = Absent
-                  | Present Type
-                  | PresenceVar VarName
-                  | PresenceVarWithType VarName Type
-                  deriving (Show, Eq, Ord)
+data TypePresence
+  = Absent
+  | Present Type
+  | PresenceVar VarName
+  | PresenceVarWithType VarName Type
+  deriving (Show, Eq, Ord)
 
 -- preserve depth
 instance Monad m => Serial m TypePresence where
-  series = pure Absent \/ cons1 Present \/ pure (PresenceVar "X") \/ cons1
-    (PresenceVarWithType "X")
+  series =
+    pure Absent \/ cons1 Present \/ pure (PresenceVar "X")
+      \/ cons1
+        (PresenceVarWithType "X")
 
-data PresenceWithType = PresenceWithTypeAbsent
-                      | PresenceWithTypePresent
-                      | PresenceWithTypeVar VarName
-                      deriving (Show, Eq, Ord)
+data PresenceWithType
+  = PresenceWithTypeAbsent
+  | PresenceWithTypePresent
+  | PresenceWithTypeVar VarName
+  deriving (Show, Eq, Ord)
 
-data TypeScheme = ScmMono Type
-                | ScmForall VarName Kind TypeScheme
-                deriving (Eq, Show)
+data TypeScheme
+  = ScmMono Type
+  | ScmForall VarName Kind TypeScheme
+  deriving (Eq, Show)
 
 instance Monad m => Serial m TypeScheme where
   series = cons1 ScmMono \/ cons2 (ScmForall "X")
 
-data TypeSubstitutor = TySubProper Type
-                     | TySubPresenceWithType PresenceWithType
-                     | TySubPresence TypePresence
-                     | TySubRow TypeRow
-                     deriving (Show, Eq, Ord)
+data TypeSubstituter
+  = TySubProper Type
+  | TySubPresenceWithType PresenceWithType
+  | TySubPresence TypePresence
+  | TySubRow TypeRow
+  deriving (Show, Eq, Ord)
 
-varToTySub :: Kind -> VarName -> Either Error TypeSubstitutor
+varToTySub :: Kind -> VarName -> Either Error TypeSubstituter
 varToTySub KProper = Right . TySubProper . TyVar
 varToTySub KPresenceWithType =
   Right . TySubPresenceWithType . PresenceWithTypeVar
 varToTySub KPresence = Right . TySubPresence . PresenceVar
-varToTySub KRow      = Right . TySubRow . RowVar
-varToTySub k         = const (Left (ErrInvalidKind k))
+varToTySub KRow = Right . TySubRow . RowVar
+varToTySub k = const (Left (ErrInvalidKind k))
 
-kindOfTySub :: TypeSubstitutor -> Kind
-kindOfTySub (TySubProper           _) = KProper
+kindOfTySub :: TypeSubstituter -> Kind
+kindOfTySub (TySubProper _) = KProper
 kindOfTySub (TySubPresenceWithType _) = KPresenceWithType
-kindOfTySub (TySubPresence         _) = KPresence
-kindOfTySub (TySubRow              _) = KRow
+kindOfTySub (TySubPresence _) = KPresence
+kindOfTySub (TySubRow _) = KRow
 
-data Kind = KProper
-          | KPresence
-          | KRow
-          | KArrow Kind Kind
-          deriving (Eq, Show)
+data Kind
+  = KProper
+  | KPresence
+  | KRow
+  | KArrow Kind Kind
+  deriving (Eq, Show)
 
 pattern KPresenceWithType :: Kind
 pattern KPresenceWithType = KArrow KProper KPresence
@@ -347,32 +372,32 @@ instance Monad m => Serial m Kind where
 isValue :: Term -> Bool
 -- record value
 isValue t@(TmApp (TmApp (TmRcdExtend _) _) _) = isRcdValue t
-isValue t@TmEmptyRcd                          = isRcdValue t
+isValue t@TmEmptyRcd = isRcdValue t
 -- match value
 isValue t@(TmApp (TmApp (TmMatchExtend _) _) _) = isMatchValue t
-isValue t@TmEmptyMatch                        = isMatchValue t
+isValue t@TmEmptyMatch = isMatchValue t
 -- variant value
-isValue (TmApp (TmVariant _) t)               = isValue t
+isValue (TmApp (TmVariant _) t) = isValue t
 -- partial applied
-isValue (TmApp (TmRcdExtend _) t)             = isValue t
-isValue (TmApp (TmRcdUpdate _) t)             = isValue t
-isValue (TmApp (TmMatchExtend _) t)           = isValue t
-isValue (TmApp (TmMatchUpdate _) t)           = isValue t
-isValue (TmApp TmAssign t)                    = isValue t
-isValue (TmApp TmCharCompare (TmChar _))      = True
-isValue (TmApp TmIntegerPlus (TmInteger _))   = True
-isValue (TmApp TmIntegerMul (TmInteger _))    = True
+isValue (TmApp (TmRcdExtend _) t) = isValue t
+isValue (TmApp (TmRcdUpdate _) t) = isValue t
+isValue (TmApp (TmMatchExtend _) t) = isValue t
+isValue (TmApp (TmMatchUpdate _) t) = isValue t
+isValue (TmApp TmAssign t) = isValue t
+isValue (TmApp TmCharCompare (TmChar _)) = True
+isValue (TmApp TmIntegerPlus (TmInteger _)) = True
+isValue (TmApp TmIntegerMul (TmInteger _)) = True
 isValue (TmApp TmIntegerQuotRem (TmInteger _)) = True
 isValue (TmApp TmIntegerCompare (TmInteger _)) = True
 -- Basic
-isValue TmApp{}                               = False
-isValue TmVar{}                               = False
-isValue TmAbs{}                               = True
-isValue TmLet{}                               = False
-isValue _                                     = True
+isValue TmApp {} = False
+isValue TmVar {} = False
+isValue TmAbs {} = True
+isValue TmLet {} = False
+isValue _ = True
 
 isRcdValue :: Term -> Bool
-isRcdValue TmEmptyRcd                      = True
+isRcdValue TmEmptyRcd = True
 isRcdValue (TmApp (TmRcdExtend _label) v1) = isValue v1
 isRcdValue (TmApp (TmApp (TmRcdExtend _label) v1) v2) =
   isValue v1 && isRcdValue v2
@@ -385,65 +410,67 @@ isMatchValue (TmApp (TmApp (TmMatchExtend _label) v1) v2) =
 isMatchValue _ = False
 
 fvTerm :: Term -> Set.Set VarName
-fvTerm (TmVar x      ) = Set.singleton x
-fvTerm (TmAbs x  t   ) = Set.delete x (fvTerm t)
-fvTerm (TmApp t1 t2  ) = fvTerm t1 `Set.union` fvTerm t2
+fvTerm (TmVar x) = Set.singleton x
+fvTerm (TmAbs x t) = Set.delete x (fvTerm t)
+fvTerm (TmApp t1 t2) = fvTerm t1 `Set.union` fvTerm t2
 fvTerm (TmLet x t1 t2) = fvTerm t1 `Set.union` Set.delete x (fvTerm t2)
-fvTerm _               = Set.empty
+fvTerm _ = Set.empty
 
-mapUnionWithKind
-  :: Map.Map VarName Kind
-  -> Map.Map VarName Kind
-  -> Either Error (Map.Map VarName Kind)
+mapUnionWithKind ::
+  Map.Map VarName Kind ->
+  Map.Map VarName Kind ->
+  Either Error (Map.Map VarName Kind)
 mapUnionWithKind m1 m2 = sequence (Map.unionWithKey union m1' m2')
- where
-  m1' = Map.map Right m1
-  m2' = Map.map Right m2
-  union x (Right k1) (Right k2) | k1 == k2  = Right k1
-                                | otherwise = Left (ErrVarKindConflict x k1 k2)
-  union _ l@(Left _) _ = l
-  union _ _          l = l
+  where
+    m1' = Map.map Right m1
+    m2' = Map.map Right m2
+    union x (Right k1) (Right k2)
+      | k1 == k2 = Right k1
+      | otherwise = Left (ErrVarKindConflict x k1 k2)
+    union _ l@(Left _) _ = l
+    union _ _ l = l
 
-mapDeleteWithKind
-  :: VarName
-  -> Kind
-  -> Map.Map VarName Kind
-  -> Either Error (Map.Map VarName Kind)
+mapDeleteWithKind ::
+  VarName ->
+  Kind ->
+  Map.Map VarName Kind ->
+  Either Error (Map.Map VarName Kind)
 mapDeleteWithKind x k m = case Map.lookup x m of
   Nothing -> Right m
-  Just k' | k == k'   -> Right (Map.delete x m)
-          | otherwise -> Left (ErrVarKindConflict x k k')
+  Just k'
+    | k == k' -> Right (Map.delete x m)
+    | otherwise -> Left (ErrVarKindConflict x k k')
 
-mapDiffWithKind
-  :: Map.Map VarName Kind
-  -> Map.Map VarName Kind
-  -> Either Error (Map.Map VarName Kind)
+mapDiffWithKind ::
+  Map.Map VarName Kind ->
+  Map.Map VarName Kind ->
+  Either Error (Map.Map VarName Kind)
 mapDiffWithKind m1 m2 = sequence (Map.differenceWithKey diff m1' m2')
- where
-  m1' = Map.map Right m1
-  m2' = Map.map Right m2
-  diff x (Right k1) (Right k2)
-    | k1 == k2  = Nothing
-    | otherwise = Just (Left (ErrVarKindConflict x k1 k2))
-  diff _ l@(Left _) _ = Just l
-  diff _ _          l = Just l
+  where
+    m1' = Map.map Right m1
+    m2' = Map.map Right m2
+    diff x (Right k1) (Right k2)
+      | k1 == k2 = Nothing
+      | otherwise = Just (Left (ErrVarKindConflict x k1 k2))
+    diff _ l@(Left _) _ = Just l
+    diff _ _ l = Just l
 
 fvType :: Type -> Either Error (Map.Map VarName Kind)
-fvType (TyVar x        ) = return (Map.singleton x KProper)
+fvType (TyVar x) = return (Map.singleton x KProper)
 fvType (TyArrow ty1 ty2) = do
   f1 <- fvType ty1
   f2 <- fvType ty2
   mapUnionWithKind f1 f2
-fvType (TyRecord  row) = fvRow row
+fvType (TyRecord row) = fvRow row
 fvType (TyVariant row) = fvRow row
-fvType (TyMu x t     ) = fvType t >>= mapDeleteWithKind x KProper
-fvType (TyRef t      ) = fvType t
-fvType TyInteger       = return Map.empty
-fvType TyChar          = return Map.empty
+fvType (TyMu x t) = fvType t >>= mapDeleteWithKind x KProper
+fvType (TyRef t) = fvType t
+fvType TyInteger = return Map.empty
+fvType TyChar = return Map.empty
 
 fvRow :: TypeRow -> Either Error (Map.Map VarName Kind)
-fvRow RowEmpty                 = return Map.empty
-fvRow (RowVar x              ) = return (Map.singleton x KRow)
+fvRow RowEmpty = return Map.empty
+fvRow (RowVar x) = return (Map.singleton x KRow)
 fvRow (RowPresence _label p r) = do
   fp <- fvPresence p
   fr <- fvRow r
@@ -451,26 +478,26 @@ fvRow (RowPresence _label p r) = do
 fvRow (RowMu x r) = fvRow r >>= mapDeleteWithKind x KRow
 
 fvPresence :: TypePresence -> Either Error (Map.Map VarName Kind)
-fvPresence Absent          = return Map.empty
-fvPresence (Present     t) = fvType t
+fvPresence Absent = return Map.empty
+fvPresence (Present t) = fvType t
 fvPresence (PresenceVar x) = return (Map.singleton x KPresence)
 fvPresence (PresenceVarWithType x t) =
   fvType t >>= mapUnionWithKind (Map.singleton x KPresenceWithType)
 
 fvPresenceWithType :: PresenceWithType -> Either Error (Map.Map VarName Kind)
-fvPresenceWithType PresenceWithTypeAbsent  = return Map.empty
+fvPresenceWithType PresenceWithTypeAbsent = return Map.empty
 fvPresenceWithType PresenceWithTypePresent = return Map.empty
 fvPresenceWithType (PresenceWithTypeVar x) =
   return (Map.singleton x KPresenceWithType)
 
-fvTySub :: TypeSubstitutor -> Either Error (Map.Map VarName Kind)
-fvTySub (TySubProper           t) = fvType t
+fvTySub :: TypeSubstituter -> Either Error (Map.Map VarName Kind)
+fvTySub (TySubProper t) = fvType t
 fvTySub (TySubPresenceWithType p) = fvPresenceWithType p
-fvTySub (TySubPresence         p) = fvPresence p
-fvTySub (TySubRow              r) = fvRow r
+fvTySub (TySubPresence p) = fvPresence p
+fvTySub (TySubRow r) = fvRow r
 
 fvScheme :: TypeScheme -> Either Error (Map.Map VarName Kind)
-fvScheme (ScmMono t      ) = fvType t
+fvScheme (ScmMono t) = fvType t
 fvScheme (ScmForall x k t) = fvScheme t >>= mapDeleteWithKind x k
 
 class PrettyPrec a where
@@ -480,62 +507,68 @@ instance Pretty Term where
   pretty = prettyPrec 0
 
 instance PrettyPrec Term where
-  prettyPrec n (TmAbs x t) = parensPrec
-    (n > prec)
-    (hang
-      indentSpace
-      (   pretty '\x3bb'
-      <+> pretty x
-      <+> pretty '.'
-      <>  softline
-      <>  prettyPrec prec t
+  prettyPrec n (TmAbs x t) =
+    parensPrec
+      (n > prec)
+      ( hang
+          indentSpace
+          ( pretty '\x3bb'
+              <+> pretty x
+              <+> pretty '.'
+              <> softline
+              <> prettyPrec prec t
+          )
       )
-    )
-    where prec = 0
-  prettyPrec n (TmApp t1 t2) = parensPrec
-    (n > prec)
-    (align (prettyPrec prec t1 <> softline <> prettyPrec (prec + 1) t2))
-    where prec = 1
-  prettyPrec _ (TmVar name   ) = pretty name
-  prettyPrec n (TmLet x t1 t2) = parensPrec
-    (n > prec)
-    (align
-      (   pretty "let"
-      <+> pretty x
-      <+> pretty '='
-      <+> prettyPrec 0 t1
-      <+> pretty "in"
-      <>  softline
-      <>  prettyPrec prec t2
+    where
+      prec = 0
+  prettyPrec n (TmApp t1 t2) =
+    parensPrec
+      (n > prec)
+      (align (prettyPrec prec t1 <> softline <> prettyPrec (prec + 1) t2))
+    where
+      prec = 1
+  prettyPrec _ (TmVar name) = pretty name
+  prettyPrec n (TmLet x t1 t2) =
+    parensPrec
+      (n > prec)
+      ( align
+          ( pretty "let"
+              <+> pretty x
+              <+> pretty '='
+              <+> prettyPrec 0 t1
+              <+> pretty "in"
+              <> softline
+              <> prettyPrec prec t2
+          )
       )
-    )
-    where prec = 0
-  prettyPrec _ TmEmptyRcd      = pretty "{}"
+    where
+      prec = 0
+  prettyPrec _ TmEmptyRcd = pretty "{}"
   prettyPrec _ (TmRcdExtend l) = pretty "extend" <> parens (pretty l)
   prettyPrec _ (TmRcdUpdate l) = pretty "update" <> parens (pretty l)
   prettyPrec _ (TmRcdAccess l) = pretty "access" <> parens (pretty l)
-  prettyPrec _ TmEmptyMatch    = pretty "[]"
+  prettyPrec _ TmEmptyMatch = pretty "[]"
   prettyPrec _ (TmMatchExtend l) =
     pretty "extend" <> parens (prettyVariantLabel l)
   prettyPrec _ (TmMatchUpdate l) =
     pretty "update" <> parens (prettyVariantLabel l)
-  prettyPrec _ (TmVariant l)    = prettyVariantLabel l
-  prettyPrec _ TmRef            = pretty "ref"
-  prettyPrec _ TmDeref          = pretty "!"
-  prettyPrec _ TmAssign         = pretty "assign"
-  prettyPrec _ (TmLoc     l)    = pretty "loc(" <> pretty l <> pretty ")"
-  prettyPrec _ (TmInteger n)    = pretty n
-  prettyPrec _ TmIntegerPlus    = pretty "integerPlus"
-  prettyPrec _ TmIntegerMul     = pretty "integerMul"
-  prettyPrec _ TmIntegerAbs     = pretty "integerAbs"
-  prettyPrec _ TmIntegerSignum  = pretty "integerSignum"
-  prettyPrec _ TmIntegerNegate  = pretty "integerNegate"
+  prettyPrec _ (TmVariant l) = prettyVariantLabel l
+  prettyPrec _ TmRef = pretty "ref"
+  prettyPrec _ TmDeref = pretty "!"
+  prettyPrec _ TmAssign = pretty "assign"
+  prettyPrec _ (TmLoc l) = pretty "loc(" <> pretty l <> pretty ")"
+  prettyPrec _ (TmInteger n) = pretty n
+  prettyPrec _ TmIntegerPlus = pretty "integerPlus"
+  prettyPrec _ TmIntegerMul = pretty "integerMul"
+  prettyPrec _ TmIntegerAbs = pretty "integerAbs"
+  prettyPrec _ TmIntegerSignum = pretty "integerSignum"
+  prettyPrec _ TmIntegerNegate = pretty "integerNegate"
   prettyPrec _ TmIntegerQuotRem = pretty "integerQuotRem"
   prettyPrec _ TmIntegerCompare = pretty "integerCompare"
-  prettyPrec _ (TmChar c)       = pretty (show c)
-  prettyPrec _ TmIOPutChar      = pretty "ioPutChar"
-  prettyPrec _ TmIOGetChar      = pretty "ioGetChar"
-  prettyPrec _ TmCharCompare    = pretty "charCompare"
+  prettyPrec _ (TmChar c) = pretty (show c)
+  prettyPrec _ TmIOPutChar = pretty "ioPutChar"
+  prettyPrec _ TmIOGetChar = pretty "ioGetChar"
+  prettyPrec _ TmCharCompare = pretty "charCompare"
 
 prettyVariantLabel :: LabelName -> Doc ann
 prettyVariantLabel name = pretty '`' <> pretty name
@@ -544,57 +577,65 @@ instance Pretty Type where
   pretty = prettyPrec 0
 
 instance PrettyPrec Type where
-  prettyPrec _ (TyVar name     ) = pretty name
-  prettyPrec n (TyArrow ty1 ty2) = parensPrec
-    (n > prec)
-    (align
-      (   prettyPrec (prec + 1) ty1
-      <+> pretty "->"
-      <>  softline
-      <>  prettyPrec prec ty2
+  prettyPrec _ (TyVar name) = pretty name
+  prettyPrec n (TyArrow ty1 ty2) =
+    parensPrec
+      (n > prec)
+      ( align
+          ( prettyPrec (prec + 1) ty1
+              <+> pretty "->"
+              <> softline
+              <> prettyPrec prec ty2
+          )
       )
-    )
-    where prec = 1
+    where
+      prec = 1
   prettyPrec _ (TyRecord rows) =
     prettyTypeRow "{" "}" (\l -> pretty l <+> pretty ":") rows
-
   prettyPrec _ (TyVariant rows) =
     prettyTypeRow "[" "]" (\l -> prettyVariantLabel l <+> pretty ":") rows
-  prettyPrec n (TyMu x t) = parensPrec
-    (n > prec)
-    (pretty "\x3bc" <+> pretty x <+> pretty '.' <+> prettyPrec prec t)
-    where prec = 0
-  prettyPrec n (TyRef t) = parensPrec (n > prec)
-                                      (pretty "Ref" <+> prettyPrec prec t)
-    where prec = 2
+  prettyPrec n (TyMu x t) =
+    parensPrec
+      (n > prec)
+      (pretty "\x3bc" <+> pretty x <+> pretty '.' <+> prettyPrec prec t)
+    where
+      prec = 0
+  prettyPrec n (TyRef t) =
+    parensPrec
+      (n > prec)
+      (pretty "Ref" <+> prettyPrec prec t)
+    where
+      prec = 2
   prettyPrec _ TyInteger = pretty "Integer"
-  prettyPrec _ TyChar    = pretty "Char"
+  prettyPrec _ TyChar = pretty "Char"
 
-prettyTypeRow
-  :: String -> String -> (LabelName -> Doc ann) -> TypeRow -> Doc ann
-prettyTypeRow open close label row = align
-  (group (open' <> prettyTypeRow' label row <> close'))
- where
-  open'  = flatAlt (pretty (open ++ " ")) (pretty open)
-  close' = flatAlt (pretty (" " ++ close)) (pretty close)
+prettyTypeRow ::
+  String -> String -> (LabelName -> Doc ann) -> TypeRow -> Doc ann
+prettyTypeRow open close label row =
+  align
+    (group (open' <> prettyTypeRow' label row <> close'))
+  where
+    open' = flatAlt (pretty (open ++ " ")) (pretty open)
+    close' = flatAlt (pretty (" " ++ close)) (pretty close)
 
 prettyTypeRow' :: (LabelName -> Doc ann) -> TypeRow -> Doc ann
-prettyTypeRow' _ RowEmpty   = pretty "\xb7" -- ·
+prettyTypeRow' _ RowEmpty = pretty "\xb7" -- ·
 prettyTypeRow' _ (RowVar x) = pretty x
 prettyTypeRow' label (RowPresence l p r) =
   label l <+> pretty p <> line' <> pretty ',' <+> prettyTypeRow' label r
 prettyTypeRow' label (RowMu x r) =
-  pretty '\x3bc' <+> pretty x <+> pretty '.' <+> align
-    (group (pretty "(" <+> prettyTypeRow' label r <+> pretty ")"))
+  pretty '\x3bc' <+> pretty x <+> pretty '.'
+    <+> align
+      (group (pretty "(" <+> prettyTypeRow' label r <+> pretty ")"))
 
 instance Pretty TypePresence where
-  pretty Absent                    = pretty "Absent"
-  pretty (Present     t          ) = pretty "Present" <+> prettyPrec 1 t
-  pretty (PresenceVar x          ) = pretty x
+  pretty Absent = pretty "Absent"
+  pretty (Present t) = pretty "Present" <+> prettyPrec 1 t
+  pretty (PresenceVar x) = pretty x
   pretty (PresenceVarWithType x t) = pretty x <+> prettyPrec 1 t
 
 instance Pretty PresenceWithType where
-  pretty PresenceWithTypeAbsent  = pretty "Absent"
+  pretty PresenceWithTypeAbsent = pretty "Absent"
   pretty PresenceWithTypePresent = pretty "Present"
   pretty (PresenceWithTypeVar x) = pretty x
 
@@ -606,26 +647,28 @@ instance Pretty TypeScheme where
       <+> pretty "::"
       <+> pretty k
       <+> pretty "."
-      <>  softline -- no hang and align
-      <>  pretty s
+      <> softline -- no hang and align
+      <> pretty s
 
-instance Pretty TypeSubstitutor where
-  pretty (TySubProper           t) = pretty t
+instance Pretty TypeSubstituter where
+  pretty (TySubProper t) = pretty t
   pretty (TySubPresenceWithType p) = pretty p
-  pretty (TySubPresence         p) = pretty p
+  pretty (TySubPresence p) = pretty p
   pretty (TySubRow r) = prettyTypeRow "(" ")" (\l -> pretty l <+> pretty ":") r
 
 instance Pretty Kind where
   pretty = prettyPrec 0
 
 instance PrettyPrec Kind where
-  prettyPrec _ KProper        = pretty '*'
-  prettyPrec _ KPresence      = pretty "Presence"
-  prettyPrec _ KRow           = pretty "Row"
-  prettyPrec n (KArrow k1 k2) = parensPrec
-    (n > prec)
-    (prettyPrec (prec + 1) k1 <+> pretty "=>" <+> prettyPrec prec k2)
-    where prec = 0
+  prettyPrec _ KProper = pretty '*'
+  prettyPrec _ KPresence = pretty "Presence"
+  prettyPrec _ KRow = pretty "Row"
+  prettyPrec n (KArrow k1 k2) =
+    parensPrec
+      (n > prec)
+      (prettyPrec (prec + 1) k1 <+> pretty "=>" <+> prettyPrec prec k2)
+    where
+      prec = 0
 
 parensPrec :: Bool -> Doc ann -> Doc ann
 parensPrec cond = if cond then parens else id
@@ -633,47 +676,52 @@ parensPrec cond = if cond then parens else id
 indentSpace :: Int
 indentSpace = 2
 
-data Error = ErrVarKindConflict VarName Kind Kind
-           | ErrInvalidKind Kind
-           -- typing errors
-           | ErrUnifyKindMismatch Kind Kind
-           | ErrUnifyNoRuleApplied TypeSubstitutor TypeSubstitutor
-           | ErrUnifyRowLabelCollided (Set.Set LabelName)
-           | ErrUnboundedVariable VarName
-           | ErrStoreTypingNotImplemented
-           | ErrCanNotHandleMuType Type
-           | ErrCanNotHandleMuRow TypeRow
-           | ErrImperativeFeaturesDisabled Term
-           -- evaluation errors
-           | ErrEvalStuck Term
-           deriving Eq
+data Error
+  = ErrVarKindConflict VarName Kind Kind
+  | ErrInvalidKind Kind
+  | -- typing errors
+    ErrUnifyKindMismatch Kind Kind
+  | ErrUnifyNoRuleApplied TypeSubstituter TypeSubstituter
+  | ErrUnifyRowLabelCollided (Set.Set LabelName)
+  | ErrUnboundedVariable VarName
+  | ErrStoreTypingNotImplemented
+  | ErrCanNotHandleMuType Type
+  | ErrCanNotHandleMuRow TypeRow
+  | ErrImperativeFeaturesDisabled Term
+  | -- evaluation errors
+    ErrEvalStuck Term
+  deriving (Eq)
 
 showPretty :: Pretty a => a -> String
 showPretty = show . pretty
 
 instance Show Error where
-  show (ErrVarKindConflict x k1 k2) = printf
-    "variable \"%s\" has two different kind \"%s\" and \"%s\""
-    x
-    (showPretty k1)
-    (showPretty k2)
+  show (ErrVarKindConflict x k1 k2) =
+    printf
+      "variable \"%s\" has two different kind \"%s\" and \"%s\""
+      x
+      (showPretty k1)
+      (showPretty k2)
   show (ErrInvalidKind k) = printf "invalid kind \"%s\"" (showPretty k)
-  show (ErrUnifyKindMismatch k1 k2) = printf
-    "kind \"%s\" mismatch with kind \"%s\" in unification"
-    (showPretty k1)
-    (showPretty k2)
+  show (ErrUnifyKindMismatch k1 k2) =
+    printf
+      "kind \"%s\" mismatch with kind \"%s\" in unification"
+      (showPretty k1)
+      (showPretty k2)
   show (ErrUnifyNoRuleApplied s1 s2) =
     printf "no rule to unify \"%s\" with \"%s\"" (showPretty s1) (showPretty s2)
   show (ErrUnifyRowLabelCollided s) =
     printf "row label \"%s\" collided" (show s)
-  show (ErrUnboundedVariable x)     = printf "unbounded variable \"%s\"" x
+  show (ErrUnboundedVariable x) = printf "unbounded variable \"%s\"" x
   show ErrStoreTypingNotImplemented = "store typing is not implemented"
   show (ErrCanNotHandleMuType t) =
     printf "can not handle recursive type here \"%s\"" (showPretty t)
-  show (ErrCanNotHandleMuRow r) = printf
-    "can not handle recursive row here \"%s\""
-    (show (prettyTypeRow "(" ")" (\l -> pretty l <+> pretty ":") r))
-  show (ErrImperativeFeaturesDisabled t) = printf
-    "imperative features disabled, can not type term \"%s\""
-    (showPretty t)
+  show (ErrCanNotHandleMuRow r) =
+    printf
+      "can not handle recursive row here \"%s\""
+      (show (prettyTypeRow "(" ")" (\l -> pretty l <+> pretty ":") r))
+  show (ErrImperativeFeaturesDisabled t) =
+    printf
+      "imperative features disabled, can not type term \"%s\""
+      (showPretty t)
   show (ErrEvalStuck t) = printf "evaluation stuck at \"%s\"" (showPretty t)
