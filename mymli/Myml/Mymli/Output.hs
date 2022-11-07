@@ -11,8 +11,8 @@ module Myml.Mymli.Output
   )
 where
 
-import Prettyprinter
 import Myml.Syntax
+import Prettyprinter
 import System.Console.ANSI
 
 ioErrorLabel :: IO ()

@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+
 module Myml.Typing.Spec
   ( tests,
   )
@@ -27,6 +29,7 @@ unifyAndTestDescribe :: [(String, String)] -> String -> String -> Assertion
 unifyAndTestDescribe us t1 t2 =
   fst (runInference m Map.empty emptyInferenceState) @?= Right (pType t2)
   where
+    m :: forall s. Inference s Type
     m = do
       mapM_ (\(a, b) -> unifyProper (pType a) (pType b)) us
       describeProper False Set.empty (pType t1)
@@ -36,7 +39,7 @@ testInstantiate s t pairs =
   fst (runInference m Map.empty emptyInferenceState)
     @?= Right (pType t)
   where
-    m :: Inference Type
+    m :: forall s. Inference s Type
     m = do
       instantiated <- instantiate (pScheme s)
       mapM_

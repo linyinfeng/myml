@@ -1,5 +1,5 @@
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NoMonoLocalBinds #-}
 
@@ -15,7 +15,6 @@ where
 
 import Control.Monad.Except
 import Control.Monad.State
-import Control.Monad.Identity
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Myml.Eval
@@ -37,7 +36,7 @@ mymliInferTypeAndUpdateBinding t = do
   termBindings <- gets envTermBindings
   typeBindings <- gets envTypeBindings
   inferState <- gets envInferState
-  let (result, inferState') = runIdentity (runInferenceT (doInfer termBindings typeBindings t) typeBindings inferState)
+  let (result, inferState') = runInference (doInfer termBindings typeBindings t) typeBindings inferState
   modify (\e -> e {envInferState = inferState'})
   case result of
     Left e -> return (Left e)

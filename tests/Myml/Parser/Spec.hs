@@ -3,13 +3,13 @@ module Myml.Parser.Spec
   )
 where
 
+import Myml.Parser
+import Myml.Parser.Common
+import Myml.Syntax
 import Prettyprinter
   ( Pretty,
     pretty,
   )
-import Myml.Parser
-import Myml.Parser.Common
-import Myml.Syntax
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.SmallCheck as SC

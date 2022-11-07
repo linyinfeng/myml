@@ -9,12 +9,12 @@ module Myml.Test.Helper
 where
 
 import qualified Data.Map as Map
-import Prettyprinter
 import Myml.Parser
 import Myml.Parser.Common
 import Myml.Parser.Style
 import Myml.Syntax
 import Myml.Typing
+import Prettyprinter
 import Text.Trifecta hiding (Parser)
 
 parseHelper :: Parser a -> String -> a

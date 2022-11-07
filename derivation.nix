@@ -1,8 +1,8 @@
 { mkDerivation, ansi-terminal, base, containers, directory
-, equivalence, filepath, haskeline, mtl, neat-interpolation
-, optparse-applicative, parsers, prettyprinter, smallcheck, stdenv
-, tasty, tasty-hunit, tasty-smallcheck, text, transformers
-, trifecta, unordered-containers
+, equivalence, filepath, haskeline, lib, mtl, neat-interpolation
+, optparse-applicative, parsers, prettyprinter, smallcheck, tasty
+, tasty-hunit, tasty-smallcheck, text, transformers, trifecta
+, unordered-containers
 }:
 mkDerivation {
   pname = "myml";
@@ -27,5 +27,6 @@ mkDerivation {
   ];
   homepage = "https://github.com/linyinfeng/myml#readme";
   description = "My toy programming language(WIP)";
-  license = stdenv.lib.licenses.mit;
+  license = lib.licenses.mit;
+  mainProgram = "mymli";
 }

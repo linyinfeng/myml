@@ -1,8 +1,8 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Myml.Typing
   ( NewVar (..),
@@ -12,6 +12,7 @@ module Myml.Typing
     MonadUnify,
     MonadInference,
     newVar,
+    runInference,
     runInferenceT,
     -- main infer function
     infer,
@@ -36,17 +37,17 @@ module Myml.Typing
 where
 
 import Control.Monad.Except as Except
+import Control.Monad.Identity
 import Control.Monad.Reader
 import Control.Monad.State
-import Control.Monad.Identity
 import Data.Equivalence.Monad
 import qualified Data.Equivalence.STT as STT
 import qualified Data.Map as Map
 import Data.Maybe
 import qualified Data.Set as Set
-import Prettyprinter
 import Myml.Subst
 import Myml.Syntax
+import Prettyprinter
 
 newtype NewVar = NewVar (Map.Map VarName Integer)
   deriving (Show)
@@ -55,19 +56,15 @@ type TypingEnv = Map.Map VarName TypeScheme
 
 type MonadUnify s m = MonadEquiv (STT.Class s TypeSubstituter TypeSubstituter) TypeSubstituter TypeSubstituter m
 
-type MonadInference s m = (
-    MonadError Error m,
+type MonadInference s m =
+  ( MonadError Error m,
     MonadUnify s m,
     MonadReader TypingEnv m,
     MonadState InferenceState m
   )
--- class (
---     MonadError Error m,
---     MonadUnify s m,
---     MonadReader TypingEnv m,
---     MonadState InferenceState m
---   ) => MonadInference s m where
+
 type Inference s a = InferenceT s Identity a
+
 type InferenceT s m a =
   ExceptT
     Error
@@ -75,8 +72,10 @@ type InferenceT s m a =
         s
         TypeSubstituter
         TypeSubstituter
-        (ReaderT TypingEnv
-          (StateT InferenceState m))
+        ( ReaderT
+            TypingEnv
+            (StateT InferenceState m)
+        )
     )
     a
 
@@ -85,6 +84,9 @@ data InferenceState = InferenceState
     imperativeFeaturesEnabled :: Bool
   }
   deriving (Show)
+
+runInference :: forall a. (forall s. Inference s a) -> TypingEnv -> InferenceState -> (Either Error a, InferenceState)
+runInference inf env state = runIdentity (runInferenceT inf env state)
 
 runInferenceT :: forall a m. (Monad m) => (forall s. InferenceT s m a) -> TypingEnv -> InferenceState -> m (Either Error a, InferenceState)
 runInferenceT inf env = runStateT (runReaderT (runEquivT id (const id) (runExceptT inf)) env)
@@ -320,7 +322,7 @@ instantiate (ScmForall _ k _) = error ("Unknown kind: " ++ show (pretty k))
 instantiate (ScmMono t) = instantiateType t
 
 -- instantiate mu type in scheme
-instantiateType :: (MonadUnify s m, MonadError Error m,  MonadState InferenceState m) => Type -> m Type
+instantiateType :: (MonadUnify s m, MonadError Error m, MonadState InferenceState m) => Type -> m Type
 instantiateType (TyVar x) = return (TyVar x)
 instantiateType (TyArrow t1 t2) =
   TyArrow <$> instantiateType t1 <*> instantiateType t2
@@ -344,7 +346,7 @@ instantiateRow (RowMu x r) = do
   unifyRow (RowVar x) r'
   return (RowVar x)
 
-instantiatePresence :: (MonadUnify s m, MonadError Error m,  MonadState InferenceState m) => TypePresence -> m TypePresence
+instantiatePresence :: (MonadUnify s m, MonadError Error m, MonadState InferenceState m) => TypePresence -> m TypePresence
 instantiatePresence Absent = return Absent
 instantiatePresence (Present t) = Present <$> instantiateType t
 instantiatePresence (PresenceVar x) = return (PresenceVar x)
@@ -456,7 +458,7 @@ dangerousVarPresence (Present t) = dangerousVar t
 dangerousVarPresence (PresenceVarWithType _ t) = dangerousVar t
 dangerousVarPresence p = fvPresence p
 
-replaceSafePresent :: (MonadError Error m,  MonadState InferenceState m) => Type -> m Type
+replaceSafePresent :: (MonadError Error m, MonadState InferenceState m) => Type -> m Type
 replaceSafePresent (TyArrow t1 t2) = TyArrow t1 <$> replaceSafePresent t2
 replaceSafePresent (TyMu x t) = do
   dt <- liftEither (dangerousVar t)
@@ -522,7 +524,7 @@ ensureRow :: (MonadError Error m) => TypeSubstituter -> m TypeRow
 ensureRow (TySubRow r) = return r
 ensureRow s = throwError (ErrUnifyKindMismatch KRow (kindOfTySub s))
 
-unifyProper :: (MonadError Error m, MonadUnify s m,  MonadState InferenceState m) => MonadUnify s m => Type -> Type -> m ()
+unifyProper :: (MonadError Error m, MonadUnify s m, MonadState InferenceState m) => MonadUnify s m => Type -> Type -> m ()
 unifyProper t1 t2 = do
   t1' <- classDesc (TySubProper t1) >>= ensureProper
   t2' <- classDesc (TySubProper t2) >>= ensureProper
@@ -536,7 +538,7 @@ unifyProper t1 t2 = do
         equate (TySubProper t1') (TySubProper t2')
         unifyProper' t1' t2' -- unify structures
 
-unifyProper' :: (MonadUnify s m, MonadError Error m,  MonadState InferenceState m) => Type -> Type -> m ()
+unifyProper' :: (MonadUnify s m, MonadError Error m, MonadState InferenceState m) => Type -> Type -> m ()
 unifyProper' (TyArrow t11 t12) (TyArrow t21 t22) =
   unifyProper t11 t21 >> unifyProper t12 t22
 unifyProper' (TyRecord r1) (TyRecord r2) = unifyRow r1 r2
@@ -567,7 +569,7 @@ unifyPresenceWithType p1 p2 = do
               (TySubPresenceWithType p2')
           )
 
-unifyPresence :: (MonadError Error m, MonadUnify s m,  MonadState InferenceState m) => TypePresence -> TypePresence -> m ()
+unifyPresence :: (MonadError Error m, MonadUnify s m, MonadState InferenceState m) => TypePresence -> TypePresence -> m ()
 unifyPresence p1 p2 = do
   p1' <- classDesc (TySubPresence p1) >>= ensurePresence
   p2' <- classDesc (TySubPresence p2) >>= ensurePresence
@@ -580,7 +582,7 @@ unifyPresence p1 p2 = do
         equate (TySubPresence (PresenceVar x2)) (TySubPresence p1')
       _ -> unifyPresence' p1' p2'
 
-unifyPresence' :: (MonadError Error m, MonadUnify s m,  MonadState InferenceState m) => TypePresence -> TypePresence -> m ()
+unifyPresence' :: (MonadError Error m, MonadUnify s m, MonadState InferenceState m) => TypePresence -> TypePresence -> m ()
 unifyPresence' (Present t1) (Present t2) = unifyProper t1 t2
 unifyPresence' (PresenceVarWithType x1 _) Absent =
   unifyPresenceWithType (PresenceWithTypeVar x1) PresenceWithTypeAbsent

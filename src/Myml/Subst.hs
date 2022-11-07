@@ -13,8 +13,8 @@ import Control.Monad.Reader
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
-import Prettyprinter
 import Myml.Syntax
+import Prettyprinter
 
 substTerm :: Map.Map VarName Term -> Term -> Term
 substTerm s t = runReader (substTerm' t) s

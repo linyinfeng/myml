@@ -15,8 +15,6 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.State
 import qualified Data.Map as Map
-import Prettyprinter
-import Prettyprinter.Render.Text
 import Myml.Eval.Store
 import Myml.Lang.Parser
 import Myml.Lang.Syntax
@@ -26,6 +24,8 @@ import Myml.Mymli.Option
 import Myml.Mymli.Output
 import Myml.Parser.Common
 import Myml.Syntax
+import Prettyprinter
+import Prettyprinter.Render.Text
 import System.Directory
 import System.FilePath
 import System.IO

@@ -9,13 +9,13 @@ where
 import Control.Monad.State
 import qualified Data.Map as Map
 import qualified Data.Text.IO as Text.IO
-import Prettyprinter
 import Myml.Eval.Store
 import Myml.Mymli.Common
 import Myml.Mymli.Environment
 import Myml.Mymli.Output
 import Myml.Mymli.Text
 import Myml.Syntax
+import Prettyprinter
 
 data Command
   = CmdExit

@@ -101,7 +101,7 @@ termOperatorTable =
         <$ symbol "-"
     opMul = (\t1 t2 -> TmIntegerMul `TmApp` t1 `TmApp` t2) <$ symbol "*"
     opQuot =
-      ( \t1 t2 -> TmRcdAccess "quot" `TmApp` (TmIntegerQuotRem `TmApp` t1 `TmApp` t2))
+      (\t1 t2 -> TmRcdAccess "quot" `TmApp` (TmIntegerQuotRem `TmApp` t1 `TmApp` t2))
         <$ symbol "*"
 
 parseTermAtom :: Parser Term
