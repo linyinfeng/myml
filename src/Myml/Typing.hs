@@ -36,6 +36,7 @@ module Myml.Typing
   )
 where
 
+import Control.Monad
 import Control.Monad.Except as Except
 import Control.Monad.Identity
 import Control.Monad.Reader
@@ -86,7 +87,7 @@ data InferenceState = InferenceState
   deriving (Show)
 
 runInference :: forall a. (forall s. Inference s a) -> TypingEnv -> InferenceState -> (Either Error a, InferenceState)
-runInference inf env state = runIdentity (runInferenceT inf env state)
+runInference inf env s = runIdentity (runInferenceT inf env s)
 
 runInferenceT :: forall a m. (Monad m) => (forall s. InferenceT s m a) -> TypingEnv -> InferenceState -> m (Either Error a, InferenceState)
 runInferenceT inf env = runStateT (runReaderT (runEquivT id (const id) (runExceptT inf)) env)
