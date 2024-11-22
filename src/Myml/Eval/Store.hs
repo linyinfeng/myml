@@ -52,7 +52,7 @@ unsetMark (WithMark _ x) = WithMark False x
 clearStoreMark :: Store (WithMark a) -> Store (WithMark a)
 clearStoreMark (Store d m) = Store (Map.map unsetMark d) m
 
-markStore :: Locations a => [a] -> Store (WithMark a) -> Store (WithMark a)
+markStore :: (Locations a) => [a] -> Store (WithMark a) -> Store (WithMark a)
 markStore items store@(Store sData _) =
   if Map.null new
     then store
@@ -62,7 +62,7 @@ markStore items store@(Store sData _) =
     new = Map.filter isMarkedFalse (sData `Map.restrictKeys` ls)
 
 markStore' ::
-  Locations a =>
+  (Locations a) =>
   Map.Map Location (WithMark a) ->
   Store (WithMark a) ->
   Store (WithMark a)
@@ -79,7 +79,7 @@ sweepStore (Store sData sMinFree) = Store hold sMinFree
   where
     (hold, _) = Map.partition isMarkedTrue sData
 
-markSweepClear :: Locations a => [a] -> Store (WithMark a) -> Store (WithMark a)
+markSweepClear :: (Locations a) => [a] -> Store (WithMark a) -> Store (WithMark a)
 markSweepClear items s = clearStoreMark $ sweepStore $ markStore items s
 
 emptyStore :: Store (WithMark a)

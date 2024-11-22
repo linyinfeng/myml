@@ -18,12 +18,14 @@ mymliOptions =
   MymliOptions
     <$> optional (argument str (metavar "FILE"))
     <*> switch
-      ( long "pure" <> short 'p'
+      ( long "pure"
+          <> short 'p'
           <> help
             "Whether to disable imperative features"
       )
     <*> switch
-      ( long "verbose" <> short 'v'
+      ( long "verbose"
+          <> short 'v'
           <> help
             "Whether to print in verbose mode"
       )

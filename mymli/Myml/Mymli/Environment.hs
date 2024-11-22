@@ -52,10 +52,10 @@ type Mymli m = (StateT MymliEnv m)
 runMymli :: Mymli m a -> MymliEnv -> m (a, MymliEnv)
 runMymli = runStateT
 
-execMymli :: Monad m => Mymli m a -> MymliEnv -> m MymliEnv
+execMymli :: (Monad m) => Mymli m a -> MymliEnv -> m MymliEnv
 execMymli = execStateT
 
-evalMymli :: Monad m => Mymli m a -> MymliEnv -> m a
+evalMymli :: (Monad m) => Mymli m a -> MymliEnv -> m a
 evalMymli = evalStateT
 
 data MymliRequest
@@ -63,7 +63,7 @@ data MymliRequest
   | MymliExit
 
 mymliAddBinding ::
-  Monad m => VarName -> Term -> Term -> TypeScheme -> Mymli m ()
+  (Monad m) => VarName -> Term -> Term -> TypeScheme -> Mymli m ()
 mymliAddBinding x t v ty = do
   termBindings <- gets envTermBindings
   valueBindings <- gets envValueBindings

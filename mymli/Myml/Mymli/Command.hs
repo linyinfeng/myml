@@ -27,7 +27,7 @@ data Command
   | CmdShowTypeBindings
   deriving (Show)
 
-processCommand :: MonadIO m => Command -> Mymli m MymliRequest
+processCommand :: (MonadIO m) => Command -> Mymli m MymliRequest
 processCommand CmdExit = return MymliExit
 processCommand CmdHelp = do
   liftIO (Text.IO.putStrLn mymliHelpText)

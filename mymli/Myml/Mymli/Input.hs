@@ -49,6 +49,6 @@ getMymliInput' firstLine step = case step of
     where
       p = if firstLine then prompt else promptMultiLine
 
-processInput :: MonadIO m => Input -> Mymli m MymliRequest
+processInput :: (MonadIO m) => Input -> Mymli m MymliRequest
 processInput (InputTopLevel t) = processTopLevel' t
 processInput (InputCommand c) = processCommand c

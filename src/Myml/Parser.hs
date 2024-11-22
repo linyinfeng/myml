@@ -60,10 +60,11 @@ termOperatorTable =
     opRcdExtend = do
       ext <-
         try $
-          ( TmRcdExtend <$ reserve identStyle "extend" <|> TmRcdUpdate
-              <$ reserve
-                identStyle
-                "update"
+          ( TmRcdExtend <$ reserve identStyle "extend"
+              <|> TmRcdUpdate
+                <$ reserve
+                  identStyle
+                  "update"
           )
             <* symbol "{"
       pairs <- recordPair `sepBy` symbol ","
@@ -75,7 +76,7 @@ termOperatorTable =
           ( TmMatchExtend
               <$ reserve identStyle "extend"
               <|> TmMatchUpdate
-              <$ reserve identStyle "update"
+                <$ reserve identStyle "update"
           )
             <* symbol "["
       pairs <- matchPair `sepBy` symbol ","
@@ -127,17 +128,19 @@ parseTermAtom =
     rcdAndMatchOps = try matchOps <|> try rcdOps
     matchOps = do
       op <-
-        TmMatchExtend <$ reserve identStyle "extend" <|> TmMatchUpdate
-          <$ reserve
-            identStyle
-            "update"
+        TmMatchExtend <$ reserve identStyle "extend"
+          <|> TmMatchUpdate
+            <$ reserve
+              identStyle
+              "update"
       op <$> parens variantLabel
     rcdOps = do
       op <-
-        TmRcdExtend <$ reserve identStyle "extend" <|> TmRcdUpdate
-          <$ reserve
-            identStyle
-            "update"
+        TmRcdExtend <$ reserve identStyle "extend"
+          <|> TmRcdUpdate
+            <$ reserve
+              identStyle
+              "update"
       op <$> parens recordLabel
     access = TmRcdAccess <$> (reserve identStyle "access" *> parens recordLabel)
     int = TmInteger <$> try integer

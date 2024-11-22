@@ -204,7 +204,7 @@ recordLiteral = labeledApps TmRcdExtend TmEmptyRcd
 matchLiteral :: [(LabelName, Term)] -> Term
 matchLiteral = labeledApps TmMatchExtend TmEmptyMatch
 
-instance Monad m => Serial m Term where
+instance (Monad m) => Serial m Term where
   series =
     cons1 (TmAbs "x")
       \/ cons2 TmApp
@@ -282,7 +282,7 @@ typeMaybe ty r =
           RowVar r
     )
 
-instance Monad m => Serial m Type where
+instance (Monad m) => Serial m Type where
   series =
     cons0 (TyVar "X")
       \/ cons2 TyArrow
@@ -301,9 +301,11 @@ data TypeRow
   deriving (Show, Eq, Ord)
 
 -- preserve depth
-instance Monad m => Serial m TypeRow where
+instance (Monad m) => Serial m TypeRow where
   series =
-    cons0 RowEmpty \/ cons0 (RowVar "X") \/ cons2 (RowPresence "l")
+    cons0 RowEmpty
+      \/ cons0 (RowVar "X")
+      \/ cons2 (RowPresence "l")
       \/ cons1
         (RowMu "X")
 
@@ -315,9 +317,11 @@ data TypePresence
   deriving (Show, Eq, Ord)
 
 -- preserve depth
-instance Monad m => Serial m TypePresence where
+instance (Monad m) => Serial m TypePresence where
   series =
-    pure Absent \/ cons1 Present \/ pure (PresenceVar "X")
+    pure Absent
+      \/ cons1 Present
+      \/ pure (PresenceVar "X")
       \/ cons1
         (PresenceVarWithType "X")
 
@@ -332,7 +336,7 @@ data TypeScheme
   | ScmForall VarName Kind TypeScheme
   deriving (Eq, Show)
 
-instance Monad m => Serial m TypeScheme where
+instance (Monad m) => Serial m TypeScheme where
   series = cons1 ScmMono \/ cons2 (ScmForall "X")
 
 data TypeSubstituter
@@ -366,7 +370,7 @@ data Kind
 pattern KPresenceWithType :: Kind
 pattern KPresenceWithType = KArrow KProper KPresence
 
-instance Monad m => Serial m Kind where
+instance (Monad m) => Serial m Kind where
   series = pure KProper \/ cons0 KPresence \/ cons0 KRow \/ cons2 KArrow
 
 isValue :: Term -> Bool
@@ -624,7 +628,9 @@ prettyTypeRow' _ (RowVar x) = pretty x
 prettyTypeRow' label (RowPresence l p r) =
   label l <+> pretty p <> line' <> pretty ',' <+> prettyTypeRow' label r
 prettyTypeRow' label (RowMu x r) =
-  pretty '\x3bc' <+> pretty x <+> pretty '.'
+  pretty '\x3bc'
+    <+> pretty x
+    <+> pretty '.'
     <+> align
       (group (pretty "(" <+> prettyTypeRow' label r <+> pretty ")"))
 
@@ -692,7 +698,7 @@ data Error
     ErrEvalStuck Term
   deriving (Eq)
 
-showPretty :: Pretty a => a -> String
+showPretty :: (Pretty a) => a -> String
 showPretty = show . pretty
 
 instance Show Error where

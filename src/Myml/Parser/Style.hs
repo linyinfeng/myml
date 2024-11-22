@@ -88,13 +88,13 @@ isIdentLetter c = not (isSpace c) && not (H.member c punctureChars)
 isIdentStart :: Char -> Bool
 isIdentStart c = isIdentLetter c && c /= '`'
 
-identStart :: CharParsing m => m Char
+identStart :: (CharParsing m) => m Char
 identStart = satisfy isIdentStart
 
-identLetter :: CharParsing m => m Char
+identLetter :: (CharParsing m) => m Char
 identLetter = satisfy isIdentLetter
 
-identStyle :: CharParsing m => IdentifierStyle m
+identStyle :: (CharParsing m) => IdentifierStyle m
 identStyle =
   IdentifierStyle
     { _styleName = "identifer",

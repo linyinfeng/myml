@@ -51,37 +51,37 @@ maybeToExcept m = case m of
 smallStep :: Term -> SmallStepState
 smallStep (TmApp (TmAbs x t1) v2)
   | isValue v2 =
-    return (substTerm (Map.singleton x v2) t1)
+      return (substTerm (Map.singleton x v2) t1)
 smallStep (TmApp (TmApp (TmApp (TmMatchExtend l1) v1) match') (TmApp (TmVariant l2) v2))
   | isValue v1 && isValue match' && isValue v2 =
-    if l1 == l2
-      then return (TmApp v1 v2)
-      else return (TmApp match' (TmApp (TmVariant l2) v2))
+      if l1 == l2
+        then return (TmApp v1 v2)
+        else return (TmApp match' (TmApp (TmVariant l2) v2))
 smallStep (TmApp (TmApp (TmMatchUpdate l1) v1) (TmApp (TmApp (TmMatchExtend l2) v2) match'))
   | isValue v1 && isValue v2 =
-    if l1 == l2
-      then return (TmApp (TmApp (TmMatchExtend l2) v1) match')
-      else
-        return
-          ( TmApp
-              (TmApp (TmMatchExtend l2) v2)
-              (TmApp (TmApp (TmMatchUpdate l1) v1) match')
-          )
+      if l1 == l2
+        then return (TmApp (TmApp (TmMatchExtend l2) v1) match')
+        else
+          return
+            ( TmApp
+                (TmApp (TmMatchExtend l2) v2)
+                (TmApp (TmApp (TmMatchUpdate l1) v1) match')
+            )
 smallStep (TmApp (TmRcdAccess l1) (TmApp (TmApp (TmRcdExtend l2) v) rcd'))
   | isValue v =
-    if l1 == l2
-      then return v
-      else return (TmApp (TmRcdAccess l1) rcd')
+      if l1 == l2
+        then return v
+        else return (TmApp (TmRcdAccess l1) rcd')
 smallStep (TmApp (TmApp (TmRcdUpdate l1) v1) (TmApp (TmApp (TmRcdExtend l2) v2) rcd'))
   | isValue v1 && isValue v2 =
-    if l1 == l2
-      then return (TmApp (TmApp (TmRcdExtend l2) v1) rcd')
-      else
-        return
-          ( TmApp
-              (TmApp (TmRcdExtend l2) v2)
-              (TmApp (TmApp (TmRcdUpdate l1) v1) rcd')
-          )
+      if l1 == l2
+        then return (TmApp (TmApp (TmRcdExtend l2) v1) rcd')
+        else
+          return
+            ( TmApp
+                (TmApp (TmRcdExtend l2) v2)
+                (TmApp (TmApp (TmRcdUpdate l1) v1) rcd')
+            )
 smallStep (TmApp TmRef v) | isValue v = do
   s <- get >>= maybeToExcept
   let (l, s') = allocate s v
@@ -93,9 +93,9 @@ smallStep (TmApp TmDeref (TmLoc l)) =
     Just v -> return v
 smallStep (TmApp (TmApp TmAssign (TmLoc l)) v)
   | isValue v =
-    gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
-      Nothing -> throwError ExcNoRuleApplied
-      Just _ -> TmUnit <$ modify (fmap (\s -> assign s l v))
+      gets (fmap (lookupStore l)) >>= maybeToExcept >>= \case
+        Nothing -> throwError ExcNoRuleApplied
+        Just _ -> TmUnit <$ modify (fmap (\s -> assign s l v))
 smallStep (TmApp (TmApp TmIntegerPlus (TmInteger n)) (TmInteger m)) =
   return (TmInteger (n + m))
 smallStep (TmApp (TmApp TmIntegerMul (TmInteger n)) (TmInteger m)) =
@@ -125,7 +125,7 @@ smallStep (TmApp v1 t2) | isValue v1 = TmApp v1 <$> smallStep t2
 smallStep (TmApp t1 t2) = flip TmApp t2 <$> smallStep t1
 smallStep (TmLet x v1 t2)
   | isValue v1 =
-    return (substTerm (Map.singleton x v1) t2)
+      return (substTerm (Map.singleton x v1) t2)
 smallStep (TmLet x t1 t2) = (\t1' -> TmLet x t1' t2) <$> smallStep t1
 smallStep _ = throwError ExcNoRuleApplied
 

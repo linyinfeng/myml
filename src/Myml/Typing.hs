@@ -92,21 +92,21 @@ runInference inf env s = runIdentity (runInferenceT inf env s)
 runInferenceT :: forall a m. (Monad m) => (forall s. InferenceT s m a) -> TypingEnv -> InferenceState -> m (Either Error a, InferenceState)
 runInferenceT inf env = runStateT (runReaderT (runEquivT id (const id) (runExceptT inf)) env)
 
-newVar :: MonadState InferenceState m => VarName -> m VarName
+newVar :: (MonadState InferenceState m) => VarName -> m VarName
 newVar prefix = do
   NewVar m <- gets inferStateNewVar
   let i = fromMaybe 0 (Map.lookup prefix m)
   modify (\s -> s {inferStateNewVar = NewVar (Map.insert prefix (i + 1) m)})
   return (if i == 0 then prefix else prefix ++ show i)
 
-resetVarPrefix :: MonadState InferenceState m => Set.Set VarName -> m ()
+resetVarPrefix :: (MonadState InferenceState m) => Set.Set VarName -> m ()
 resetVarPrefix ps = do
   NewVar m <- gets inferStateNewVar
   -- union = unionWith const
   let m' = Map.map (const 0) (Map.restrictKeys m ps) `Map.union` m
   modify (\s -> s {inferStateNewVar = NewVar m'})
 
-newVarInner :: MonadState InferenceState m => Kind -> m VarName
+newVarInner :: (MonadState InferenceState m) => Kind -> m VarName
 newVarInner = newVar . ('_' :) . kindToPrefix
 
 kindPrefixes :: Set.Set VarName
@@ -124,7 +124,7 @@ checkImperativeFeaturesEnabled t = do
   enabled <- gets imperativeFeaturesEnabled
   unless enabled (throwError (ErrImperativeFeaturesDisabled t))
 
-infer :: MonadInference s m => Term -> m Type
+infer :: (MonadInference s m) => Term -> m Type
 infer (TmVar x) =
   reader (Map.lookup x) >>= \case
     Nothing -> throwError (ErrUnboundedVariable x)
@@ -354,7 +354,7 @@ instantiatePresence (PresenceVar x) = return (PresenceVar x)
 instantiatePresence (PresenceVarWithType x t) =
   PresenceVarWithType x <$> instantiateType t
 
-generalize :: MonadInference s m => Term -> Type -> m TypeScheme
+generalize :: (MonadInference s m) => Term -> Type -> m TypeScheme
 generalize t ty = do
   tyDesc <- describeProper False Set.empty ty
   -- this step replace all Presents only appear in covariant location to a fresh variable
@@ -525,7 +525,7 @@ ensureRow :: (MonadError Error m) => TypeSubstituter -> m TypeRow
 ensureRow (TySubRow r) = return r
 ensureRow s = throwError (ErrUnifyKindMismatch KRow (kindOfTySub s))
 
-unifyProper :: (MonadError Error m, MonadUnify s m, MonadState InferenceState m) => MonadUnify s m => Type -> Type -> m ()
+unifyProper :: (MonadError Error m, MonadUnify s m, MonadState InferenceState m) => (MonadUnify s m) => Type -> Type -> m ()
 unifyProper t1 t2 = do
   t1' <- classDesc (TySubProper t1) >>= ensureProper
   t2' <- classDesc (TySubProper t2) >>= ensureProper

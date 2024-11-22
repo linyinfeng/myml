@@ -35,7 +35,7 @@ import Text.Trifecta hiding
   )
 import Text.Trifecta.Delta
 
-processTopLevel' :: MonadIO m => Careted TopLevel -> Mymli m MymliRequest
+processTopLevel' :: (MonadIO m) => Careted TopLevel -> Mymli m MymliRequest
 processTopLevel' t = processTopLevel False t >> return MymliContinue
 
 printValueSchemePair :: MymliOptions -> Term -> TypeScheme -> IO ()
@@ -56,7 +56,7 @@ printCaret (Caret d _) = do
   putStr (show (prettyDelta d))
   putStr ": "
 
-processTopLevel :: MonadIO m => Bool -> Careted TopLevel -> Mymli m Bool
+processTopLevel :: (MonadIO m) => Bool -> Careted TopLevel -> Mymli m Bool
 processTopLevel silent (TopTerm t :^ car) = do
   inferRes <- mymliInferTypeAndUpdateBinding t
   case inferRes of
@@ -91,7 +91,7 @@ processTopLevel _ (TopImport file :^ _) = do
       when success (mymliMergeFileEnv fileEnv >> mymliGc)
       return success
 
-postEval :: MonadIO m => Bool -> Term -> TypeScheme -> Mymli m Bool
+postEval :: (MonadIO m) => Bool -> Term -> TypeScheme -> Mymli m Bool
 postEval silent v s = do
   options <- gets envOption
   unless silent (liftIO (printValueSchemePair options v s))
@@ -99,7 +99,7 @@ postEval silent v s = do
   return True
 
 searchAndParseFile ::
-  MonadIO m => FilePath -> Mymli m (Maybe ([Careted TopLevel], FilePath))
+  (MonadIO m) => FilePath -> Mymli m (Maybe ([Careted TopLevel], FilePath))
 searchAndParseFile file = do
   searchPath <- gets envSearchPath
   exists <-
@@ -117,13 +117,13 @@ searchAndParseFile file = do
       handle (\(e :: IOException) -> print e >> return Nothing)
         . parseFromFile (unParser (whiteSpace *> parseTopLevelsCareted <* eof))
 
-processTopLevels :: MonadIO m => Bool -> [Careted TopLevel] -> Mymli m Bool
+processTopLevels :: (MonadIO m) => Bool -> [Careted TopLevel] -> Mymli m Bool
 processTopLevels _ [] = return True
 processTopLevels silent (t : remain) = do
   success <- processTopLevel silent t
   if success then processTopLevels silent remain else return False
 
-mymliEnvForFile :: Monad m => FilePath -> Mymli m MymliEnv
+mymliEnvForFile :: (Monad m) => FilePath -> Mymli m MymliEnv
 mymliEnvForFile path = do
   env <- get
   let opt = envOption env
@@ -138,7 +138,7 @@ mymliEnvForFile path = do
         envSearchPath = takeDirectory path : envSearchPath env
       }
 
-mymliMergeFileEnv :: Monad m => MymliEnv -> Mymli m ()
+mymliMergeFileEnv :: (Monad m) => MymliEnv -> Mymli m ()
 mymliMergeFileEnv file = do
   current <- get
   let env =

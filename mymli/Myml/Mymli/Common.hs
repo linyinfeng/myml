@@ -31,7 +31,7 @@ promptMultiLine :: String
 promptMultiLine = "     | "
 
 mymliInferTypeAndUpdateBinding ::
-  Monad m => Term -> Mymli m (Either Error TypeScheme)
+  (Monad m) => Term -> Mymli m (Either Error TypeScheme)
 mymliInferTypeAndUpdateBinding t = do
   termBindings <- gets envTermBindings
   typeBindings <- gets envTypeBindings
@@ -58,10 +58,10 @@ updateBinding _t s = do
   fv <- liftEither (fvScheme s)
   if Map.null fv then return s else describeScheme True Set.empty s
 
-mymliSubstEnv :: Monad m => Term -> Mymli m Term
+mymliSubstEnv :: (Monad m) => Term -> Mymli m Term
 mymliSubstEnv t = gets (flip substTerm t . envValueBindings)
 
-mymliEval :: MonadIO m => Term -> Mymli m (Either Error Term)
+mymliEval :: (MonadIO m) => Term -> Mymli m (Either Error Term)
 mymliEval t = do
   t' <- mymliSubstEnv t
   store <- gets envStore
@@ -69,7 +69,7 @@ mymliEval t = do
   modify (\e -> e {envStore = store'})
   return v
 
-mymliGc :: Monad m => Mymli m ()
+mymliGc :: (Monad m) => Mymli m ()
 mymliGc = do
   bindings <- gets envValueBindings
   maybeStore <- gets envStore
